@@ -332,7 +332,14 @@ async function loadMoreContent() {
 
 function handleScroll() {
   const scrollPosition = window.innerHeight + window.scrollY;
-  const threshold = document.body.offsetHeight - 200;
+  const documentHeight = Math.max(
+    document.body.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.clientHeight,
+    document.documentElement.scrollHeight,
+    document.documentElement.offsetHeight
+  );
+  const threshold = documentHeight - 200;
   if (scrollPosition >= threshold && !isLoading) {
     loadMoreContent();
   }
