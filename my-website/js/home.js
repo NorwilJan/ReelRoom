@@ -11,6 +11,20 @@ let currentPages = {
   tagalogMovies: 1,
   netflix: 1
 };
+let initialItems = {
+  movies: [],
+  tvShows: [],
+  anime: [],
+  tagalogMovies: [],
+  netflix: []
+};
+let expandedCategories = {
+  movies: false,
+  tvShows: false,
+  anime: false,
+  tagalogMovies: false,
+  netflix: false
+};
 let isLoading = false;
 let slideshowItems = [];
 let currentSlide = 0;
@@ -148,9 +162,11 @@ function changeSlide(n) {
   showSlide();
 }
 
-function displayList(items, containerId) {
+function displayList(items, containerId, clear = false) {
   const container = document.getElementById(containerId);
   const emptyMessage = document.getElementById('empty-message');
+  
+  if (clear) container.innerHTML = ''; // Clear container for Show Less or initial load
   
   if (items.length === 0 && container.innerHTML === '') {
     container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
@@ -307,22 +323,124 @@ async function searchTMDB() {
   }
 }
 
+async function showMore(category) {
+  if (isLoading) return;
+  isLoading = true;
+
+  try {
+    let items = [];
+    let containerId = `${category}-list`;
+    let showMoreBtn = document.getElementById(`show-more-${category}`);
+    let showLessBtn = document.getElementById(`show-less-${category}`);
+
+    // Fetch up to 5 pages (approx. 100 items) for the category
+    const maxPages = 5;
+    let currentPage = currentPages[category];
+    const endPage = Math.min(currentPage + maxPages - 1, 500); // TMDB page limit
+    let allItems = [];
+
+    if (category === 'movies') {
+      for (let i = currentPage; i <= endPage; i++) {
+        const results = await fetchTrending('movie', i);
+        allItems = allItems.concat(results);
+      }
+      currentPages.movies = endPage + 1;
+    } else if (category === 'tvShows') {
+      for (let i = currentPage; i <= endPage; i++) {
+        const results = await fetchTrending('tv', i);
+        allItems = allItems.concat(results);
+      }
+      currentPages.tvShows = endPage + 1;
+    } else if (category === 'anime') {
+      for (let i = currentPage; i <= endPage; i++) {
+        const results = await fetchTrendingAnime(i);
+        allItems = allItems.concat(results);
+      }
+      currentPages.anime = endPage + 1;
+    } else if (category === 'tagalogMovies') {
+      for (let i = currentPage; i <= endPage; i++) {
+        const results = await fetchTagalogMovies(i);
+        allItems = allItems.concat(results);
+      }
+      currentPages.tagalogMovies = endPage + 1;
+    } else if (category === 'netflix') {
+      for (let i = currentPage; i <= endPage; i++) {
+        const results = await fetchNetflixContent(i);
+        allItems = allItems.concat(results);
+      }
+      currentPages.netflix = endPage + 1;
+    }
+
+    // Clear and display all items
+    displayList(allItems, containerId, true);
+    
+    // Update button visibility
+    showMoreBtn.style.display = 'none';
+    showLessBtn.style.display = 'inline-block';
+    
+    // Mark category as expanded
+    expandedCategories[category] = true;
+  } catch (error) {
+    console.error(`Error in showMore for ${category}:`, error);
+  } finally {
+    isLoading = false;
+  }
+}
+
+async function showLess(category) {
+  if (isLoading) return;
+  isLoading = true;
+
+  try {
+    const containerId = `${category}-list`;
+    const showMoreBtn = document.getElementById(`show-more-${category}`);
+    const showLessBtn = document.getElementById(`show-less-${category}`);
+    
+    // Reset to initial items
+    displayList(initialItems[category], containerId, true);
+    
+    // Reset page counter
+    currentPages[category] = 1;
+    
+    // Update button visibility
+    showMoreBtn.style.display = 'inline-block';
+    showLessBtn.style.display = 'none';
+    
+    // Mark category as not expanded
+    expandedCategories[category] = false;
+  } catch (error) {
+    console.error(`Error in showLess for ${category}:`, error);
+  } finally {
+    isLoading = false;
+  }
+}
+
 async function loadMoreContent() {
   if (isLoading) return;
   isLoading = true;
 
   try {
-    const movies = await fetchTrending('movie', ++currentPages.movies);
-    const tvShows = await fetchTrending('tv', ++currentPages.tvShows);
-    const anime = await fetchTrendingAnime(++currentPages.anime);
-    const tagalogMovies = await fetchTagalogMovies(++currentPages.tagalogMovies);
-    const netflixContent = await fetchNetflixContent(++currentPages.netflix);
-
-    displayList(movies, 'movies-list');
-    displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixContent, 'netflix-list');
+    // Only load more for expanded categories
+    if (expandedCategories.movies) {
+      const movies = await fetchTrending('movie', ++currentPages.movies);
+      displayList(movies, 'movies-list');
+    }
+    if (expandedCategories.tvShows) {
+      const tvShows = await fetchTrending('tv', ++currentPages.tvShows);
+      displayList(tvShows, 'tvshows-list');
+    }
+    if (expandedCategories.anime) {
+      const anime = await fetchTrendingAnime(++currentPages.anime);
+      displayList(anime, 'anime-list');
+    }
+    if (expandedCategories.tagalogMovies) {
+      const tagalogMovies = await fetchTagalogMovies(++currentPages.tagalogMovies);
+      displayList(tagalogMovies, 'tagalog-movies-list');
+    }
+    if (expandedCategories.netflix) {
+      const netflixContent = await fetchNetflixContent(++currentPages.netflix);
+      displayList(netflixContent, 'netflix-list');
+    }
   } catch (error) {
     console.error('Error loading more content:', error);
   } finally {
@@ -357,6 +475,13 @@ async function init() {
       fetchNetflixContent(currentPages.netflix)
     ]);
 
+    // Store initial items for Show Less
+    initialItems.movies = movies.slice(0, 12); // Limit to ~2 rows
+    initialItems.tvShows = tvShows.slice(0, 12);
+    initialItems.anime = anime.slice(0, 12);
+    initialItems.tagalogMovies = tagalogMovies.slice(0, 12);
+    initialItems.netflix = netflixContent.slice(0, 12);
+
     slideshowItems = [
       ...movies.slice(0, 3),
       tvShows[0] || {},
@@ -371,11 +496,11 @@ async function init() {
       document.getElementById('slides').innerHTML = '<h1>No featured content available</h1>';
     }
 
-    displayList(movies, 'movies-list');
-    displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixContent, 'netflix-list');
+    displayList(initialItems.movies, 'movies-list', true);
+    displayList(initialItems.tvShows, 'tvshows-list', true);
+    displayList(initialItems.anime, 'anime-list', true);
+    displayList(initialItems.tagalogMovies, 'tagalog-movies-list', true);
+    displayList(initialItems.netflix, 'netflix-list', true);
 
     window.addEventListener('scroll', handleScroll);
   } catch (error) {
