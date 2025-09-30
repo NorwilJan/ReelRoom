@@ -3,86 +3,70 @@ const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 let currentItem;
 
-// Track pagination for each category
-const pageTrackers = {
-  movies: 1,
-  tvshows: 1,
-  anime: 1,
-  tagalog: 1,
-  netflix: 1
-};
-
-// Track collapse state for each category
-const collapseStates = {
-  movies: true,
-  tvshows: true,
-  anime: true,
-  tagalog: true,
-  netflix: true
-};
-
-async function fetchTrending(type, page = 1) {
+async function fetchTrending(type) {
   try {
-    const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
+    const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}`);
     const data = await res.json();
-    return { results: data.results || [], total_pages: data.total_pages || 1 };
+    return data.results || [];
   } catch (error) {
     console.error(`Error fetching trending ${type}:`, error);
-    return { results: [], total_pages: 1 };
+    return [];
   }
 }
 
-async function fetchTrendingAnime(page = 1) {
+async function fetchTrendingAnime() {
   let allResults = [];
   try {
-    const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}&page=${page}`);
-    const data = await res.json();
-    const filtered = data.results.filter(item =>
-      item.original_language === 'ja' && item.genre_ids.includes(16)
-    );
-    allResults = filtered;
-    return { results: allResults, total_pages: data.total_pages || 1 };
+    // Fetch from multiple pages to get more anime (max 3 pages for demo)
+    for (let page = 1; page <= 3; page++) {
+      const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}&page=${page}`);
+      const data = await res.json();
+      const filtered = data.results.filter(item =>
+        item.original_language === 'ja' && item.genre_ids.includes(16)
+      );
+      allResults = allResults.concat(filtered);
+    }
   } catch (error) {
     console.error('Error fetching trending anime:', error);
-    return { results: [], total_pages: 1 };
   }
+  return allResults;
 }
 
-async function fetchTagalogMovies(page = 1) {
+async function fetchTagalogMovies() {
   try {
     const res = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_original_language=tl`
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=1&with_original_language=tl`
     );
     const data = await res.json();
-    return { results: data.results || [], total_pages: data.total_pages || 1 };
+    return data.results || [];
   } catch (error) {
     console.error('Error fetching Tagalog movies:', error);
-    return { results: [], total_pages: 1 };
+    return [];
   }
 }
 
-async function fetchNetflixContent(page = 1) {
+async function fetchNetflixContent() {
   try {
     // Fetch Netflix movies
     const movieRes = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=1`
     );
     const movieData = await movieRes.json();
     const movies = movieData.results || [];
 
     // Fetch Netflix TV shows
     const tvRes = await fetch(
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=1`
     );
     const tvData = await tvRes.json();
     const tvShows = tvData.results || [];
 
     // Combine and sort by popularity (descending)
     const combined = [...movies, ...tvShows].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-    return { results: combined.slice(0, 20), total_pages: Math.min(movieData.total_pages || 1, tvData.total_pages || 1) };
+    return combined.slice(0, 20); // Limit to 20 items for performance
   } catch (error) {
     console.error('Error fetching Netflix content:', error);
-    return { results: [], total_pages: 1 };
+    return [];
   }
 }
 
@@ -91,15 +75,12 @@ function displayBanner(item) {
   document.getElementById('banner-title').textContent = item.title || item.name;
 }
 
-function displayList(items, containerId, append = false) {
+function displayList(items, containerId) {
   const container = document.getElementById(containerId);
   const emptyMessage = document.getElementById('empty-message');
+  container.innerHTML = '';
   
-  if (!append) {
-    container.innerHTML = '';
-  }
-  
-  if (items.length === 0 && !append) {
+  if (items.length === 0) {
     container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
     return;
   }
@@ -121,12 +102,13 @@ function displayList(items, containerId, append = false) {
 
 function showDetails(item) {
   currentItem = item;
-  document.getElementById('modal-title').textContent = item.title || item.name || 'Untitled';
-  document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-  document.getElementById('modal-image').src = `${IMG_URL}${item.poster_path || ''}`;
+  document.getElementById('modal-title').textContent = item.title || item.name;
+  document.getElementById('modal-description').textContent = item.overview;
+  document.getElementById('modal-image').src = `${IMG_URL}${item.poster_path}`;
   document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
+  // Set default server to player.videasy.net
   document.getElementById('server').value = 'player.videasy.net';
-  changeServer();
+  changeServer(); // Load the default server's embed URL
   document.getElementById('modal').style.display = 'flex';
 }
 
@@ -192,54 +174,8 @@ async function searchTMDB() {
   }
 }
 
-async function fetchMore(category) {
-  const button = document.querySelector(`.show-more[data-category="${category}"]`);
-  button.disabled = true; // Disable button while fetching
-  let results = [];
-  let total_pages = 1;
-
-  if (category === 'movies') {
-    ({ results, total_pages } = await fetchTrending('movie', ++pageTrackers.movies));
-  } else if (category === 'tvshows') {
-    ({ results, total_pages } = await fetchTrending('tv', ++pageTrackers.tvshows));
-  } else if (category === 'anime') {
-    ({ results, total_pages } = await fetchTrendingAnime(++pageTrackers.anime));
-  } else if (category === 'tagalog') {
-    ({ results, total_pages } = await fetchTagalogMovies(++pageTrackers.tagalog));
-  } else if (category === 'netflix') {
-    ({ results, total_pages } = await fetchNetflixContent(++pageTrackers.netflix));
-  }
-
-  const containerId = category === 'movies' ? 'movies-list' :
-                     category === 'tvshows' ? 'tvshows-list' :
-                     category === 'anime' ? 'anime-list' :
-                     category === 'tagalog' ? 'tagalog-movies-list' : 'netflix-list';
-
-  displayList(results, containerId, true); // Append new items
-
-  // Re-enable button if there are more pages
-  if (pageTrackers[category] < total_pages) {
-    button.disabled = false;
-  } else {
-    button.style.display = 'none'; // Hide button if no more pages
-  }
-}
-
-function toggleCategory(category) {
-  const list = document.getElementById(
-    category === 'movies' ? 'movies-list' :
-    category === 'tvshows' ? 'tvshows-list' :
-    category === 'anime' ? 'anime-list' :
-    category === 'tagalog' ? 'tagalog-movies-list' : 'netflix-list'
-  );
-  const button = document.querySelector(`.show-more[data-category="${category}"]`);
-  collapseStates[category] = !collapseStates[category];
-  list.style.display = collapseStates[category] ? 'flex' : 'none';
-  button.style.display = collapseStates[category] ? 'block' : 'none';
-}
-
 async function init() {
-  document.getElementById('empty-message').style.display = 'block';
+  document.getElementById('empty-message').style.display = 'block'; // Show loading/fallback initially
 
   try {
     const [movies, tvShows, anime, tagalogMovies, netflixContent] = await Promise.all([
@@ -250,41 +186,17 @@ async function init() {
       fetchNetflixContent()
     ]);
 
-    const bannerItem = movies.results[Math.floor(Math.random() * movies.results.length)] || movies.results[0];
+    // Random banner from movies (fallback to first if empty)
+    const bannerItem = movies[Math.floor(Math.random() * movies.length)] || movies[0];
     if (bannerItem) {
       displayBanner(bannerItem);
     }
 
-    displayList(movies.results, 'movies-list');
-    displayList(tvShows.results, 'tvshows-list');
-    displayList(anime.results, 'anime-list');
-    displayList(tagalogMovies.results, 'tagalog-movies-list');
-    displayList(netflixContent.results, 'netflix-list');
-
-    // Add toggle event listeners to category titles
-    document.querySelectorAll('.row h2').forEach(header => {
-      header.addEventListener('click', () => toggleCategory(header.dataset.category));
-    });
-
-    // Add click event listeners to Show More buttons
-    document.querySelectorAll('.show-more').forEach(button => {
-      button.addEventListener('click', () => fetchMore(button.dataset.category));
-    });
-
-    // Set up IntersectionObserver for infinite scroll
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const category = entry.target.dataset.category;
-          if (!collapseStates[category]) return; // Skip if collapsed
-          fetchMore(category);
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.show-more').forEach(button => {
-      observer.observe(button);
-    });
+    displayList(movies, 'movies-list');
+    displayList(tvShows, 'tvshows-list');
+    displayList(anime, 'anime-list');
+    displayList(tagalogMovies, 'tagalog-movies-list');
+    displayList(netflixContent, 'netflix-list');
   } catch (error) {
     console.error('Error initializing:', error);
     document.getElementById('empty-message').textContent = 'Failed to load content. Please refresh the page.';
