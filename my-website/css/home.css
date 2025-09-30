@@ -1,3 +1,5 @@
+/* Existing CSS with added slideshow styles */
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
@@ -96,18 +98,13 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Responsive columns */
-  gap: 10px; /* Space between items */
-  overflow-x: auto; /* Horizontal scroll for overflow */
-  padding-bottom: 10px; /* Padding for better spacing */
-  min-height: 340px; /* Approximate height for two rows */
+  display: flex;
+  overflow-x: auto;
 }
 
 .list img {
-  width: 100%; /* Fill the grid cell */
-  aspect-ratio: 2/3; /* Maintain poster aspect ratio */
-  object-fit: cover; /* Ensure images fit nicely */
+  width: 150px;
+  margin-right: 10px;
   cursor: pointer;
   border-radius: 5px;
   transition: transform 0.3s ease, filter 0.3s ease;
@@ -117,11 +114,6 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   transform: scale(1.05);
   filter: brightness(1.2);
   z-index: 2;
-}
-
-.fa-spinner {
-  font-size: 24px;
-  color: #ccc;
 }
 
 .modal {
@@ -268,7 +260,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   font-size: 30px;
 }
 
-/* Mobile Display */
+/* MOBILE DISPLAY START */
 @media (max-width: 768px) {
   .navbar {
     flex-direction: row;
@@ -325,12 +317,13 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 
   .list {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Smaller columns */
-    min-height: 280px; /* Adjust for two rows */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .list img {
-    width: 100%;
+    width: 120px;
   }
 
   .episode-list {
@@ -383,12 +376,8 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   .episode-item img {
     width: 40px;
   }
-
-  .list {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Smaller columns */
-    min-height: 240px; /* Adjust for two rows */
-  }
 }
+/* MOBILE DISPLAY END */
 
 .footer {
   background: #222;
@@ -421,6 +410,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   color: #fff;
 }
 
+/* Responsive adjustments */
 @media (max-width: 600px) {
   .footer-content {
     font-size: 14px;
