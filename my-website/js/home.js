@@ -34,6 +34,7 @@ async function fetchTrending(type, page = 1) {
   try {
     const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
     const data = await res.json();
+    console.log(`Fetched ${type} page ${page}:`, data.results.length, 'items');
     return data.results || [];
   } catch (error) {
     console.error(`Error fetching trending ${type}:`, error);
@@ -50,6 +51,7 @@ async function fetchTrendingAnime(page = 1) {
       item.original_language === 'ja' && item.genre_ids.includes(16)
     );
     allResults = allResults.concat(filtered);
+    console.log(`Fetched anime page ${page}:`, allResults.length, 'items');
   } catch (error) {
     console.error('Error fetching trending anime:', error);
   }
@@ -62,6 +64,7 @@ async function fetchTagalogMovies(page = 1) {
       `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_original_language=tl`
     );
     const data = await res.json();
+    console.log(`Fetched Tagalog movies page ${page}:`, data.results.length, 'items');
     return data.results || [];
   } catch (error) {
     console.error('Error fetching Tagalog movies:', error);
@@ -84,6 +87,7 @@ async function fetchNetflixContent(page = 1) {
     const tvShows = tvData.results || [];
 
     const combined = [...movies, ...tvShows].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    console.log(`Fetched Netflix page ${page}:`, combined.length, 'items');
     return combined.slice(0, 20);
   } catch (error) {
     console.error('Error fetching Netflix content:', error);
@@ -166,7 +170,7 @@ function displayList(items, containerId, clear = false) {
   const container = document.getElementById(containerId);
   const emptyMessage = document.getElementById('empty-message');
   
-  if (clear) container.innerHTML = ''; // Clear container for Show Less or initial load
+  if (clear) container.innerHTML = ''; // Clear container for Show More/Show Less
   
   if (items.length === 0 && container.innerHTML === '') {
     container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
@@ -326,6 +330,7 @@ async function searchTMDB() {
 async function showMore(category) {
   if (isLoading) return;
   isLoading = true;
+  console.log(`Show More clicked for ${category}`);
 
   try {
     let items = [];
@@ -333,10 +338,10 @@ async function showMore(category) {
     let showMoreBtn = document.getElementById(`show-more-${category}`);
     let showLessBtn = document.getElementById(`show-less-${category}`);
 
-    // Fetch up to 5 pages (approx. 100 items) for the category
+    // Fetch up to 5 pages (approx. 100 items)
     const maxPages = 5;
     let currentPage = currentPages[category];
-    const endPage = Math.min(currentPage + maxPages - 1, 500); // TMDB page limit
+    const endPage = Math.min(currentPage + maxPages - 1, 500);
     let allItems = [];
 
     if (category === 'movies') {
@@ -375,11 +380,12 @@ async function showMore(category) {
     displayList(allItems, containerId, true);
     
     // Update button visibility
-    showMoreBtn.style.display = 'none';
-    showLessBtn.style.display = 'inline-block';
+    if (showMoreBtn) showMoreBtn.style.display = 'none';
+    if (showLessBtn) showLessBtn.style.display = 'inline-block';
     
-    // Mark category as expanded
+    // Enable infinite scroll for this category
     expandedCategories[category] = true;
+    console.log(`Expanded ${category}:`, expandedCategories);
   } catch (error) {
     console.error(`Error in showMore for ${category}:`, error);
   } finally {
@@ -390,6 +396,7 @@ async function showMore(category) {
 async function showLess(category) {
   if (isLoading) return;
   isLoading = true;
+  console.log(`Show Less clicked for ${category}`);
 
   try {
     const containerId = `${category}-list`;
@@ -403,11 +410,12 @@ async function showLess(category) {
     currentPages[category] = 1;
     
     // Update button visibility
-    showMoreBtn.style.display = 'inline-block';
-    showLessBtn.style.display = 'none';
+    if (showMoreBtn) showMoreBtn.style.display = 'inline-block';
+    if (showLessBtn) showLessBtn.style.display = 'none';
     
-    // Mark category as not expanded
+    // Disable infinite scroll for this category
     expandedCategories[category] = false;
+    console.log(`Collapsed ${category}:`, expandedCategories);
   } catch (error) {
     console.error(`Error in showLess for ${category}:`, error);
   } finally {
@@ -418,9 +426,9 @@ async function showLess(category) {
 async function loadMoreContent() {
   if (isLoading) return;
   isLoading = true;
+  console.log('loadMoreContent triggered:', expandedCategories);
 
   try {
-    // Only load more for expanded categories
     if (expandedCategories.movies) {
       const movies = await fetchTrending('movie', ++currentPages.movies);
       displayList(movies, 'movies-list');
@@ -459,12 +467,14 @@ function handleScroll() {
   );
   const threshold = documentHeight - 200;
   if (scrollPosition >= threshold && !isLoading) {
+    console.log('Scroll triggered:', { scrollPosition, threshold });
     loadMoreContent();
   }
 }
 
 async function init() {
   document.getElementById('empty-message').style.display = 'block';
+  console.log('Initializing website...');
 
   try {
     const [movies, tvShows, anime, tagalogMovies, netflixContent] = await Promise.all([
@@ -476,7 +486,7 @@ async function init() {
     ]);
 
     // Store initial items for Show Less
-    initialItems.movies = movies.slice(0, 12); // Limit to ~2 rows
+    initialItems.movies = movies.slice(0, 12);
     initialItems.tvShows = tvShows.slice(0, 12);
     initialItems.anime = anime.slice(0, 12);
     initialItems.tagalogMovies = tagalogMovies.slice(0, 12);
@@ -502,7 +512,25 @@ async function init() {
     displayList(initialItems.tagalogMovies, 'tagalog-movies-list', true);
     displayList(initialItems.netflix, 'netflix-list', true);
 
+    // Add event listeners for buttons
+    const categories = ['movies', 'tvShows', 'anime', 'tagalogMovies', 'netflix'];
+    categories.forEach(category => {
+      const showMoreBtn = document.getElementById(`show-more-${category}`);
+      const showLessBtn = document.getElementById(`show-less-${category}`);
+      if (showMoreBtn) {
+        showMoreBtn.addEventListener('click', () => showMore(category));
+      } else {
+        console.error(`Show More button not found for ${category}`);
+      }
+      if (showLessBtn) {
+        showLessBtn.addEventListener('click', () => showLess(category));
+      } else {
+        console.error(`Show Less button not found for ${category}`);
+      }
+    });
+
     window.addEventListener('scroll', handleScroll);
+    console.log('Initialization complete');
   } catch (error) {
     console.error('Error initializing:', error);
     document.getElementById('empty-message').textContent = 'Failed to load content. Please refresh the page.';
