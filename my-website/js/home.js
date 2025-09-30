@@ -102,9 +102,10 @@ function displayList(items, containerId) {
 
 function showDetails(item) {
   currentItem = item;
-  document.getElementById('modal-title').textContent = item.title || item.name;
-  document.getElementById('modal-description').textContent = item.overview;
-  document.getElementById('modal-image').src = `${IMG_URL}${item.poster_path}`;
+  document.getElementById('modal-title').textContent = item.title || item.name || 'Untitled';
+  // Use fallback message if overview is missing
+  document.getElementById('modal-description').textContent = item.overview || 'No description available.';
+  document.getElementById('modal-image').src = `${IMG_URL}${item.poster_path || ''}`;
   document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
   // Set default server to player.videasy.net
   document.getElementById('server').value = 'player.videasy.net';
