@@ -2,6 +2,8 @@ const API_KEY = '40f1982842db35042e8561b13b38d492';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 let currentItem;
+let movieGenres = [];
+let tvGenres = [];
 
 // Track pagination for each category
 const pageTrackers = {
@@ -20,6 +22,25 @@ const collapseStates = {
   tagalog: true,
   netflix: true
 };
+
+// Current category and page for "Show More" modal
+let currentMoreCategory = null;
+let morePage = 1;
+
+async function fetchGenres() {
+  try {
+    const [movieRes, tvRes] = await Promise.all([
+      fetch(`${BASE_URL}/genre/movie/list?api_key=${API_KEY}`),
+      fetch(`${BASE_URL}/genre/tv/list?api_key=${API_KEY}`)
+    ]);
+    const movieData = await movieRes.json();
+    const tvData = await tvRes.json();
+    movieGenres = movieData.genres || [];
+    tvGenres = tvData.genres || [];
+  } catch (error) {
+    console.error('Error fetching genres:', error);
+  }
+}
 
 async function fetchTrending(type, page = 1) {
   try {
@@ -63,27 +84,37 @@ async function fetchTagalogMovies(page = 1) {
 
 async function fetchNetflixContent(page = 1) {
   try {
-    // Fetch Netflix movies
     const movieRes = await fetch(
       `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
     const movieData = await movieRes.json();
     const movies = movieData.results || [];
 
-    // Fetch Netflix TV shows
     const tvRes = await fetch(
       `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
     const tvData = await tvRes.json();
     const tvShows = tvData.results || [];
 
-    // Combine and sort by popularity (descending)
     const combined = [...movies, ...tvShows].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     return { results: combined.slice(0, 20), total_pages: Math.min(movieData.total_pages || 1, tvData.total_pages || 1) };
   } catch (error) {
     console.error('Error fetching Netflix content:', error);
     return { results: [], total_pages: 1 };
   }
+}
+
+function getGenres(item) {
+  const genres = item.media_type === 'tv' || item.first_air_date ? tvGenres : movieGenres;
+  return item.genre_ids
+    .map(id => genres.find(genre => genre.id === id)?.name)
+    .filter(name => name)
+    .join(', ') || 'Unknown';
+}
+
+function getYear(item) {
+  const date = item.release_date || item.first_air_date;
+  return date ? new Date(date).getFullYear() : 'Unknown';
 }
 
 function displayBanner(item) {
@@ -105,18 +136,54 @@ function displayList(items, containerId, append = false) {
   }
 
   items.forEach(item => {
-    if (!item.poster_path) return; // Skip items without posters
-    const img = document.createElement('img');
-    img.src = `${IMG_URL}${item.poster_path}`;
-    img.alt = (item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '');
-    img.onclick = () => showDetails(item);
-    container.appendChild(img);
+    if (!item.poster_path) return;
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'list-item';
+    itemDiv.innerHTML = `
+      <img src="${IMG_URL}${item.poster_path}" alt="${(item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '')}">
+      <div class="item-info">
+        <p class="item-year">${getYear(item)}</p>
+        <p class="item-genres">${getGenres(item)}</p>
+      </div>
+    `;
+    itemDiv.querySelector('img').onclick = () => showDetails(item);
+    container.appendChild(itemDiv);
   });
 
-  // Hide global empty message if any list has content
   if (items.length > 0) {
     emptyMessage.style.display = 'none';
   }
+}
+
+function displayMoreList(items, append = false) {
+  const container = document.getElementById('more-grid');
+  const emptyMessage = document.getElementById('empty-more-message');
+  
+  if (!append) {
+    container.innerHTML = '';
+  }
+  
+  if (items.length === 0 && !append) {
+    emptyMessage.style.display = 'block';
+    return;
+  }
+
+  items.forEach(item => {
+    if (!item.poster_path) return;
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'grid-item';
+    itemDiv.innerHTML = `
+      <img src="${IMG_URL}${item.poster_path}" alt="${(item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '')}">
+      <div class="item-info">
+        <p class="item-year">${getYear(item)}</p>
+        <p class="item-genres">${getGenres(item)}</p>
+      </div>
+    `;
+    itemDiv.querySelector('img').onclick = () => showDetails(item);
+    container.appendChild(itemDiv);
+  });
+
+  emptyMessage.style.display = 'none';
 }
 
 function showDetails(item) {
@@ -162,6 +229,57 @@ function closeSearchModal() {
   document.getElementById('search-results').innerHTML = '';
 }
 
+function openMoreModal(category) {
+  currentMoreCategory = category;
+  morePage = 1;
+  document.getElementById('more-modal-title').textContent = 
+    category === 'movies' ? 'Trending Movies' :
+    category === 'tvshows' ? 'Trending TV Shows' :
+    category === 'anime' ? 'Trending Anime' :
+    category === 'tagalog' ? 'Trending Tagalog Movies' : 'Trending Netflix';
+  document.getElementById('more-modal').style.display = 'flex';
+  document.getElementById('more-loading').style.display = 'block';
+  fetchMore(category);
+}
+
+function closeMoreModal() {
+  document.getElementById('more-modal').style.display = 'none';
+  document.getElementById('more-grid').innerHTML = '';
+  document.getElementById('more-loading').style.display = 'none';
+  document.getElementById('empty-more-message').style.display = 'none';
+  currentMoreCategory = null;
+  morePage = 1;
+}
+
+async function fetchMore(category) {
+  const loading = document.getElementById('more-loading');
+  loading.style.display = 'block';
+  let results = [];
+  let total_pages = 1;
+
+  if (category === 'movies') {
+    ({ results, total_pages } = await fetchTrending('movie', morePage));
+  } else if (category === 'tvshows') {
+    ({ results, total_pages } = await fetchTrending('tv', morePage));
+  } else if (category === 'anime') {
+    ({ results, total_pages } = await fetchTrendingAnime(morePage));
+  } else if (category === 'tagalog') {
+    ({ results, total_pages } = await fetchTagalogMovies(morePage));
+  } else if (category === 'netflix') {
+    ({ results, total_pages } = await fetchNetflixContent(morePage));
+  }
+
+  displayMoreList(results, morePage > 1);
+  morePage++;
+
+  if (morePage > total_pages) {
+    document.getElementById('more-loading').style.display = 'none';
+    document.getElementById('empty-more-message').style.display = 'block';
+  } else {
+    document.getElementById('more-loading').style.display = 'none';
+  }
+}
+
 async function searchTMDB() {
   const query = document.getElementById('search-input').value;
   if (!query.trim()) {
@@ -192,39 +310,6 @@ async function searchTMDB() {
   }
 }
 
-async function fetchMore(category) {
-  const button = document.querySelector(`.show-more[data-category="${category}"]`);
-  button.disabled = true; // Disable button while fetching
-  let results = [];
-  let total_pages = 1;
-
-  if (category === 'movies') {
-    ({ results, total_pages } = await fetchTrending('movie', ++pageTrackers.movies));
-  } else if (category === 'tvshows') {
-    ({ results, total_pages } = await fetchTrending('tv', ++pageTrackers.tvshows));
-  } else if (category === 'anime') {
-    ({ results, total_pages } = await fetchTrendingAnime(++pageTrackers.anime));
-  } else if (category === 'tagalog') {
-    ({ results, total_pages } = await fetchTagalogMovies(++pageTrackers.tagalog));
-  } else if (category === 'netflix') {
-    ({ results, total_pages } = await fetchNetflixContent(++pageTrackers.netflix));
-  }
-
-  const containerId = category === 'movies' ? 'movies-list' :
-                     category === 'tvshows' ? 'tvshows-list' :
-                     category === 'anime' ? 'anime-list' :
-                     category === 'tagalog' ? 'tagalog-movies-list' : 'netflix-list';
-
-  displayList(results, containerId, true); // Append new items
-
-  // Re-enable button if there are more pages
-  if (pageTrackers[category] < total_pages) {
-    button.disabled = false;
-  } else {
-    button.style.display = 'none'; // Hide button if no more pages
-  }
-}
-
 function toggleCategory(category) {
   const list = document.getElementById(
     category === 'movies' ? 'movies-list' :
@@ -242,6 +327,7 @@ async function init() {
   document.getElementById('empty-message').style.display = 'block';
 
   try {
+    await fetchGenres(); // Fetch genres first
     const [movies, tvShows, anime, tagalogMovies, netflixContent] = await Promise.all([
       fetchTrending('movie'),
       fetchTrending('tv'),
@@ -261,30 +347,23 @@ async function init() {
     displayList(tagalogMovies.results, 'tagalog-movies-list');
     displayList(netflixContent.results, 'netflix-list');
 
-    // Add toggle event listeners to category titles
     document.querySelectorAll('.row h2').forEach(header => {
       header.addEventListener('click', () => toggleCategory(header.dataset.category));
     });
 
-    // Add click event listeners to Show More buttons
     document.querySelectorAll('.show-more').forEach(button => {
-      button.addEventListener('click', () => fetchMore(button.dataset.category));
+      button.addEventListener('click', () => openMoreModal(button.dataset.category));
     });
 
-    // Set up IntersectionObserver for infinite scroll
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const category = entry.target.dataset.category;
-          if (!collapseStates[category]) return; // Skip if collapsed
-          fetchMore(category);
+        if (entry.isIntersecting && currentMoreCategory) {
+          fetchMore(currentMoreCategory);
         }
       });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.show-more').forEach(button => {
-      observer.observe(button);
-    });
+    observer.observe(document.getElementById('more-loading'));
   } catch (error) {
     console.error('Error initializing:', error);
     document.getElementById('empty-message').textContent = 'Failed to load content. Please refresh the page.';
