@@ -145,6 +145,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   gap: 15px;
   margin-bottom: 15px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .filters label {
@@ -160,18 +161,28 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   min-width: 150px;
 }
 
-.vertical-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
+.search-button {
+  background: #e50914; /* Netflix-style red */
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.3s;
+}
+
+.search-button:hover {
+  background: #f40612;
 }
 
 .list {
   display: flex;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.list img, .vertical-list img {
+.list img {
   width: 150px;
   margin-right: 10px;
   cursor: pointer;
@@ -179,7 +190,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   transition: transform 0.3s ease, filter 0.3s ease;
 }
 
-.list img:hover, .vertical-list img:hover {
+.list img:hover {
   transform: scale(1.05);
   filter: brightness(1.2);
   z-index: 2;
@@ -189,7 +200,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: #e50914; /* Netflix-style red */
+  background: #e50914;
   color: #fff;
   border: none;
   border-radius: 50%;
@@ -253,11 +264,6 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 .modal-text {
   flex: 1;
   text-align: left;
-}
-
-.modal img {
-  width: 25%;
-  border-radius: 5px;
 }
 
 .stars { color: gold; }
@@ -418,14 +424,26 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   .filters {
     flex-direction: column;
     gap: 10px;
+    align-items: stretch;
   }
 
   .filters select {
     width: 100%;
   }
 
-  .vertical-list {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  .search-button {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .list img {
+    width: 120px;
   }
 
   .modal-body {
@@ -438,16 +456,6 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
   .modal-text {
     text-align: center;
-  }
-
-  .list {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .list img {
-    width: 120px;
   }
 
   .episode-list {
