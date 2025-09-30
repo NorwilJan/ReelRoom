@@ -19,6 +19,7 @@ let slideshowInterval;
 async function fetchTrending(type, page = 1) {
   try {
     const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
+    if (!res.ok) throw new Error('Network response was not ok');
     const data = await res.json();
     return data.results || [];
   } catch (error) {
@@ -31,6 +32,7 @@ async function fetchTrendingAnime(page = 1) {
   let allResults = [];
   try {
     const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}&page=${page}`);
+    if (!res.ok) throw new Error('Network response was not ok');
     const data = await res.json();
     const filtered = data.results.filter(item =>
       item.original_language === 'ja' && item.genre_ids.includes(16)
@@ -47,6 +49,7 @@ async function fetchTagalogMovies(page = 1) {
     const res = await fetch(
       `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_original_language=tl`
     );
+    if (!res.ok) throw new Error('Network response was not ok');
     const data = await res.json();
     return data.results || [];
   } catch (error) {
@@ -60,12 +63,14 @@ async function fetchNetflixContent(page = 1) {
     const movieRes = await fetch(
       `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
+    if (!movieRes.ok) throw new Error('Network response was not ok');
     const movieData = await movieRes.json();
     const movies = movieData.results || [];
 
     const tvRes = await fetch(
       `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
+    if (!tvRes.ok) throw new Error('Network response was not ok');
     const tvData = await tvRes.json();
     const tvShows = tvData.results || [];
 
@@ -80,6 +85,7 @@ async function fetchNetflixContent(page = 1) {
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
     const res = await fetch(`${BASE_URL}/tv/${tvId}?api_key=${API_KEY}`);
+    if (!res.ok) throw new Error('Network response was not ok');
     const data = await res.json();
     return data.seasons || [];
   } catch (error) {
@@ -91,6 +97,7 @@ async function fetchSeasonsAndEpisodes(tvId) {
 async function fetchEpisodes(tvId, seasonNumber) {
   try {
     const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`);
+    if (!res.ok) throw new Error('Network response was not ok');
     const data = await res.json();
     return data.episodes || [];
   } catch (error) {
@@ -106,12 +113,12 @@ function displaySlides() {
   dotsContainer.innerHTML = '';
 
   slideshowItems.forEach((item, index) => {
-    if (!item.backdrop_path) return;
+    if (!item.backdrop_path || (!item.title && !item.name)) return;
     const slide = document.createElement('div');
     slide.className = 'slide';
     slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
     const description = item.overview ? item.overview.substring(0, 150) + (item.overview.length > 150 ? '...' : '') : 'No description available.';
-    const rating = '★'.repeat(Math.round((item.vote_average || 0) / 2));
+    const rating = item.vote_average ? '★'.repeat(Math.round(item.vote_average / 2)) : 'No rating';
     slide.innerHTML = `
       <div class="slide-content">
         <h1>${item.title || item.name}</h1>
@@ -132,12 +139,17 @@ function displaySlides() {
     dotsContainer.appendChild(dot);
   });
 
+  if (slidesContainer.children.length === 0) {
+    slidesContainer.innerHTML = '<div class="slide-content"><h1>No featured content available</h1></div>';
+  }
+
   showSlide();
 }
 
 function showSlide() {
   const slides = document.querySelectorAll('.slide');
   const dots = document.querySelectorAll('.dot');
+  if (slides.length === 0) return;
   slides.forEach((slide, index) => {
     slide.style.transform = `translateX(-${currentSlide * 100}%)`;
   });
@@ -146,13 +158,15 @@ function showSlide() {
   });
   clearInterval(slideshowInterval);
   slideshowInterval = setInterval(() => {
-    currentSlide = (currentSlide + 1) % slideshowItems.length;
+    currentSlide = (currentSlide + 1) % slides.length;
     showSlide();
   }, 5000);
 }
 
 function changeSlide(n) {
-  currentSlide = (currentSlide + n + slideshowItems.length) % slideshowItems.length;
+  const slides = document.querySelectorAll('.slide');
+  if (slides.length === 0) return;
+  currentSlide = (currentSlide + n + slides.length) % slides.length;
   showSlide();
 }
 
@@ -184,9 +198,9 @@ async function showDetails(item) {
   currentSeason = 1;
   currentEpisode = 1;
   document.getElementById('modal-title').textContent = item.title || item.name;
-  document.getElementById('modal-description').textContent = item.overview;
-  document.getElementById('modal-image').src = `${IMG_URL}${item.poster_path}`;
-  document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
+  document.getElementById('modal-description').textContent = item.overview || 'No description available.';
+  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : '';
+  document.getElementById('modal-rating').innerHTML = item.vote_average ? '★'.repeat(Math.round(item.vote_average / 2)) : 'No rating';
   document.getElementById('server').value = 'player.videasy.net';
   
   const seasonSelector = document.getElementById('season-selector');
@@ -228,7 +242,7 @@ async function loadEpisodes() {
     const img = episode.still_path
       ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number}" />`
       : '';
-    div.innerHTML = `${img}<span>Episode ${episode.episode_number}: ${episode.name}</span>`;
+    div.innerHTML = `${img}<span>Episode ${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
     div.onclick = () => {
       currentEpisode = episode.episode_number;
       changeServer();
@@ -286,6 +300,7 @@ async function searchTMDB() {
 
   try {
     const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
+    if (!res.ok) throw new Error('Network response was not ok');
     const data = await res.json();
 
     const container = document.getElementById('search-results');
@@ -294,7 +309,7 @@ async function searchTMDB() {
       if (!item.poster_path) return;
       const img = document.createElement('img');
       img.src = `${IMG_URL}${item.poster_path}`;
-      img.alt = item.title || item.name;
+      img.alt = (item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '');
       img.onclick = () => {
         closeSearchModal();
         showDetails(item);
@@ -351,17 +366,17 @@ async function init() {
     ]);
 
     slideshowItems = [
-      ...movies.slice(0, 3),
-      tvShows[0] || {},
-      anime[0] || {},
-      tagalogMovies[0] || {},
-      netflixContent[0] || {}
-    ].filter(item => item.backdrop_path && (item.title || item.name));
+      ...movies.slice(0, 3).filter(item => item.backdrop_path && (item.title || item.name)),
+      ...(tvShows[0] && tvShows[0].backdrop_path && (tvShows[0].title || tvShows[0].name) ? [tvShows[0]] : []),
+      ...(anime[0] && anime[0].backdrop_path && (anime[0].title || anime[0].name) ? [anime[0]] : []),
+      ...(tagalogMovies[0] && tagalogMovies[0].backdrop_path && (tagalogMovies[0].title || tagalogMovies[0].name) ? [tagalogMovies[0]] : []),
+      ...(netflixContent[0] && netflixContent[0].backdrop_path && (netflixContent[0].title || netflixContent[0].name) ? [netflixContent[0]] : [])
+    ];
 
     if (slideshowItems.length > 0) {
       displaySlides();
     } else {
-      document.getElementById('slides').innerHTML = '<h1>No featured content available</h1>';
+      document.getElementById('slides').innerHTML = '<div class="slide-content"><h1>No featured content available</h1></div>';
     }
 
     displayList(movies, 'movies-list');
