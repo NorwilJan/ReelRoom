@@ -2,8 +2,8 @@ const API_KEY = '40f1982842db35042e8561b13b38d492';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 let currentItem;
-let currentSeason = 1;
-let currentEpisode = 1;
+let currentSeason = 1; // Default season
+let currentEpisode = 1; // Default episode
 let currentPages = {
   movies: 1,
   tvShows: 1,
@@ -12,9 +12,6 @@ let currentPages = {
   netflix: 1
 };
 let isLoading = false;
-let slideshowItems = [];
-let currentSlide = 0;
-let slideshowInterval;
 
 async function fetchTrending(type, page = 1) {
   try {
@@ -99,53 +96,9 @@ async function fetchEpisodes(tvId, seasonNumber) {
   }
 }
 
-function displaySlides() {
-  const slidesContainer = document.getElementById('slides');
-  const dotsContainer = document.getElementById('dots');
-  slidesContainer.innerHTML = '';
-  dotsContainer.innerHTML = '';
-
-  slideshowItems.forEach((item, index) => {
-    if (!item.backdrop_path) return;
-    const slide = document.createElement('div');
-    slide.className = 'slide';
-    slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
-    slide.innerHTML = `<h1>${item.title || item.name}</h1>`;
-    slide.onclick = () => showDetails(item);
-    slidesContainer.appendChild(slide);
-
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    if (index === currentSlide) dot.className += ' active';
-    dot.onclick = () => {
-      currentSlide = index;
-      showSlide();
-    };
-    dotsContainer.appendChild(dot);
-  });
-
-  showSlide();
-}
-
-function showSlide() {
-  const slides = document.querySelectorAll('.slide');
-  const dots = document.querySelectorAll('.dot');
-  slides.forEach((slide, index) => {
-    slide.style.transform = `translateX(-${currentSlide * 100}%)`;
-  });
-  dots.forEach((dot, index) => {
-    dot.className = index === currentSlide ? 'dot active' : 'dot';
-  });
-  clearInterval(slideshowInterval);
-  slideshowInterval = setInterval(() => {
-    currentSlide = (currentSlide + 1) % slideshowItems.length;
-    showSlide();
-  }, 5000); // Change slide every 5 seconds
-}
-
-function changeSlide(n) {
-  currentSlide = (currentSlide + n + slideshowItems.length) % slideshowItems.length;
-  showSlide();
+function displayBanner(item) {
+  document.getElementById('banner').style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
+  document.getElementById('banner-title').textContent = item.title || item.name;
 }
 
 function displayList(items, containerId) {
@@ -190,7 +143,7 @@ async function showDetails(item) {
     const seasonSelect = document.getElementById('season');
     seasonSelect.innerHTML = '';
     seasons.forEach(season => {
-      if (season.season_number === 0) return;
+      if (season.season_number === 0) return; // Skip special seasons
       const option = document.createElement('option');
       option.value = season.season_number;
       option.textContent = `Season ${season.season_number}`;
@@ -324,7 +277,7 @@ async function loadMoreContent() {
 
 function handleScroll() {
   const scrollPosition = window.innerHeight + window.scrollY;
-  const threshold = document.body.offsetHeight - 200;
+  const threshold = document.body.offsetHeight - 200; // Load 200px before bottom
   if (scrollPosition >= threshold && !isLoading) {
     loadMoreContent();
   }
@@ -342,19 +295,9 @@ async function init() {
       fetchNetflixContent(currentPages.netflix)
     ]);
 
-    // Select top 3 trending movies and one from each other category
-    slideshowItems = [
-      ...movies.slice(0, 3), // Top 3 movies
-      tvShows[0] || {}, // First TV show
-      anime[0] || {}, // First anime
-      tagalogMovies[0] || {}, // First Tagalog movie
-      netflixContent[0] || {} // First Netflix content
-    ].filter(item => item.backdrop_path && (item.title || item.name)); // Ensure valid items
-
-    if (slideshowItems.length > 0) {
-      displaySlides();
-    } else {
-      document.getElementById('slides').innerHTML = '<h1>No featured content available</h1>';
+    const bannerItem = movies[Math.floor(Math.random() * movies.length)] || movies[0];
+    if (bannerItem) {
+      displayBanner(bannerItem);
     }
 
     displayList(movies, 'movies-list');
