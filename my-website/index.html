@@ -14,10 +14,10 @@
 
 <body>
   <div class="navbar">
-    <img src="logo.png" alt="LOGO HERE" />
+    <img src="logo.png" alt="Website Logo" />
     <div class="nav-links">
       <a href="index.html">Home</a>
-      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" />
+      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" aria-label="Search movies and shows" />
     </div>
   </div>
 
@@ -26,40 +26,40 @@
   </div>
 
   <div class="row">
-    <h2 data-category="movies">Trending Movies</h2>
+    <h2 data-category="movies" aria-expanded="true">Trending Movies <span class="chevron">▼</span></h2>
     <div class="list" id="movies-list"></div>
-    <button class="show-more" data-category="movies">Show More</button>
+    <button class="show-more" data-category="movies" aria-label="Show more trending movies">Show More</button>
   </div>
 
   <div class="row">
-    <h2 data-category="tvshows">Trending TV Shows</h2>
+    <h2 data-category="tvshows" aria-expanded="true">Trending TV Shows <span class="chevron">▼</span></h2>
     <div class="list" id="tvshows-list"></div>
-    <button class="show-more" data-category="tvshows">Show More</button>
+    <button class="show-more" data-category="tvshows" aria-label="Show more trending TV shows">Show More</button>
   </div>
 
   <div class="row">
-    <h2 data-category="anime">Trending Anime</h2>
+    <h2 data-category="anime" aria-expanded="true">Trending Anime <span class="chevron">▼</span></h2>
     <div class="list" id="anime-list"></div>
-    <button class="show-more" data-category="anime">Show More</button>
+    <button class="show-more" data-category="anime" aria-label="Show more trending anime">Show More</button>
   </div>
 
   <div class="row">
-    <h2 data-category="tagalog">Trending Tagalog Movies</h2>
+    <h2 data-category="tagalog" aria-expanded="true">Trending Tagalog Movies <span class="chevron">▼</span></h2>
     <div class="list" id="tagalog-movies-list"></div>
-    <button class="show-more" data-category="tagalog">Show More</button>
+    <button class="show-more" data-category="tagalog" aria-label="Show more trending Tagalog movies">Show More</button>
   </div>
 
   <div class="row">
-    <h2 data-category="netflix">Trending Netflix</h2>
+    <h2 data-category="netflix" aria-expanded="true">Trending Netflix <span class="chevron">▼</span></h2>
     <div class="list" id="netflix-list"></div>
-    <button class="show-more" data-category="netflix">Show More</button>
+    <button class="show-more" data-category="netflix" aria-label="Show more trending Netflix content">Show More</button>
   </div>
 
   <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">No content available at the moment. Try searching!</div>
 
-  <div class="modal" id="modal">
+  <div class="modal" id="modal" role="dialog" aria-labelledby="modal-title">
     <div class="modal-content">
-      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+      <span class="close" onclick="closeModal()" aria-label="Close details modal">&times;</span>
       <div class="modal-body">
         <img id="modal-image" src="" alt="" />
         <div class="modal-text">
@@ -68,23 +68,33 @@
           <p id="modal-description"></p>
         </div>
       </div>
-      
       <div class="server-selector">
         <label for="server">Change Server:</label>
-        <select id="server" onchange="changeServer()">
+        <select id="server" onchange="changeServer()" aria-label="Select streaming server">
           <option value="vidsrc.cc">Vidsrc.cc</option>
           <option value="vidsrc.me">Vidsrc.me</option>
           <option value="player.videasy.net">Player.Videasy.net</option>
         </select>
       </div>
-      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen title="Video player"></iframe>
     </div>
   </div>
 
-  <div class="search-modal" id="search-modal">
-    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" />
+  <div class="search-modal" id="search-modal" role="dialog" aria-labelledby="search-input">
+    <span class="close" onclick="closeSearchModal()" aria-label="Close search modal">&times;</span>
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" aria-label="Search movies and shows" />
     <div class="results" id="search-results"></div>
+  </div>
+
+  <div class="more-modal" id="more-modal" role="dialog" aria-labelledby="more-modal-title">
+    <span class="close" onclick="closeMoreModal()" aria-label="Close more content modal">&times;</span>
+    <h2 id="more-modal-title"></h2>
+    <div class="more-grid" id="more-grid"></div>
+    <div id="more-loading" style="display: none; text-align: center; color: #ccc; padding: 20px;">
+      <i class="fas fa-spinner fa-spin"></i> Loading...
+    </div>
+    <div id="empty-more-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">No more content available.</div>
+    <button id="back-to-top" style="display: none;" onclick="document.getElementById('more-grid').scrollTo({top: 0, behavior: 'smooth'})" aria-label="Scroll back to top">Back to Top</button>
   </div>
 
   <footer class="footer">
