@@ -32,21 +32,6 @@
   </div>
 
   <div class="row">
-    <h2>All Movies</h2>
-    <div class="filters">
-      <label for="genre-filter">Genre:</label>
-      <select id="genre-filter" onchange="loadAllMovies(1)">
-        <option value="">All Genres</option>
-      </select>
-      <label for="year-filter">Year:</label>
-      <select id="year-filter" onchange="loadAllMovies(1)">
-        <option value="">All Years</option>
-      </select>
-    </div>
-    <div class="vertical-list" id="all-movies-list"></div>
-  </div>
-
-  <div class="row">
     <h2>Trending Movies</h2>
     <div class="list" id="movies-list"></div>
   </div>
@@ -69,6 +54,22 @@
   <div class="row">
     <h2>Trending Netflix</h2>
     <div class="list" id="netflix-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>All Movies</h2>
+    <div class="filters">
+      <label for="genre-filter">Genre:</label>
+      <select id="genre-filter">
+        <option value="">All Genres</option>
+      </select>
+      <label for="year-filter">Year:</label>
+      <select id="year-filter">
+        <option value="">All Years</option>
+      </select>
+      <button class="search-button" onclick="loadAllMovies(1)">Search</button>
+    </div>
+    <div class="list" id="all-movies-list"></div>
   </div>
 
   <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">No content available at the moment. Try searching!</div>
