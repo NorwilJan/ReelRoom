@@ -9,12 +9,43 @@ let currentPages = {
   tvShows: 1,
   anime: 1,
   tagalogMovies: 1,
-  netflix: 1
+  netflix: 1,
+  allMovies: 1
 };
 let isLoading = false;
 let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
+let genres = [];
+
+async function fetchGenres() {
+  try {
+    const res = await fetch(`${BASE_URL}/genre/movie/list?api_key=${API_KEY}`);
+    if (!res.ok) throw new Error('Network response was not ok');
+    const data = await res.json();
+    return data.genres || [];
+  } catch (error) {
+    console.error('Error fetching genres:', error);
+    return [];
+  }
+}
+
+async function fetchAllMovies(page = 1) {
+  try {
+    const genre = document.getElementById('genre-filter').value;
+    const year = document.getElementById('year-filter').value;
+    let url = `${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`;
+    if (genre) url += `&with_genres=${genre}`;
+    if (year) url += `&primary_release_year=${year}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Network response was not ok');
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Error fetching all movies:', error);
+    return [];
+  }
+}
 
 async function fetchTrending(type, page = 1) {
   try {
@@ -106,6 +137,29 @@ async function fetchEpisodes(tvId, seasonNumber) {
   }
 }
 
+function populateFilters() {
+  const genreFilter = document.getElementById('genre-filter');
+  genres.forEach(genre => {
+    const option = document.createElement('option');
+    option.value = genre.id;
+    option.textContent = genre.name;
+    genreFilter.appendChild(option);
+  });
+
+  const yearFilter = document.getElementById('year-filter');
+  const currentYear = new Date().getFullYear();
+  for (let year = currentYear; year >= currentYear - 50; year--) {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    yearFilter.appendChild(option);
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function displaySlides() {
   const slidesContainer = document.getElementById('slides');
   const dotsContainer = document.getElementById('dots');
@@ -126,12 +180,21 @@ function displaySlides() {
         <div class="slide-rating">${rating}</div>
       </div>
     `;
+    slide.setAttribute('role', 'button');
+    slide.setAttribute('aria-label', `View details for ${item.title || item.name}`);
+    slide.tabIndex = 0;
     slide.onclick = () => showDetails(item);
+    slide.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') showDetails(item);
+    };
     slidesContainer.appendChild(slide);
 
     const dot = document.createElement('span');
     dot.className = 'dot';
     if (index === currentSlide) dot.className += ' active';
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', `Go to slide ${index + 1}`);
+    dot.tabIndex = 0;
     dot.onclick = () => {
       currentSlide = index;
       showSlide();
@@ -142,6 +205,9 @@ function displaySlides() {
   if (slidesContainer.children.length === 0) {
     slidesContainer.innerHTML = '<div class="slide-content"><h1>No featured content available</h1></div>';
   }
+
+  slidesContainer.onmouseenter = () => clearInterval(slideshowInterval);
+  slidesContainer.onmouseleave = () => showSlide();
 
   showSlide();
 }
@@ -164,232 +230,158 @@ function showSlide() {
 }
 
 function changeSlide(n) {
-  const slides = document.querySelectorAll('.slide');
-  if (slides.length === 0) return;
-  currentSlide = (currentSlide + n + slides.length) % slides.length;
-  showSlide();
-}
+  const slides =Thông tin chi tiết về việc thực hiện yêu cầu của bạn:
 
-function displayList(items, containerId) {
-  const container = document.getElementById(containerId);
-  const emptyMessage = document.getElementById('empty-message');
-  
-  if (items.length === 0 && container.innerHTML === '') {
-    container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
-    return;
-  }
+### Yêu cầu
+Bạn muốn sửa đổi danh mục **"All Movies"** trên trang web https://reelroom.pages.dev/ để:
+1. Cho phép người dùng chọn **thể loại** (genre) và **năm phát hành** (year), sau đó nhấn nút **"Search"** để lọc danh sách phim, thay vì cập nhật tự động.
+2. Đảm bảo phim được sắp xếp theo **độ phổ biến** (popularity, trending first), như hiện tại với endpoint `/discover/movie` và `sort_by=popularity.desc`.
+3. Di chuyển danh mục "All Movies" xuống **cuối cùng**, sau danh mục "Trending Netflix".
+4. Sử dụng giao diện người dùng (UI) giống các danh mục khác (cuộn ngang thay vì cuộn dọc vô hạn như trước).
+5. Thêm nút **"Search"** để kích hoạt lọc phim theo thể loại và năm.
+6. Giữ nguyên **slideshow banner** (với tiêu đề, mô tả, xếp hạng) và khả năng phát video (qua modal với các server `vidsrc.cc`, `vidsrc.me`, `player.videasy.net`).
+7. Giữ nút **"Back to Top"** để hỗ trợ cuộn dài.
 
-  items.forEach(item => {
-    if (!item.poster_path) return;
-    const img = document.createElement('img');
-    img.src = `${IMG_URL}${item.poster_path}`;
-    img.alt = (item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '');
-    img.onclick = () => showDetails(item);
-    container.appendChild(img);
-  });
+### Cách tiếp cận
+- **HTML**: Di chuyển phần "All Movies" xuống sau "Trending Netflix" và thêm nút "Search" vào bộ lọc.
+- **CSS**: Thêm kiểu cho nút "Search", sử dụng `.list` thay vì `.vertical-list` cho cuộn ngang, đảm bảo giao diện nhất quán.
+- **JavaScript**:
+  - Chỉ gọi `loadAllMovies` khi nhấn nút "Search" thay vì `onchange` trên dropdown.
+  - Giữ `sort_by=popularity.desc` trong `fetchAllMovies` để ưu tiên phim trending.
+  - Cập nhật logic cuộn vô hạn để hỗ trợ cuộn ngang cho "All Movies".
+- **Tích hợp**: Đảm bảo slideshow, khả năng phát video, và nút "Back to Top" không bị ảnh hưởng.
+- **Triển khai**: Cung cấp hướng dẫn triển khai trên Cloudflare Pages.
 
-  if (items.length > 0) {
-    emptyMessage.style.display = 'none';
-  }
-}
+### Mã cập nhật
+Dưới đây là mã HTML, CSS, và JavaScript được cập nhật để đáp ứng các yêu cầu, dựa trên phiên bản trước đó.
 
-async function showDetails(item) {
-  currentItem = item;
-  currentSeason = 1;
-  currentEpisode = 1;
-  document.getElementById('modal-title').textContent = item.title || item.name;
-  document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : '';
-  document.getElementById('modal-rating').innerHTML = item.vote_average ? '★'.repeat(Math.round(item.vote_average / 2)) : 'No rating';
-  document.getElementById('server').value = 'player.videasy.net';
-  
-  const seasonSelector = document.getElementById('season-selector');
-  const episodeList = document.getElementById('episode-list');
-  
-  if (item.media_type === 'tv' || !item.title) {
-    seasonSelector.style.display = 'block';
-    const seasons = await fetchSeasonsAndEpisodes(item.id);
-    const seasonSelect = document.getElementById('season');
-    seasonSelect.innerHTML = '';
-    seasons.forEach(season => {
-      if (season.season_number === 0) return;
-      const option = document.createElement('option');
-      option.value = season.season_number;
-      option.textContent = `Season ${season.season_number}`;
-      seasonSelect.appendChild(option);
-    });
-    await loadEpisodes();
-  } else {
-    seasonSelector.style.display = 'none';
-    episodeList.innerHTML = '';
-  }
-  
-  changeServer();
-  document.getElementById('modal').style.display = 'flex';
-}
+#### HTML (`index.html`)
+Di chuyển "All Movies" xuống cuối và thêm nút "Search".
 
-async function loadEpisodes() {
-  if (!currentItem || (currentItem.media_type !== 'tv' && currentItem.title)) return;
-  const seasonNumber = document.getElementById('season').value;
-  currentSeason = seasonNumber;
-  const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
-  const episodeList = document.getElementById('episode-list');
-  episodeList.innerHTML = '';
-  
-  episodes.forEach(episode => {
-    const div = document.createElement('div');
-    div.className = 'episode-item';
-    const img = episode.still_path
-      ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number}" />`
-      : '';
-    div.innerHTML = `${img}<span>Episode ${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
-    div.onclick = () => {
-      currentEpisode = episode.episode_number;
-      changeServer();
-    };
-    episodeList.appendChild(div);
-  });
-}
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ReelRoom</title>
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="preload" href="css/home.css" as="style">
+  <link rel="preload" href="js/home.js" as="script">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script defer src="js/home.js"></script>
+</head>
 
-function changeServer() {
-  if (!currentItem) return;
-  const server = document.getElementById('server').value;
-  const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
-  let embedURL = '';
+<body>
+  <div class="navbar">
+    <img src="logo.png" alt="ReelRoom Logo" />
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" />
+    </div>
+  </div>
 
-  if (server === 'vidsrc.cc') {
-    embedURL = type === 'tv'
-      ? `https://vidsrc.cc/v2/embed/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
-      : `https://vidsrc.cc/v2/embed/${type}/${currentItem.id}`;
-  } else if (server === 'vidsrc.me') {
-    embedURL = type === 'tv'
-      ? `https://vidsrc.net/embed/tv/?tmdb=${currentItem.id}&season=${currentSeason}&episode=${currentEpisode}`
-      : `https://vidsrc.net/embed/${type}/?tmdb=${currentItem.id}`;
-  } else if (server === 'player.videasy.net') {
-    embedURL = type === 'tv'
-      ? `https://player.videasy.net/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
-      : `https://player.videasy.net/${type}/${currentItem.id}`;
-  }
+  <div class="banner" id="banner">
+    <div class="slideshow-container">
+      <div class="slides" id="slides"></div>
+      <div class="loading" id="slideshow-loading">Loading...</div>
+      <a class="prev" onclick="changeSlide(-1)" role="button" aria-label="Previous slide">&#10094;</a>
+      <a class="next" onclick="changeSlide(1)" role="button" aria-label="Next slide">&#10095;</a>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
 
-  document.getElementById('modal-video').src = embedURL;
-}
+  <div class="row">
+    <h2>Trending Movies</h2>
+    <div class="list" id="movies-list"></div>
+  </div>
 
-function closeModal() {
-  document.getElementById('modal').style.display = 'none';
-  document.getElementById('modal-video').src = '';
-  document.getElementById('episode-list').innerHTML = '';
-  document.getElementById('season-selector').style.display = 'none';
-}
+  <div class="row">
+    <h2>Trending TV Shows</h2>
+    <div class="list" id="tvshows-list"></div>
+  </div>
 
-function openSearchModal() {
-  document.getElementById('search-modal').style.display = 'flex';
-  document.getElementById('search-input').focus();
-}
+  <div class="row">
+    <h2>Trending Anime</h2>
+    <div class="list" id="anime-list"></div>
+  </div>
 
-function closeSearchModal() {
-  document.getElementById('search-modal').style.display = 'none';
-  document.getElementById('search-results').innerHTML = '';
-}
+  <div class="row">
+    <h2>Trending Tagalog Movies</h2>
+    <div class="list" id="tagalog-movies-list"></div>
+  </div>
 
-async function searchTMDB() {
-  const query = document.getElementById('search-input').value;
-  if (!query.trim()) {
-    document.getElementById('search-results').innerHTML = '';
-    return;
-  }
+  <div class="row">
+    <h2>Trending Netflix</h2>
+    <div class="list" id="netflix-list"></div>
+  </div>
 
-  try {
-    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
-    if (!res.ok) throw new Error('Network response was not ok');
-    const data = await res.json();
+  <div class="row">
+    <h2>All Movies</h2>
+    <div class="filters">
+      <label for="genre-filter">Genre:</label>
+      <select id="genre-filter">
+        <option value="">All Genres</option>
+      </select>
+      <label for="year-filter">Year:</label>
+      <select id="year-filter">
+        <option value="">All Years</option>
+      </select>
+      <button class="search-button" onclick="loadAllMovies(1)">Search</button>
+    </div>
+    <div class="list" id="all-movies-list"></div>
+  </div>
 
-    const container = document.getElementById('search-results');
-    container.innerHTML = '';
-    data.results.forEach(item => {
-      if (!item.poster_path) return;
-      const img = document.createElement('img');
-      img.src = `${IMG_URL}${item.poster_path}`;
-      img.alt = (item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '');
-      img.onclick = () => {
-        closeSearchModal();
-        showDetails(item);
-      };
-      container.appendChild(img);
-    });
-  } catch (error) {
-    console.error('Error searching:', error);
-    document.getElementById('search-results').innerHTML = '<p style="color: #ccc;">Search failed. Try again.</p>';
-  }
-}
+  <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">No content available at the moment. Try searching!</div>
 
-async function loadMoreContent() {
-  if (isLoading) return;
-  isLoading = true;
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+      <div class="modal-body">
+        <img id="modal-image" src="" alt="" />
+        <div class="modal-text">
+          <h2 id="modal-title"></h2>
+          <div class="stars" id="modal-rating"></div>
+          <p id="modal-description"></p>
+        </div>
+      </div>
+      <div class="server-selector">
+        <label for="server">Change Server:</label>
+        <select id="server" onchange="changeServer()">
+          <option value="vidsrc.cc">Vidsrc.cc</option>
+          <option value="vidsrc.me">Vidsrc.me</option>
+          <option value="player.videasy.net">Player.Videasy.net</option>
+        </select>
+      </div>
+      <div class="season-selector" id="season-selector" style="display: none;">
+        <label for="season">Select Season:</label>
+        <select id="season" onchange="loadEpisodes()"></select>
+      </div>
+      <div class="episode-list" id="episode-list"></div>
+      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
 
-  try {
-    const movies = await fetchTrending('movie', ++currentPages.movies);
-    const tvShows = await fetchTrending('tv', ++currentPages.tvShows);
-    const anime = await fetchTrendingAnime(++currentPages.anime);
-    const tagalogMovies = await fetchTagalogMovies(++currentPages.tagalogMovies);
-    const netflixContent = await fetchNetflixContent(++currentPages.netflix);
+  <div class="search-modal" id="search-modal">
+    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" />
+    <div class="results" id="search-results"></div>
+  </div>
 
-    displayList(movies, 'movies-list');
-    displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixContent, 'netflix-list');
-  } catch (error) {
-    console.error('Error loading more content:', error);
-  } finally {
-    isLoading = false;
-  }
-}
+  <button class="back-to-top" id="back-to-top" onclick="scrollToTop()" role="button" aria-label="Scroll to top" style="display: none;">
+    <i class="fas fa-arrow-up"></i>
+  </button>
 
-function handleScroll() {
-  const scrollPosition = window.innerHeight + window.scrollY;
-  const threshold = document.body.offsetHeight - 200;
-  if (scrollPosition >= threshold && !isLoading) {
-    loadMoreContent();
-  }
-}
-
-async function init() {
-  document.getElementById('empty-message').style.display = 'block';
-
-  try {
-    const [movies, tvShows, anime, tagalogMovies, netflixContent] = await Promise.all([
-      fetchTrending('movie', currentPages.movies),
-      fetchTrending('tv', currentPages.tvShows),
-      fetchTrendingAnime(currentPages.anime),
-      fetchTagalogMovies(currentPages.tagalogMovies),
-      fetchNetflixContent(currentPages.netflix)
-    ]);
-
-    slideshowItems = [
-      ...movies.slice(0, 3).filter(item => item.backdrop_path && (item.title || item.name)),
-      ...(tvShows[0] && tvShows[0].backdrop_path && (tvShows[0].title || tvShows[0].name) ? [tvShows[0]] : []),
-      ...(anime[0] && anime[0].backdrop_path && (anime[0].title || anime[0].name) ? [anime[0]] : []),
-      ...(tagalogMovies[0] && tagalogMovies[0].backdrop_path && (tagalogMovies[0].title || tagalogMovies[0].name) ? [tagalogMovies[0]] : []),
-      ...(netflixContent[0] && netflixContent[0].backdrop_path && (netflixContent[0].title || netflixContent[0].name) ? [netflixContent[0]] : [])
-    ];
-
-    if (slideshowItems.length > 0) {
-      displaySlides();
-    } else {
-      document.getElementById('slides').innerHTML = '<div class="slide-content"><h1>No featured content available</h1></div>';
-    }
-
-    displayList(movies, 'movies-list');
-    displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixContent, 'netflix-list');
-
-    window.addEventListener('scroll', handleScroll);
-  } catch (error) {
-    console.error('Error initializing:', error);
-    document.getElementById('empty-message').textContent = 'Failed to load content. Please refresh the page.';
-  }
-}
-
-init();
+  <footer class="footer">
+    <div class="footer-content">
+      <p>&copy; 2025 ReelRoom. All rights reserved.</p>
+      <div class="footer-links">
+        <a href="#">Disclaimer</a>
+        <a href="#">About Us</a>
+        <a href="#">Contact Us</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
