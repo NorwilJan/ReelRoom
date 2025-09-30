@@ -140,7 +140,7 @@ function showSlide() {
   slideshowInterval = setInterval(() => {
     currentSlide = (currentSlide + 1) % slideshowItems.length;
     showSlide();
-  }, 5000); // Change slide every 5 seconds
+  }, 5000);
 }
 
 function changeSlide(n) {
@@ -154,14 +154,22 @@ function displayList(items, containerId) {
   
   if (items.length === 0 && container.innerHTML === '') {
     container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
+    emptyMessage.style.display = 'block';
     return;
   }
+
+  const spinner = document.createElement('div');
+  spinner.className = 'spinner';
+  spinner.style.cssText = 'text-align: center; padding: 10px; grid-column: span 2;';
+  spinner.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  container.appendChild(spinner);
 
   items.forEach(item => {
     if (!item.poster_path) return;
     const img = document.createElement('img');
     img.src = `${IMG_URL}${item.poster_path}`;
     img.alt = (item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '');
+    img.onload = () => spinner.remove();
     img.onclick = () => showDetails(item);
     container.appendChild(img);
   });
@@ -342,14 +350,13 @@ async function init() {
       fetchNetflixContent(currentPages.netflix)
     ]);
 
-    // Select top 3 trending movies and one from each other category
     slideshowItems = [
-      ...movies.slice(0, 3), // Top 3 movies
-      tvShows[0] || {}, // First TV show
-      anime[0] || {}, // First anime
-      tagalogMovies[0] || {}, // First Tagalog movie
-      netflixContent[0] || {} // First Netflix content
-    ].filter(item => item.backdrop_path && (item.title || item.name)); // Ensure valid items
+      ...movies.slice(0, 3),
+      tvShows[0] || {},
+      anime[0] || {},
+      tagalogMovies[0] || {},
+      netflixContent[0] || {}
+    ].filter(item => item.backdrop_path && (item.title || item.name));
 
     if (slideshowItems.length > 0) {
       displaySlides();
