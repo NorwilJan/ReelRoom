@@ -1,4 +1,4 @@
-const API_KEY = 'YOUR_NEW_API_KEY_HERE'; // Replace with a valid TMDB API key
+const API_KEY = 'YOUR_NEW_API_KEY_HERE'; // Replace with a valid TMDB API key from https://www.themoviedb.org/settings/api
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 let currentItem;
@@ -147,12 +147,11 @@ function showError(message) {
 
 function showLoading(containerId) {
   const container = document.getElementById(containerId);
-  if (container) {
-    const loading = document.createElement('p');
-    loading.className = 'loading';
-    loading.textContent = 'Loading...';
-    container.appendChild(loading);
-  }
+  if (!container) return;
+  const loading = document.createElement('p');
+  loading.className = 'loading';
+  loading.textContent = 'Loading...';
+  container.appendChild(loading);
 }
 
 function displaySlides() {
