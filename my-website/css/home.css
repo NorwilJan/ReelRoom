@@ -421,3 +421,28 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
     gap: 8px;
   }
 }
+
+/* New styles for load more button */
+.load-more {
+  background: #333;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 0.3s;
+  flex-shrink: 0;
+  margin: 0 10px;
+  align-self: center;
+}
+
+.load-more:hover {
+  background: #444;
+}
+
+@media (max-width: 768px) {
+  .load-more {
+    padding: 8px 16px;
+    margin: 0 5px;
+  }
+}
