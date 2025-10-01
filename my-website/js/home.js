@@ -55,18 +55,33 @@ async function fetchTrending(type, page = 1) {
 
 async function fetchTrendingAnime(page = 1) {
   try {
-    console.log(`Fetching anime page ${page}...`);
-    const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}&page=${page}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const filtered = data.results.filter(item =>
-      item.original_language === 'ja' && item.genre_ids.includes(16)
+    console.log(`Fetching anime (movies and TV shows) page ${page}...`);
+    // Fetch anime movies
+    const movieRes = await fetch(
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
     );
-    console.log(`Fetched ${filtered.length} anime items`);
-    return filtered;
+    if (!movieRes.ok) throw new Error(`Movies HTTP ${movieRes.status}`);
+    const movieData = await movieRes.json();
+    const movies = movieData.results || [];
+
+    // Fetch anime TV shows
+    const tvRes = await fetch(
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
+    );
+    if (!tvRes.ok) throw new Error(`TV HTTP ${tvRes.status}`);
+    const tvData = await tvRes.json();
+    const tvShows = tvData.results || [];
+
+    // Combine and sort by popularity
+    const combined = [...movies, ...tvShows]
+      .filter(item => item.poster_path) // Ensure items have posters
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+      .slice(0, 20); // Limit to 20 items per page
+    console.log(`Fetched ${combined.length} anime items (movies: ${movies.length}, TV: ${tvShows.length})`);
+    return combined;
   } catch (error) {
     console.error('Error fetching trending anime:', error);
-    showError('Failed to load anime.', 'anime-list');
+    showError('Failed to load anime. Check API key or connection.', 'anime-list');
     return [];
   }
 }
