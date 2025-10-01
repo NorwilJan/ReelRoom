@@ -1,5 +1,4 @@
-/* Existing CSS with added slideshow styles */
-
+/* css/home.css */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
@@ -100,6 +99,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 .list {
   display: flex;
   overflow-x: auto;
+  padding-bottom: 10px;
 }
 
 .list img {
@@ -422,7 +422,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 }
 
-/* New styles for load more button */
+/* Styles for load more button, error, and loading */
 .load-more {
   background: #333;
   color: #fff;
