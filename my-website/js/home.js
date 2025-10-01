@@ -1,6 +1,8 @@
-const API_KEY = 'YOUR_NEW_API_KEY_HERE'; // Replace with a valid TMDB API key from https://www.themoviedb.org/settings/api
+// js/home.js
+const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
+const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image'; // Fallback for missing posters
 let currentItem;
 let currentSeason = 1;
 let currentEpisode = 1;
@@ -46,7 +48,7 @@ async function fetchTrending(type, page = 1) {
     return data;
   } catch (error) {
     console.error(`Error fetching trending ${type}:`, error);
-    showError(`Failed to load ${type}. Check API key or connection.`);
+    showError(`Failed to load ${type}. Check API key or connection.`, `${type}-list`);
     return { results: [] };
   }
 }
@@ -64,7 +66,7 @@ async function fetchTrendingAnime(page = 1) {
     return filtered;
   } catch (error) {
     console.error('Error fetching trending anime:', error);
-    showError('Failed to load anime.');
+    showError('Failed to load anime.', 'anime-list');
     return [];
   }
 }
@@ -81,7 +83,7 @@ async function fetchTagalogMovies(page = 1) {
     return data;
   } catch (error) {
     console.error('Error fetching Tagalog movies:', error);
-    showError('Failed to load Tagalog movies.');
+    showError('Failed to load Tagalog movies.', 'tagalog-movies-list');
     return { results: [] };
   }
 }
@@ -109,7 +111,7 @@ async function fetchNetflixContent(page = 1) {
     return sliced;
   } catch (error) {
     console.error('Error fetching Netflix content:', error);
-    showError('Failed to load Netflix content.');
+    showError('Failed to load Netflix content.', 'netflix-list');
     return [];
   }
 }
@@ -138,20 +140,33 @@ async function fetchEpisodes(tvId, seasonNumber) {
   }
 }
 
-function showError(message) {
-  const emptyMessage = document.getElementById('empty-message');
-  emptyMessage.textContent = message;
-  emptyMessage.style.display = 'block';
-  emptyMessage.className = 'error-message';
+function showError(message, containerId) {
+  const container = document.getElementById(containerId);
+  if (container) {
+    const error = document.createElement('p');
+    error.className = 'error-message';
+    error.textContent = message;
+    container.appendChild(error);
+  } else {
+    const emptyMessage = document.getElementById('empty-message');
+    if (emptyMessage) {
+      emptyMessage.textContent = message;
+      emptyMessage.style.display = 'block';
+      emptyMessage.className = 'error-message';
+    }
+  }
 }
 
 function showLoading(containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  const loading = document.createElement('p');
-  loading.className = 'loading';
-  loading.textContent = 'Loading...';
-  container.appendChild(loading);
+  const existingLoading = container.querySelector('.loading');
+  if (!existingLoading) {
+    const loading = document.createElement('p');
+    loading.className = 'loading';
+    loading.textContent = 'Loading...';
+    container.appendChild(loading);
+  }
 }
 
 function displaySlides() {
@@ -160,12 +175,17 @@ function displaySlides() {
   slidesContainer.innerHTML = '';
   dotsContainer.innerHTML = '';
 
+  if (slideshowItems.length === 0) {
+    slidesContainer.innerHTML = '<h1 class="loading">No featured content available</h1>';
+    return;
+  }
+
   slideshowItems.forEach((item, index) => {
     if (!item.backdrop_path) return;
     const slide = document.createElement('div');
     slide.className = 'slide';
     slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
-    slide.innerHTML = `<h1>${item.title || item.name}</h1>`;
+    slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
     slide.onclick = () => showDetails(item);
     slidesContainer.appendChild(slide);
 
@@ -185,6 +205,7 @@ function displaySlides() {
 function showSlide() {
   const slides = document.querySelectorAll('.slide');
   const dots = document.querySelectorAll('.dot');
+  if (slides.length === 0) return;
   slides.forEach((slide, index) => {
     slide.style.transform = `translateX(-${currentSlide * 100}%)`;
   });
@@ -193,13 +214,15 @@ function showSlide() {
   });
   clearInterval(slideshowInterval);
   slideshowInterval = setInterval(() => {
-    currentSlide = (currentSlide + 1) % slideshowItems.length;
+    currentSlide = (currentSlide + 1) % slides.length;
     showSlide();
   }, 5000);
 }
 
 function changeSlide(n) {
-  currentSlide = (currentSlide + n + slideshowItems.length) % slideshowItems.length;
+  const slides = document.querySelectorAll('.slide');
+  if (slides.length === 0) return;
+  currentSlide = (currentSlide + n + slides.length) % slides.length;
   showSlide();
 }
 
@@ -210,6 +233,7 @@ function displayList(items, containerId) {
     return;
   }
   container.querySelector('.loading')?.remove();
+  container.querySelector('.error-message')?.remove();
 
   if (items.length === 0 && container.innerHTML === '') {
     container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
@@ -217,10 +241,9 @@ function displayList(items, containerId) {
   }
 
   items.forEach(item => {
-    if (!item.poster_path) return;
     const img = document.createElement('img');
-    img.src = `${IMG_URL}${item.poster_path}`;
-    img.alt = (item.title || item.name) + (item.media_type ? ` (${item.media_type})` : '');
+    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
     img.onclick = () => showDetails(item);
     container.appendChild(img);
   });
@@ -238,6 +261,7 @@ function addLoadMoreButton(containerId, category) {
 
 function addLoadMoreIfApplicable(containerId, category) {
   const container = document.getElementById(containerId);
+  if (!container) return;
   if (container.innerHTML && !container.querySelector('p') && hasMore[category]) {
     addLoadMoreButton(containerId, category);
   }
@@ -310,7 +334,7 @@ async function loadMore(category) {
     }
   } catch (error) {
     console.error(`Error loading more for ${category}:`, error);
-    showError(`Failed to load more ${category}.`);
+    showError(`Failed to load more ${category}.`, containerId);
     if (button) {
       button.textContent = 'Show More';
       button.disabled = false;
@@ -326,7 +350,7 @@ async function showDetails(item) {
   currentEpisode = 1;
   document.getElementById('modal-title').textContent = item.title || item.name || 'Unknown';
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : '';
+  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
   document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
   document.getElementById('server').value = 'player.videasy.net';
 
@@ -433,9 +457,8 @@ async function searchTMDB() {
     const container = document.getElementById('search-results');
     container.innerHTML = '';
     data.results.forEach(item => {
-      if (!item.poster_path) return;
       const img = document.createElement('img');
-      img.src = `${IMG_URL}${item.poster_path}`;
+      img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
       img.alt = item.title || item.name || 'Unknown';
       img.onclick = () => {
         closeSearchModal();
@@ -445,7 +468,7 @@ async function searchTMDB() {
     });
   } catch (error) {
     console.error('Error searching:', error);
-    showError('Search failed. Try again.');
+    showError('Search failed. Try again.', 'search-results');
   }
 }
 
@@ -481,11 +504,7 @@ async function init() {
       netflixContent[0] || {}
     ].filter(item => item.backdrop_path && (item.title || item.name));
 
-    if (slideshowItems.length > 0) {
-      displaySlides();
-    } else {
-      document.getElementById('slides').innerHTML = '<h1 class="loading">No featured content available</h1>';
-    }
+    displaySlides();
 
     displayList(movies, 'movies-list');
     addLoadMoreIfApplicable('movies-list', 'movies');
@@ -505,7 +524,7 @@ async function init() {
     console.log('Initialization complete.');
   } catch (error) {
     console.error('Error initializing:', error);
-    showError('Failed to load content. Please refresh or check your connection.');
+    showError('Failed to load content. Please refresh or check your connection.', 'empty-message');
   }
 }
 
