@@ -11,7 +11,14 @@ let currentPages = {
   tagalogMovies: 1,
   netflix: 1
 };
-let isLoading = false;
+let isLoading = {};
+let hasMore = {
+  movies: true,
+  tvshows: true,
+  anime: true,
+  'tagalog-movies': true,
+  netflix: true
+};
 let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
@@ -20,10 +27,10 @@ async function fetchTrending(type, page = 1) {
   try {
     const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
     const data = await res.json();
-    return data.results || [];
+    return data;
   } catch (error) {
     console.error(`Error fetching trending ${type}:`, error);
-    return [];
+    return { results: [] };
   }
 }
 
@@ -48,10 +55,10 @@ async function fetchTagalogMovies(page = 1) {
       `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_original_language=tl`
     );
     const data = await res.json();
-    return data.results || [];
+    return data;
   } catch (error) {
     console.error('Error fetching Tagalog movies:', error);
-    return [];
+    return { results: [] };
   }
 }
 
@@ -150,7 +157,6 @@ function changeSlide(n) {
 
 function displayList(items, containerId) {
   const container = document.getElementById(containerId);
-  const emptyMessage = document.getElementById('empty-message');
   
   if (items.length === 0 && container.innerHTML === '') {
     container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
@@ -165,9 +171,91 @@ function displayList(items, containerId) {
     img.onclick = () => showDetails(item);
     container.appendChild(img);
   });
+}
 
-  if (items.length > 0) {
-    emptyMessage.style.display = 'none';
+function addLoadMoreButton(containerId) {
+  const container = document.getElementById(containerId);
+  const button = document.createElement('button');
+  button.className = 'load-more';
+  button.textContent = 'Show More';
+  container.appendChild(button);
+}
+
+function addLoadMoreIfApplicable(containerId) {
+  const container = document.getElementById(containerId);
+  if (container.innerHTML !== '' && !container.querySelector('p')) {
+    addLoadMoreButton(containerId);
+  }
+}
+
+function addScrollListener(cat) {
+  const containerId = cat + '-list';
+  const container = document.getElementById(containerId);
+  container.onscroll = function() {
+    if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 50 && !isLoading[cat] && hasMore[cat]) {
+      loadMore(cat);
+    }
+  };
+}
+
+async function loadMore(cat) {
+  if (isLoading[cat] || !hasMore[cat]) return;
+  isLoading[cat] = true;
+
+  const containerId = cat + '-list';
+  const container = document.getElementById(containerId);
+  const button = container.querySelector('.load-more');
+  const hasButton = !!button;
+
+  if (hasButton) {
+    button.textContent = 'Loading...';
+    button.disabled = true;
+  }
+
+  let pageKey = cat.replace(/-/g, '');
+  if (pageKey === 'tvshows') pageKey = 'tvShows';
+  if (pageKey === 'tagalogmovies') pageKey = 'tagalogMovies';
+
+  currentPages[pageKey]++;
+
+  try {
+    let data;
+    if (cat === 'movies') {
+      data = await fetchTrending('movie', currentPages[pageKey]);
+    } else if (cat === 'tvshows') {
+      data = await fetchTrending('tv', currentPages[pageKey]);
+    } else if (cat === 'anime') {
+      data = await fetchTrendingAnime(currentPages[pageKey]);
+    } else if (cat === 'tagalog-movies') {
+      data = await fetchTagalogMovies(currentPages[pageKey]);
+    } else if (cat === 'netflix') {
+      data = await fetchNetflixContent(currentPages[pageKey]);
+    }
+
+    let items = (cat === 'anime' || cat === 'netflix') ? data : data.results || [];
+
+    displayList(items, containerId);
+
+    if (items.length === 0) {
+      hasMore[cat] = false;
+      if (hasButton) {
+        button.textContent = 'No More';
+        button.disabled = true;
+      }
+    } else {
+      if (hasButton) {
+        button.remove();
+        addScrollListener(cat);
+      }
+    }
+  } catch (error) {
+    console.error(`Error loading more for ${cat}:`, error);
+    if (hasButton) {
+      button.textContent = 'Show More';
+      button.disabled = false;
+    }
+  } finally {
+    isLoading[cat] = false;
   }
 }
 
@@ -299,48 +387,19 @@ async function searchTMDB() {
   }
 }
 
-async function loadMoreContent() {
-  if (isLoading) return;
-  isLoading = true;
-
-  try {
-    const movies = await fetchTrending('movie', ++currentPages.movies);
-    const tvShows = await fetchTrending('tv', ++currentPages.tvShows);
-    const anime = await fetchTrendingAnime(++currentPages.anime);
-    const tagalogMovies = await fetchTagalogMovies(++currentPages.tagalogMovies);
-    const netflixContent = await fetchNetflixContent(++currentPages.netflix);
-
-    displayList(movies, 'movies-list');
-    displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixContent, 'netflix-list');
-  } catch (error) {
-    console.error('Error loading more content:', error);
-  } finally {
-    isLoading = false;
-  }
-}
-
-function handleScroll() {
-  const scrollPosition = window.innerHeight + window.scrollY;
-  const threshold = document.body.offsetHeight - 200;
-  if (scrollPosition >= threshold && !isLoading) {
-    loadMoreContent();
-  }
-}
-
 async function init() {
-  document.getElementById('empty-message').style.display = 'block';
-
   try {
-    const [movies, tvShows, anime, tagalogMovies, netflixContent] = await Promise.all([
+    const [moviesData, tvShowsData, anime, tagalogMoviesData, netflixContent] = await Promise.all([
       fetchTrending('movie', currentPages.movies),
       fetchTrending('tv', currentPages.tvShows),
       fetchTrendingAnime(currentPages.anime),
       fetchTagalogMovies(currentPages.tagalogMovies),
       fetchNetflixContent(currentPages.netflix)
     ]);
+
+    const movies = moviesData.results || [];
+    const tvShows = tvShowsData.results || [];
+    const tagalogMovies = tagalogMoviesData.results || [];
 
     // Select top 3 trending movies and one from each other category
     slideshowItems = [
@@ -358,15 +417,21 @@ async function init() {
     }
 
     displayList(movies, 'movies-list');
-    displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixContent, 'netflix-list');
+    addLoadMoreIfApplicable('movies-list');
 
-    window.addEventListener('scroll', handleScroll);
+    displayList(tvShows, 'tvshows-list');
+    addLoadMoreIfApplicable('tvshows-list');
+
+    displayList(anime, 'anime-list');
+    addLoadMoreIfApplicable('anime-list');
+
+    displayList(tagalogMovies, 'tagalog-movies-list');
+    addLoadMoreIfApplicable('tagalog-movies-list');
+
+    displayList(netflixContent, 'netflix-list');
+    addLoadMoreIfApplicable('netflix-list');
   } catch (error) {
     console.error('Error initializing:', error);
-    document.getElementById('empty-message').textContent = 'Failed to load content. Please refresh the page.';
   }
 }
 
