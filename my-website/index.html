@@ -1,103 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReelRoom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="preload" href="css/home.css" as="style">
   <link rel="preload" href="js/home.js" as="script">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
   <script defer src="js/home.js"></script>
 </head>
-
 <body>
-  <div class="navbar">
-    <img src="logo.png" alt="ReelRoom Logo" />
-    <div class="nav-links">
-      <a href="index.html">Home</a>
-      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" />
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center" href="index.html">
+        <img src="logo.png" alt="ReelRoom Logo" style="height: 40px;">
+        <span class="logo-text">ReelRoom</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav ml-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active" id="nav-movies" href="#" aria-label="Trending Movies">Trending Movies</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nav-tvshows" href="#" aria-label="Trending TV Shows">Trending TV Shows</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nav-anime" href="#" aria-label="Trending Anime">Trending Anime</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nav-tagalog" href="#" aria-label="Trending Tagalog Movies">Trending Tagalog Movies</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nav-netflix" href="#" aria-label="Trending Netflix"><i class="fab fa-netflix"></i> Trending Netflix</a>
+          </li>
+        </ul>
+      </div>
     </div>
+  </nav>
+
+  <div class="tm-hero d-flex justify-content-center align-items-center">
+    <form class="d-flex tm-search-form" id="movie-search-form" autocomplete="on" style="width: 100%; max-width: 600px; margin: 2em auto;">
+      <input class="form-control tm-search-input" type="search" id="search-input" placeholder="Search for movies or TV shows..." aria-label="Search">
+      <button class="btn btn-outline-success tm-search-btn" type="button" onclick="searchTMDB()">
+        <i class="fas fa-search"></i>
+      </button>
+    </form>
   </div>
 
-  <div class="banner" id="banner">
-    <div class="slideshow-container">
-      <div class="slides" id="slides"></div>
-      <a class="prev" onclick="changeSlide(-1)">&#10094;</a>
-      <a class="next" onclick="changeSlide(1)">&#10095;</a>
-      <div class="dots" id="dots"></div>
+  <div class="container-fluid tm-container-content tm-mt-60">
+    <div id="recently-viewed-section" style="display: none;">
+      <h5 style="color: #fff; margin-bottom: 0.7em;">Recently Viewed</h5>
+      <div id="recently-viewed-list" class="list"></div>
     </div>
+    <div class="row mb-4">
+      <h2 class="col-6 tm-text-primary" id="section-title">Trending Movies</h2>
+    </div>
+    <div class="row mb-4">
+      <form class="genre-filter-form" id="genre-filter-form">
+        <select id="genre-filter" aria-label="Filter by genre" role="listbox" disabled>
+          <option value="" id="genre-all">Loading genres...</option>
+        </select>
+        <select id="year-filter" aria-label="Filter by year" role="listbox">
+          <option value="" id="year-all">All Years</option>
+        </select>
+        <button type="button" id="clear-genre-btn" class="btn btn-outline-primary">Clear</button>
+      </form>
+    </div>
+    <div class="row tm-mb-90 flex-wrap" id="movie-list"></div>
+    <div id="infinite-loader" style="display: none;">
+      <div class="spinner"></div>
+      <p class="loading-state">Loading more...</p>
+    </div>
+    <div class="row tm-mb-90">
+      <h2 class="col-6 tm-text-primary">Trending TV Shows</h2>
+      <div class="list flex-wrap" id="tvshows-list"></div>
+    </div>
+    <div class="row tm-mb-90">
+      <h2 class="col-6 tm-text-primary">Trending Anime</h2>
+      <div class="list flex-wrap" id="anime-list"></div>
+    </div>
+    <div class="row tm-mb-90">
+      <h2 class="col-6 tm-text-primary">Trending Tagalog Movies</h2>
+      <div class="list flex-wrap" id="tagalog-movies-list"></div>
+    </div>
+    <div class="row tm-mb-90">
+      <h2 class="col-6 tm-text-primary">Trending Netflix</h2>
+      <div class="list flex-wrap" id="netflix-list"></div>
+    </div>
+    <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
   </div>
-
-  <div class="row">
-    <h2>Trending Movies</h2>
-    <div class="list" id="movies-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>Trending TV Shows</h2>
-    <div class="list" id="tvshows-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>Trending Anime</h2>
-    <div class="list" id="anime-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>Trending Tagalog Movies</h2>
-    <div class="list" id="tagalog-movies-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>Trending Netflix</h2>
-    <div class="list" id="netflix-list"></div>
-  </div>
-
-  <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
 
   <div class="modal" id="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+    <div class="modal-content" id="modal-content-movie">
+      <span class="close" onclick="closeModal()">×</span>
       <div class="modal-body">
-        <img id="modal-image" src="" alt="" />
+        <img id="modal-image" src="" alt="Poster">
         <div class="modal-text">
           <h2 id="modal-title"></h2>
           <div class="stars" id="modal-rating"></div>
+          <div class="modal-genre" id="modal-genres"></div>
           <p id="modal-description"></p>
+          <button class="share-btn" onclick="shareContent()">Share</button>
         </div>
       </div>
       <div class="server-selector">
         <label for="server">Change Server:</label>
         <select id="server" onchange="changeServer()">
+          <option value="player.videasy.net" selected>Player.Videasy.net</option>
           <option value="vidsrc.cc">Vidsrc.cc</option>
           <option value="vidsrc.me">Vidsrc.me</option>
-          <option value="player.videasy.net">Player.Videasy.net</option>
         </select>
       </div>
-      <div class="season-selector" id="season-selector" style="display: none;">
-        <label for="season">Select Season:</label>
-        <select id="season" onchange="loadEpisodes()"></select>
+      <div class="iframe-container">
+        <iframe id="modal-video" allowfullscreen></iframe>
+        <button class="iframe-play-overlay" onclick="triggerIframePlay('modal-video')">
+          <i class="fas fa-play"></i>
+        </button>
       </div>
-      <div class="episode-list" id="episode-list"></div>
-      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <div class="modal-content" id="modal-content-tv" style="display: none;">
+      <span class="close" onclick="closeModal()">×</span>
+      <div class="modal-body">
+        <img id="tv-modal-image" src="" alt="Poster">
+        <div class="modal-text">
+          <h2 id="tv-modal-title"></h2>
+          <div class="stars" id="tv-modal-rating"></div>
+          <div class="modal-genre" id="tv-modal-genres"></div>
+          <p id="tv-modal-description"></p>
+          <div><strong>First Air Date:</strong> <span id="tv-modal-air-date"></span></div>
+          <div><strong>Seasons:</strong> <span id="tv-modal-total-seasons"></span></div>
+          <button class="share-btn" onclick="shareContent()">Share</button>
+          <div class="season-selector" id="season-selector" style="display: none;">
+            <label for="season">Select Season:</label>
+            <select id="season" onchange="loadEpisodes()"></select>
+          </div>
+          <div class="episode-list" id="episode-list"></div>
+        </div>
+      </div>
+      <div class="iframe-container">
+        <iframe id="tv-episode-player" allowfullscreen style="display: none;"></iframe>
+        <button class="iframe-play-overlay" onclick="triggerIframePlay('tv-episode-player')">
+          <i class="fas fa-play"></i>
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="search-modal" id="search-modal">
-    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" />
-    <div class="results" id="search-results"></div>
-  </div>
+  <button id="back-to-top" title="Back to Top" aria-label="Back to Top">
+    <i class="fas fa-arrow-up"></i>
+  </button>
 
-  <footer class="footer">
-    <div class="footer-content">
-      <p>&copy; 2025 ReelRoom. All rights reserved.</p>
-      <div class="footer-links">
-        <a href="#">Disclaimer</a>
-        <a href="#">About Us</a>
-        <a href="#">Contact Us</a>
+  <footer class="tm-bg-gray pt-5 pb-3 tm-text-gray tm-footer">
+    <div class="container-fluid tm-container-small">
+      <div class="row">
+        <div class="col-lg-6 col-md-12 col-12 px-5 mb-5">
+          <h3 class="tm-text-primary mb-4 tm-footer-title">About ReelRoom</h3>
+          <p>ReelRoom is a free movie & TV show browser using TMDB, built for entertainment and education.</p>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-6 col-12 px-5 mb-5">
+          <h3 class="tm-text-primary mb-4 tm-footer-title">Quick Links</h3>
+          <ul class="tm-footer-links pl-0">
+            <li><a href="#">Contact</a></li>
+            <li><a href="#">About Us</a></li>
+            <li><a href="#">Disclaimer</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-lg-8 col-md-7 col-12 px-5 mb-3">Copyright 2025 ReelRoom Project.</div>
       </div>
     </div>
   </footer>
