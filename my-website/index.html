@@ -3,40 +3,102 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Stream movies, TV shows, anime, and more on ReelRoom">
+  <meta name="keywords" content="movies, TV shows, anime, streaming, ReelRoom">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://image.tmdb.org; frame-src 'self' https://vidsrc.cc https://vidsrc.net https://player.videasy.net;">
   <title>ReelRoom</title>
   <link rel="stylesheet" href="css/home.css">
   <link rel="preload" href="css/home.css" as="style">
   <link rel="preload" href="js/home.js" as="script">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <script defer src="js/home.js"></script>
 </head>
 
 <body>
   <div class="navbar">
     <img src="logo.png" alt="ReelRoom Logo" />
-    <div class="nav-links">
+    <div class="nav-links" id="nav-links">
       <a href="index.html">Home</a>
-      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" />
+      <div class="search-container">
+        <label for="search-bar" class="sr-only">Search movies and shows</label>
+        <input type="text" class="search-bar" id="search-bar" placeholder="Search..." />
+        <button class="search-btn" onclick="openSearchModal()">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
     </div>
+    <button class="hamburger" onclick="toggleMenu()">☰</button>
   </div>
 
   <div class="banner" id="banner">
     <div class="slideshow-container">
       <div class="slides" id="slides"></div>
-      <a class="prev" onclick="changeSlide(-1)">&#10094;</a>
-      <a class="next" onclick="changeSlide(1)">&#10095;</a>
+      <a class="prev" aria-label="Previous Slide" onclick="changeSlide(-1)">&#10094;</a>
+      <a class="next" aria-label="Next Slide" onclick="changeSlide(1)">&#10095;</a>
       <div class="dots" id="dots"></div>
     </div>
   </div>
 
   <div class="row">
+    <h2>Your Favorites</h2>
+    <div class="list" id="favorites-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>Recently Viewed</h2>
+    <div class="list" id="recently-viewed-list"></div>
+  </div>
+
+  <div class="row">
     <h2>Trending Movies</h2>
+    <select id="movies-genre" onchange="filterByGenre('movies')">
+      <option value="">All Genres</option>
+      <option value="28">Action</option>
+      <option value="12">Adventure</option>
+      <option value="16">Animation</option>
+      <option value="35">Comedy</option>
+      <option value="80">Crime</option>
+      <option value="99">Documentary</option>
+      <option value="18">Drama</option>
+      <option value="10751">Family</option>
+      <option value="14">Fantasy</option>
+      <option value="36">History</option>
+      <option value="27">Horror</option>
+      <option value="10402">Music</option>
+      <option value="9648">Mystery</option>
+      <option value="10749">Romance</option>
+      <option value="878">Science Fiction</option>
+      <option value="10770">TV Movie</option>
+      <option value="53">Thriller</option>
+      <option value="10752">War</option>
+      <option value="37">Western</option>
+    </select>
     <div class="list" id="movies-list"></div>
   </div>
 
   <div class="row">
     <h2>Trending TV Shows</h2>
+    <select id="tvshows-genre" onchange="filterByGenre('tvshows')">
+      <option value="">All Genres</option>
+      <option value="10759">Action & Adventure</option>
+      <option value="16">Animation</option>
+      <option value="35">Comedy</option>
+      <option value="80">Crime</option>
+      <option value="99">Documentary</option>
+      <option value="18">Drama</option>
+      <option value="10751">Family</option>
+      <option value="10762">Kids</option>
+      <option value="9648">Mystery</option>
+      <option value="10763">News</option>
+      <option value="10764">Reality</option>
+      <option value="10765">Sci-Fi & Fantasy</option>
+      <option value="10766">Soap</option>
+      <option value="10767">Talk</option>
+      <option value="10768">War & Politics</option>
+      <option value="37">Western</option>
+    </select>
     <div class="list" id="tvshows-list"></div>
   </div>
 
@@ -59,13 +121,14 @@
 
   <div class="modal" id="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+      <span class="close" aria-label="Close Modal" onclick="closeModal()">&times;</span>
       <div class="modal-body">
         <img id="modal-image" src="" alt="" />
         <div class="modal-text">
           <h2 id="modal-title"></h2>
           <div class="stars" id="modal-rating"></div>
           <p id="modal-description"></p>
+          <button class="favorite-btn" id="favorite-btn">☆ Add Favorite</button>
         </div>
       </div>
       <div class="server-selector">
@@ -81,13 +144,19 @@
         <select id="season" onchange="loadEpisodes()"></select>
       </div>
       <div class="episode-list" id="episode-list"></div>
-      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+      <div class="modal-video-container" id="modal-video-container">
+        <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+      </div>
     </div>
   </div>
 
   <div class="search-modal" id="search-modal">
-    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" />
+    <span class="close" aria-label="Close Search Modal" onclick="closeSearchModal()">&times;</span>
+    <div class="search-container">
+      <label for="search-input" class="sr-only">Search movies, shows, or actors</label>
+      <input type="text" id="search-input" placeholder="Search movies, shows, or actors..." />
+      <button class="search-btn" onclick="searchTMDB()">Search</button>
+    </div>
     <div class="results" id="search-results"></div>
   </div>
 
