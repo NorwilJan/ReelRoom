@@ -349,6 +349,7 @@ async function loadMore(category) {
   let pageKey = category.replace(/-/g, '');
   if (pageKey === 'tvshows') pageKey = 'tvShows';
   if (pageKey === 'tagalogmovies') pageKey = 'tagalogMovies';
+  if (pageKey === 'netflixmovies') pageKey = 'netflixMovies';
   currentPages[pageKey]++;
 
   try {
