@@ -118,6 +118,22 @@ async function fetchNetflixContent(page = 1) {
     const movieData = await movieRes.json();
     const movies = movieData.results || [];
 
+async function fetchNetflixMovies(page = 1) {
+  try {
+    console.log(`Fetching Netflix movies page ${page}...`);
+    const res = await fetch(
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log(`Fetched ${data.results?.length || 0} Netflix movies`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching Netflix movies:', error);
+    showError('Failed to load Netflix movies.', 'netflix-movies-list');
+    return { results: [] };
+  }
+}
     const tvRes = await fetch(
       `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
