@@ -17,7 +17,9 @@
     <h1 class="logo-text">REELROOM</h1>
     <div class="nav-links">
       <a href="index.html">Home</a>
-      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" />
+      <button class="search-icon-btn" onclick="openSearchModal()">
+        <i class="fas fa-search"></i>
+      </button>
     </div>
   </div>
 
@@ -87,7 +89,7 @@
 
   <div class="search-modal" id="search-modal">
     <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" />
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." onkeyup="debouncedSearchTMDB()" />
     <div class="results" id="search-results"></div>
   </div>
 
