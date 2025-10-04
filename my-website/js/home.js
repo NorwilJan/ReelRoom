@@ -11,14 +11,18 @@ let currentPages = {
   tvShows: 1,
   anime: 1,
   tagalogMovies: 1,
-  netflix: 1
+  // 🆕 SPLIT NETFLIX INTO TWO CATEGORIES
+  netflixMovies: 1,
+  netflixTV: 1
 };
 let isLoading = {
   movies: false,
   tvshows: false,
   anime: false,
   'tagalog-movies': false,
-  netflix: false
+  // 🆕 SPLIT NETFLIX INTO TWO CATEGORIES
+  'netflix-movies': false,
+  'netflix-tv': false
 };
 let slideshowItems = [];
 let currentSlide = 0;
@@ -43,7 +47,6 @@ async function testApiKey() {
     try {
         const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&page=1`);
         if (res.status === 401) {
-            // This is the error code for an invalid/expired key
             throw new Error("TMDB API Key is invalid. Please check your key.");
         }
         if (!res.ok) {
@@ -58,7 +61,6 @@ async function testApiKey() {
             
             Action Required: Check your '${API_KEY}' key on TMDB.
         `;
-        // Display a critical error message globally
         showError(errorMessage, 'empty-message');
         document.getElementById('empty-message').style.display = 'block';
         return false;
@@ -70,7 +72,6 @@ async function fetchTrending(type, page = 1) {
     const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     const data = await res.json();
-    // Add media_type to items if it's not present (e.g., in combined lists)
     if (data.results) {
         data.results.forEach(item => item.media_type = item.media_type || type);
     }
@@ -100,11 +101,11 @@ async function fetchTrendingAnime(page = 1) {
     const tvData = await tvRes.json();
     const tvShows = (tvData.results || []).map(item => ({...item, media_type: 'tv'}));
 
-    // Combine and sort by popularity
+    // Combine and sort by popularity (limited to 20 items per page)
     const combined = [...movies, ...tvShows]
       .filter(item => item.poster_path)
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-      .slice(0, 20); // Limit to 20 items per page
+      .slice(0, 20); 
 
     return { results: combined, total_pages: Math.max(movieData.total_pages || 1, tvData.total_pages || 1) };
   } catch (error) {
@@ -132,29 +133,40 @@ async function fetchTagalogMovies(page = 1) {
   }
 }
 
-async function fetchNetflixContent(page = 1) {
+// 🆕 NEW FUNCTION: Fetch Netflix MOVIES (provider ID 8 is Netflix)
+async function fetchNetflixMovies(page = 1) {
   try {
-    const movieRes = await fetch(
+    const res = await fetch(
       `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
-    if (!movieRes.ok) throw new Error(`Movies HTTP ${movieRes.status}`);
-    const movieData = await movieRes.json();
-    const movies = (movieData.results || []).map(item => ({...item, media_type: 'movie'}));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.results) {
+        data.results.forEach(item => item.media_type = 'movie');
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching Netflix movies:', error);
+    showError('Failed to load Netflix movies.', 'netflix-movies-list');
+    return { results: [], total_pages: 1 };
+  }
+}
 
-    const tvRes = await fetch(
+// 🆕 NEW FUNCTION: Fetch Netflix TV SHOWS (provider ID 8 is Netflix)
+async function fetchNetflixTV(page = 1) {
+  try {
+    const res = await fetch(
       `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
-    if (!tvRes.ok) throw new Error(`TV HTTP ${tvRes.status}`);
-    const tvData = await tvRes.json();
-    const tvShows = (tvData.results || []).map(item => ({...item, media_type: 'tv'}));
-
-    const combined = [...movies, ...tvShows].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-    const sliced = combined.slice(0, 20);
-
-    return { results: sliced, total_pages: Math.max(movieData.total_pages || 1, tvData.total_pages || 1) };
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.results) {
+        data.results.forEach(item => item.media_type = 'tv');
+    }
+    return data;
   } catch (error) {
-    console.error('Error fetching Netflix content:', error);
-    showError('Failed to load Netflix content.', 'netflix-list');
+    console.error('Error fetching Netflix TV:', error);
+    showError('Failed to load Netflix TV shows.', 'netflix-tv-list');
     return { results: [], total_pages: 1 };
   }
 }
@@ -197,7 +209,7 @@ function showError(message, containerId) {
   if (container) {
     const error = document.createElement('p');
     error.className = 'error-message';
-    error.style.whiteSpace = 'pre-wrap'; // Preserve formatting for API key error
+    error.style.whiteSpace = 'pre-wrap';
     error.textContent = message;
     container.appendChild(error);
   }
@@ -206,24 +218,22 @@ function showError(message, containerId) {
 function showLoading(containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  // Check if a loading message is already visible to avoid duplicates
   if (container.querySelector('.loading')) return;
   
-  // Clear any previous error before showing loading
   container.querySelector('.error-message')?.remove();
   
   const loading = document.createElement('p');
   loading.className = 'loading';
   loading.textContent = 'Loading...';
-  // Append loading after existing content
   container.appendChild(loading);
 }
+
+// ... displaySlides, showSlide, changeSlide remain the same ...
 
 function displaySlides() {
   const slidesContainer = document.getElementById('slides');
   const dotsContainer = document.getElementById('dots');
   
-  // Remove existing content, including loading/error messages
   slidesContainer.innerHTML = '';
   dotsContainer.innerHTML = '';
   removeLoadingAndError('slides');
@@ -286,7 +296,6 @@ function displayList(items, containerId) {
     return;
   }
   
-  // Remove loading/error messages before adding content
   removeLoadingAndError(containerId);
 
   if (items.length === 0 && container.children.length === 0) {
@@ -295,13 +304,12 @@ function displayList(items, containerId) {
   }
 
   items.forEach(item => {
-    // Check if the image already exists to prevent duplicates on loadMore
     if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
-    img.setAttribute('data-id', item.id); // Add a unique ID for duplicate check
+    img.setAttribute('data-id', item.id);
     img.onclick = () => showDetails(item);
     container.appendChild(img);
   });
@@ -312,23 +320,24 @@ function addScrollListener(category) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
-  // Event listener for infinite scroll
   container.onscroll = function () {
-    // Check if scroll is near the end (within 50px of the far right)
     if (
       !isLoading[category] &&
       container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
     ) {
-      // Load more content
       loadMore(category);
     }
   };
 }
 
 async function loadMore(category) {
+  // Translate category string to the correct key name for currentPages
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
   
-  // ⛔ Removed the check: currentPages[pageKey] >= 5 ⛔
+  // Handle the new Netflix keys
+  if (category === 'netflix-movies') pageKey = 'netflixMovies';
+  if (category === 'netflix-tv') pageKey = 'netflixTV';
+
   if (isLoading[category]) return;
 
   isLoading[category] = true;
@@ -348,18 +357,20 @@ async function loadMore(category) {
       data = await fetchTrendingAnime(currentPages[pageKey]);
     } else if (category === 'tagalog-movies') {
       data = await fetchTagalogMovies(currentPages[pageKey]);
-    } else if (category === 'netflix') {
-      data = await fetchNetflixContent(currentPages[pageKey]);
+    } 
+    // 🆕 CALL THE NEW FETCH FUNCTIONS
+    else if (category === 'netflix-movies') {
+      data = await fetchNetflixMovies(currentPages[pageKey]);
+    } else if (category === 'netflix-tv') {
+      data = await fetchNetflixTV(currentPages[pageKey]);
     }
 
     const items = data.results || [];
     
     // Stop loading if the API returns no results for the next page
     if (items.length === 0) {
-        // Decrement page count back since the page was empty
         currentPages[pageKey]--; 
         console.log(`${category} reached end of available content.`);
-        // Don't display "No content available" if there are already images
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
         isLoading[category] = false;
         return;
@@ -372,10 +383,11 @@ async function loadMore(category) {
     showError(`Failed to load more ${category}.`, containerId);
   } finally {
     isLoading[category] = false;
-    // Remove loading indicator after successful or failed load
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
   }
 }
+
+// ... showDetails, loadEpisodes, changeServer, closeModal, etc. remain the same ...
 
 async function showDetails(item) {
   currentItem = item;
@@ -511,7 +523,7 @@ const debouncedSearchTMDB = debounce(async () => {
 
     container.innerHTML = ''; // Clear loading
     data.results
-      .filter(item => item.media_type !== 'person' && item.poster_path) // Filter out people and missing posters
+      .filter(item => item.media_type !== 'person' && item.poster_path)
       .forEach(item => {
         const img = document.createElement('img');
         img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
@@ -536,10 +548,8 @@ const debouncedSearchTMDB = debounce(async () => {
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
   
-  // 1. Initial API Key Check
   const apiKeyValid = await testApiKey();
   if (!apiKeyValid) {
-      // Stop initialization if the API key is bad. Error message is already displayed.
       return;
   }
 
@@ -550,21 +560,26 @@ async function init() {
     showLoading('tvshows-list');
     showLoading('anime-list');
     showLoading('tagalog-movies-list');
-    showLoading('netflix-list');
+    // 🆕 LOADING FOR NEW CATEGORIES
+    showLoading('netflix-movies-list');
+    showLoading('netflix-tv-list');
 
-    const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixContentData] = await Promise.all([
+    // 🆕 FETCH ALL CATEGORIES
+    const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData] = await Promise.all([
       fetchTrending('movie', currentPages.movies),
       fetchTrending('tv', currentPages.tvShows),
       fetchTrendingAnime(currentPages.anime),
       fetchTagalogMovies(currentPages.tagalogMovies),
-      fetchNetflixContent(currentPages.netflix)
+      fetchNetflixMovies(currentPages.netflixMovies), // New fetch
+      fetchNetflixTV(currentPages.netflixTV)         // New fetch
     ]);
 
     const movies = moviesData.results || [];
     const tvShows = tvShowsData.results || [];
     const anime = animeData.results || [];
     const tagalogMovies = tagalogMoviesData.results || [];
-    const netflixContent = netflixContentData.results || [];
+    const netflixMovies = netflixMoviesData.results || []; // New result
+    const netflixTV = netflixTVData.results || [];         // New result
 
     // Combine for slideshow
     slideshowItems = [
@@ -572,7 +587,8 @@ async function init() {
       ...tvShows.slice(0, 2),
       anime[0] || {},
       tagalogMovies[0] || {},
-      netflixContent[0] || {}
+      netflixMovies[0] || {}, // Use a Netflix Movie for slide
+      netflixTV[0] || {}      // Use a Netflix TV show for slide
     ].filter(item => item.backdrop_path && (item.title || item.name));
 
     displaySlides();
@@ -581,14 +597,18 @@ async function init() {
     displayList(tvShows, 'tvshows-list');
     displayList(anime, 'anime-list');
     displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixContent, 'netflix-list');
+    // 🆕 DISPLAY NEW CATEGORIES
+    displayList(netflixMovies, 'netflix-movies-list');
+    displayList(netflixTV, 'netflix-tv-list');
     
     // Setup infinite scroll listeners
     addScrollListener('movies');
     addScrollListener('tvshows');
     addScrollListener('anime');
     addScrollListener('tagalog-movies');
-    addScrollListener('netflix');
+    // 🆕 SETUP SCROLL LISTENERS FOR NEW CATEGORIES
+    addScrollListener('netflix-movies');
+    addScrollListener('netflix-tv');
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
