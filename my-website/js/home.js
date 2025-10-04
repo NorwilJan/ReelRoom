@@ -37,7 +37,7 @@ function debounce(func, delay) {
 }
 
 /**
- * 🔑 New function to test API Key validity on startup.
+ * 🔑 Function to test API Key validity on startup.
  */
 async function testApiKey() {
     try {
@@ -56,7 +56,7 @@ async function testApiKey() {
             ❌ **Initialization Failed** ❌
             Reason: ${error.message}
             
-            Action Required: Check your '40f1982842db35042e8561b13b38d492' key on TMDB.
+            Action Required: Check your '${API_KEY}' key on TMDB.
         `;
         // Display a critical error message globally
         showError(errorMessage, 'empty-message');
@@ -317,10 +317,9 @@ function addScrollListener(category) {
     // Check if scroll is near the end (within 50px of the far right)
     if (
       !isLoading[category] &&
-      // Limit to 5 pages max to avoid excessive API calls
-      currentPages[category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows')] < 5 && 
       container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
     ) {
+      // Load more content
       loadMore(category);
     }
   };
@@ -328,7 +327,9 @@ function addScrollListener(category) {
 
 async function loadMore(category) {
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
-  if (isLoading[category] || currentPages[pageKey] >= 5) return; // Stop at page 5
+  
+  // ⛔ Removed the check: currentPages[pageKey] >= 5 ⛔
+  if (isLoading[category]) return;
 
   isLoading[category] = true;
   const containerId = category + '-list';
@@ -353,11 +354,19 @@ async function loadMore(category) {
 
     const items = data.results || [];
     
+    // Stop loading if the API returns no results for the next page
+    if (items.length === 0) {
+        // Decrement page count back since the page was empty
+        currentPages[pageKey]--; 
+        console.log(`${category} reached end of available content.`);
+        // Don't display "No content available" if there are already images
+        document.getElementById(containerId)?.querySelector('.loading')?.remove();
+        isLoading[category] = false;
+        return;
+    }
+    
     displayList(items, containerId);
 
-    if (items.length === 0 && currentPages[pageKey] > 1) {
-      console.log(`${category} reached end of content.`);
-    }
   } catch (error) {
     console.error(`Error loading more for ${category}:`, error);
     showError(`Failed to load more ${category}.`, containerId);
