@@ -139,15 +139,24 @@ async function fetchNetflixMovies(page = 1) {
   try {
     console.log(`Fetching Netflix movies page ${page}...`);
     const res = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=WW&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    console.log(`Fetched ${data.results?.length || 0} Netflix movies`);
+    console.log(`Fetched ${data.results?.length || 0} Netflix movies (total pages: ${data.total_pages})`);
+    // Fallback: If 0 results, try without region filter (broader search)
+    if (!data.results || data.results.length === 0) {
+      console.warn('No Netflix movies found for WW—falling back to global popular movies with Netflix provider.');
+      const fallbackRes = await fetch(
+        `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+      );
+      const fallbackData = await fallbackRes.json();
+      return { results: fallbackData.results || [] };
+    }
     return data;
   } catch (error) {
     console.error('Error fetching Netflix movies:', error);
-    showError('Failed to load Netflix movies.', 'netflix-movies-list');
+    showError('Failed to load Netflix movies. Trying again soon...', 'netflix-movies-list');
     return { results: [] };
   }
 }
@@ -298,7 +307,10 @@ function addLoadMoreButton(containerId, category) {
 function addLoadMoreIfApplicable(containerId, category) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  if (container.innerHTML && !container.querySelector('p') && hasMore[category]) {
+  // Show button if has content OR even if empty but hasMore=true (for retries)
+  if ((container.innerHTML && !container.querySelector('p')) || hasMore[category]) {
+    // Remove any existing error <p> to allow button
+    container.querySelector('.error-message')?.remove();
     addLoadMoreButton(containerId, category);
   }
 }
