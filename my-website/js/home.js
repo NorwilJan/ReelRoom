@@ -10,19 +10,19 @@ let currentPages = {
   movies: 1,
   tvShows: 1,
   anime: 1,
-  tagalogMovies: 1,
+  tagalogMovies: 1, // Correct key for page counter
   netflixMovies: 1,
   netflixTV: 1,
-  koreanDrama: 1
+  koreanDrama: 1 // Added for Korean Drama
 };
 let isLoading = {
   movies: false,
   tvshows: false,
   anime: false,
-  'tagalog-movies': false,
+  'tagalog-movies': false, // Correct key for loading flag
   'netflix-movies': false,
   'netflix-tv': false,
-  'korean-drama': false
+  'korean-drama': false // Added for Korean Drama
 };
 let slideshowItems = [];
 let currentSlide = 0;
@@ -168,19 +168,18 @@ async function fetchNetflixTV(page = 1) {
 async function fetchKoreanDrama(page = 1) {
   try {
     const res = await fetch(
-      // ✅ MODIFIED: Removed 'with_genres=18' to be less restrictive, only filtering by Korean language TV shows
+      // Targeting TV, Korean language (ko) - Less restrictive filter ensures results show up
       `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.results) {
-        // Assume TV type for this category
         data.results.forEach(item => item.media_type = 'tv');
     }
     return data;
   } catch (error) {
     console.error('Error fetching Korean Drama:', error);
-    showError('Failed to load Korean Drama. (TMDB query too restrictive or network error)', 'korean-drama-list');
+    showError('Failed to load Korean Drama.', 'korean-drama-list');
     return { results: [], total_pages: 1 };
   }
 }
@@ -347,7 +346,7 @@ async function loadMore(category) {
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
   
   // Specific key mappings for hyphenated names
-  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; 
+  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // ✅ FIXED: Correct key mapping for Tagalog
   if (category === 'netflix-movies') pageKey = 'netflixMovies';
   if (category === 'netflix-tv') pageKey = 'netflixTV';
   if (category === 'korean-drama') pageKey = 'koreanDrama';
