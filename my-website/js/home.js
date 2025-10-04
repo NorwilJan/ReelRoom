@@ -38,7 +38,6 @@ let scrollActive = {
   netflix: false,
   netflixMovies: false
 };
-};
 let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
@@ -118,22 +117,6 @@ async function fetchNetflixContent(page = 1) {
     const movieData = await movieRes.json();
     const movies = movieData.results || [];
 
-async function fetchNetflixMovies(page = 1) {
-  try {
-    console.log(`Fetching Netflix movies page ${page}...`);
-    const res = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    console.log(`Fetched ${data.results?.length || 0} Netflix movies`);
-    return data;
-  } catch (error) {
-    console.error('Error fetching Netflix movies:', error);
-    showError('Failed to load Netflix movies.', 'netflix-movies-list');
-    return { results: [] };
-  }
-}
     const tvRes = await fetch(
       `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
@@ -149,6 +132,23 @@ async function fetchNetflixMovies(page = 1) {
     console.error('Error fetching Netflix content:', error);
     showError('Failed to load Netflix content.', 'netflix-list');
     return [];
+  }
+}
+
+async function fetchNetflixMovies(page = 1) {
+  try {
+    console.log(`Fetching Netflix movies page ${page}...`);
+    const res = await fetch(
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log(`Fetched ${data.results?.length || 0} Netflix movies`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching Netflix movies:', error);
+    showError('Failed to load Netflix movies.', 'netflix-movies-list');
+    return { results: [] };
   }
 }
 
@@ -351,6 +351,8 @@ async function loadMore(category) {
       data = await fetchTagalogMovies(currentPages[pageKey]);
     } else if (category === 'netflix') {
       data = await fetchNetflixContent(currentPages[pageKey]);
+    } else if (category === 'netflix-movies') {
+      data = await fetchNetflixMovies(currentPages[pageKey]);
     }
 
     const items = category === 'anime' || category === 'netflix' ? data : data.results || [];
@@ -519,13 +521,15 @@ async function init() {
     showLoading('anime-list');
     showLoading('tagalog-movies-list');
     showLoading('netflix-list');
+    showLoading('netflix-movies-list');
 
-    const [moviesData, tvShowsData, anime, tagalogMoviesData, netflixContent] = await Promise.all([
+    const [moviesData, tvShowsData, anime, tagalogMoviesData, netflixContent, netflixMoviesData] = await Promise.all([
       fetchTrending('movie', currentPages.movies),
       fetchTrending('tv', currentPages.tvShows),
       fetchTrendingAnime(currentPages.anime),
       fetchTagalogMovies(currentPages.tagalogMovies),
-      fetchNetflixContent(currentPages.netflix)
+      fetchNetflixContent(currentPages.netflix),
+      fetchNetflixMovies(currentPages.netflixMovies)
     ]);
 
     const movies = moviesData.results || [];
@@ -556,6 +560,10 @@ async function init() {
 
     displayList(netflixContent, 'netflix-list');
     addLoadMoreIfApplicable('netflix-list', 'netflix');
+
+    const netflixMovies = netflixMoviesData.results || [];
+    displayList(netflixMovies, 'netflix-movies-list');
+    addLoadMoreIfApplicable('netflix-movies-list', 'netflix-movies');
 
     console.log('Initialization complete.');
   } catch (error) {
