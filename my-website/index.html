@@ -1,116 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 CineView: Your Streaming Hub</title>
-    <link rel="stylesheet" href="css/home.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ReelRoom</title>
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="preload" href="css/home.css" as="style">
+  <link rel="preload" href="js/home.js" as="script">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script defer src="js/home.js"></script>
 </head>
+
 <body>
-
-    <header>
-        <div class="logo">🎬 CineView</div>
-        <button class="search-btn" onclick="openSearchModal()">🔍 Search</button>
-    </header>
-
-    <section class="slideshow-container">
-        <div class="slides" id="slides">
-            <h1 class="loading">Loading featured movies...</h1>
-        </div>
-        <a class="prev" onclick="changeSlide(-1)">&#10094;</a>
-        <a class="next" onclick="changeSlide(1)">&#10095;</a>
-        <div class="dots-container" id="dots"></div>
-    </section>
-    
-    <div id="empty-message" style="display: none;">
-        </div>
-
-    <section class="content-sections">
-        
-        <div class="row">
-            <h2>Trending Movies This Week</h2>
-            <div class="list" id="movies-list"></div>
-        </div>
-
-        <div class="row">
-            <h2>Trending TV Shows This Week</h2>
-            <div class="list" id="tvshows-list"></div>
-        </div>
-        
-        <div class="row">
-            <h2>Trending Korean Drama</h2>
-            <div class="list" id="korean-drama-list"></div>
-        </div>
-        
-        <div class="row">
-            <h2>Trending Tagalog Movies</h2>
-            <div class="list" id="tagalog-movies-list"></div>
-        </div>
-        <div class="row">
-            <h2>Popular Anime & Manga Adaptations</h2>
-            <div class="list" id="anime-list"></div>
-        </div>
-
-        <div class="row">
-            <h2>Trending on Netflix (Movies)</h2>
-            <div class="list" id="netflix-movies-list"></div>
-        </div>
-
-        <div class="row">
-            <h2>Trending on Netflix (TV Series)</h2>
-            <div class="list" id="netflix-tv-list"></div>
-        </div>
-
-    </section>
-
-
-    <div id="modal" class="modal" onclick="if(event.target.id === 'modal') closeModal()">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <div class="modal-details">
-                <img id="modal-image" src="" alt="Poster">
-                <div class="text-details">
-                    <h1 id="modal-title"></h1>
-                    <p class="rating" id="modal-rating"></p>
-                    <p id="modal-description"></p>
-                </div>
-            </div>
-            
-            <div class="video-player-section">
-                <div class="controls">
-                    <label for="server">Server:</label>
-                    <select id="server" onchange="changeServer()">
-                        <option value="player.videasy.net">Server 1 (Videasy)</option>
-                        <option value="vidsrc.cc">Server 2 (vidsrc.cc)</option>
-                        <option value="vidsrc.me">Server 3 (vidsrc.me)</option>
-                    </select>
-                </div>
-                
-                <div id="season-selector" style="display: none;">
-                    <label for="season">Season:</label>
-                    <select id="season" onchange="loadEpisodes()"></select>
-                </div>
-
-                <iframe id="modal-video" src="" frameborder="0" allowfullscreen allow="encrypted-media"></iframe>
-            </div>
-
-            <div class="episode-list" id="episode-list">
-                </div>
-        </div>
+  <div class="navbar">
+    <h1 class="logo-text">REELROOM</h1>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <button class="search-icon-btn" onclick="openSearchModal()">
+        <i class="fas fa-search"></i>
+      </button>
     </div>
-    
-    <div id="search-modal" class="modal" onclick="if(event.target.id === 'search-modal') closeSearchModal()">
-        <div class="search-modal-content">
-            <span class="close" onclick="closeSearchModal()">&times;</span>
-            <input type="text" id="search-input" placeholder="Search for any movie or TV show..." onkeyup="debouncedSearchTMDB()">
-            <div id="search-results" class="list">
-                </div>
-        </div>
-    </div>
+  </div>
 
-    <script src="js/home.js"></script>
+  <div class="banner" id="banner">
+    <div class="slideshow-container">
+      <div class="slides" id="slides"></div>
+      <a class="prev" onclick="changeSlide(-1)">&#10094;</a>
+      <a class="next" onclick="changeSlide(1)">&#10095;</a>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <h2>Trending Movies</h2>
+    <div class="list" id="movies-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>Trending TV Shows</h2>
+    <div class="list" id="tvshows-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>Trending Anime</h2>
+    <div class="list" id="anime-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>Trending Tagalog Movies</h2>
+    <div class="list" id="tagalog-movies-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>Trending Netflix Movies</h2>
+    <div class="list" id="netflix-movies-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>Trending Netflix TV Shows</h2>
+    <div class="list" id="netflix-tv-list"></div>
+  </div>
+  
+  <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+      <div class="modal-body">
+        <img id="modal-image" src="" alt="" />
+        <div class="modal-text">
+          <h2 id="modal-title"></h2>
+          <div class="stars" id="modal-rating"></div>
+          <p id="modal-description"></p>
+        </div>
+      </div>
+      <div class="server-selector">
+        <label for="server">Change Server:</label>
+        <select id="server" onchange="changeServer()">
+          <option value="vidsrc.cc">Vidsrc.cc</option>
+          <option value="vidsrc.me">Vidsrc.me</option>
+          <option value="player.videasy.net">Player.Videasy.net</option>
+        </select>
+      </div>
+      <div class="season-selector" id="season-selector" style="display: none;">
+        <label for="season">Select Season:</label>
+        <select id="season" onchange="loadEpisodes()"></select>
+      </div>
+      <div class="episode-list" id="episode-list"></div>
+      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <div class="search-modal" id="search-modal">
+    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." onkeyup="debouncedSearchTMDB()" />
+    <div class="results" id="search-results"></div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>&copy; 2025 ReelRoom. All rights reserved.</p>
+      <div class="footer-links">
+        <a href="#">Disclaimer</a>
+        <a href="#">About Us</a>
+        <a href="#">Contact Us</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
