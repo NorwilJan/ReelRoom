@@ -10,19 +10,19 @@ let currentPages = {
   movies: 1,
   tvShows: 1,
   anime: 1,
-  tagalogMovies: 1,
-  // 🆕 SPLIT NETFLIX INTO TWO CATEGORIES
+  tagalogMovies: 1, // Correct key format for page counter
   netflixMovies: 1,
-  netflixTV: 1
+  netflixTV: 1,
+  koreanDrama: 1
 };
 let isLoading = {
   movies: false,
   tvshows: false,
   anime: false,
-  'tagalog-movies': false,
-  // 🆕 SPLIT NETFLIX INTO TWO CATEGORIES
+  'tagalog-movies': false, // Correct key format for loading flag
   'netflix-movies': false,
-  'netflix-tv': false
+  'netflix-tv': false,
+  'korean-drama': false
 };
 let slideshowItems = [];
 let currentSlide = 0;
@@ -85,7 +85,6 @@ async function fetchTrending(type, page = 1) {
 
 async function fetchTrendingAnime(page = 1) {
   try {
-    // Fetch anime movies
     const movieRes = await fetch(
       `${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
     );
@@ -93,7 +92,6 @@ async function fetchTrendingAnime(page = 1) {
     const movieData = await movieRes.json();
     const movies = (movieData.results || []).map(item => ({...item, media_type: 'movie'}));
 
-    // Fetch anime TV shows
     const tvRes = await fetch(
       `${BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
     );
@@ -101,7 +99,6 @@ async function fetchTrendingAnime(page = 1) {
     const tvData = await tvRes.json();
     const tvShows = (tvData.results || []).map(item => ({...item, media_type: 'tv'}));
 
-    // Combine and sort by popularity (limited to 20 items per page)
     const combined = [...movies, ...tvShows]
       .filter(item => item.poster_path)
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
@@ -133,7 +130,6 @@ async function fetchTagalogMovies(page = 1) {
   }
 }
 
-// 🆕 NEW FUNCTION: Fetch Netflix MOVIES (provider ID 8 is Netflix)
 async function fetchNetflixMovies(page = 1) {
   try {
     const res = await fetch(
@@ -152,7 +148,6 @@ async function fetchNetflixMovies(page = 1) {
   }
 }
 
-// 🆕 NEW FUNCTION: Fetch Netflix TV SHOWS (provider ID 8 is Netflix)
 async function fetchNetflixTV(page = 1) {
   try {
     const res = await fetch(
@@ -167,6 +162,26 @@ async function fetchNetflixTV(page = 1) {
   } catch (error) {
     console.error('Error fetching Netflix TV:', error);
     showError('Failed to load Netflix TV shows.', 'netflix-tv-list');
+    return { results: [], total_pages: 1 };
+  }
+}
+
+async function fetchKoreanDrama(page = 1) {
+  try {
+    const res = await fetch(
+      // Targeting TV, Korean language (ko), Drama genre (18)
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.results) {
+        // Assume TV type for this category
+        data.results.forEach(item => item.media_type = 'tv');
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching Korean Drama:', error);
+    showError('Failed to load Korean Drama.', 'korean-drama-list');
     return { results: [], total_pages: 1 };
   }
 }
@@ -227,8 +242,6 @@ function showLoading(containerId) {
   loading.textContent = 'Loading...';
   container.appendChild(loading);
 }
-
-// ... displaySlides, showSlide, changeSlide remain the same ...
 
 function displaySlides() {
   const slidesContainer = document.getElementById('slides');
@@ -331,12 +344,14 @@ function addScrollListener(category) {
 }
 
 async function loadMore(category) {
-  // Translate category string to the correct key name for currentPages
+  // Translate category string to the correct key name for currentPages (e.g., 'tvshows' -> 'tvShows')
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
   
-  // Handle the new Netflix keys
+  // Specific key mappings for hyphenated names
+  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
   if (category === 'netflix-movies') pageKey = 'netflixMovies';
   if (category === 'netflix-tv') pageKey = 'netflixTV';
+  if (category === 'korean-drama') pageKey = 'koreanDrama';
 
   if (isLoading[category]) return;
 
@@ -357,12 +372,12 @@ async function loadMore(category) {
       data = await fetchTrendingAnime(currentPages[pageKey]);
     } else if (category === 'tagalog-movies') {
       data = await fetchTagalogMovies(currentPages[pageKey]);
-    } 
-    // 🆕 CALL THE NEW FETCH FUNCTIONS
-    else if (category === 'netflix-movies') {
+    } else if (category === 'netflix-movies') {
       data = await fetchNetflixMovies(currentPages[pageKey]);
     } else if (category === 'netflix-tv') {
       data = await fetchNetflixTV(currentPages[pageKey]);
+    } else if (category === 'korean-drama') {
+      data = await fetchKoreanDrama(currentPages[pageKey]);
     }
 
     const items = data.results || [];
@@ -386,8 +401,6 @@ async function loadMore(category) {
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
   }
 }
-
-// ... showDetails, loadEpisodes, changeServer, closeModal, etc. remain the same ...
 
 async function showDetails(item) {
   currentItem = item;
@@ -560,26 +573,27 @@ async function init() {
     showLoading('tvshows-list');
     showLoading('anime-list');
     showLoading('tagalog-movies-list');
-    // 🆕 LOADING FOR NEW CATEGORIES
     showLoading('netflix-movies-list');
     showLoading('netflix-tv-list');
+    showLoading('korean-drama-list');
 
-    // 🆕 FETCH ALL CATEGORIES
-    const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData] = await Promise.all([
+    const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
       fetchTrending('movie', currentPages.movies),
       fetchTrending('tv', currentPages.tvShows),
       fetchTrendingAnime(currentPages.anime),
       fetchTagalogMovies(currentPages.tagalogMovies),
-      fetchNetflixMovies(currentPages.netflixMovies), // New fetch
-      fetchNetflixTV(currentPages.netflixTV)         // New fetch
+      fetchNetflixMovies(currentPages.netflixMovies),
+      fetchNetflixTV(currentPages.netflixTV),
+      fetchKoreanDrama(currentPages.koreanDrama)
     ]);
 
     const movies = moviesData.results || [];
     const tvShows = tvShowsData.results || [];
     const anime = animeData.results || [];
     const tagalogMovies = tagalogMoviesData.results || [];
-    const netflixMovies = netflixMoviesData.results || []; // New result
-    const netflixTV = netflixTVData.results || [];         // New result
+    const netflixMovies = netflixMoviesData.results || [];
+    const netflixTV = netflixTVData.results || [];
+    const koreanDrama = koreanDramaData.results || [];
 
     // Combine for slideshow
     slideshowItems = [
@@ -587,8 +601,9 @@ async function init() {
       ...tvShows.slice(0, 2),
       anime[0] || {},
       tagalogMovies[0] || {},
-      netflixMovies[0] || {}, // Use a Netflix Movie for slide
-      netflixTV[0] || {}      // Use a Netflix TV show for slide
+      netflixMovies[0] || {}, 
+      netflixTV[0] || {},
+      koreanDrama[0] || {} 
     ].filter(item => item.backdrop_path && (item.title || item.name));
 
     displaySlides();
@@ -597,18 +612,18 @@ async function init() {
     displayList(tvShows, 'tvshows-list');
     displayList(anime, 'anime-list');
     displayList(tagalogMovies, 'tagalog-movies-list');
-    // 🆕 DISPLAY NEW CATEGORIES
     displayList(netflixMovies, 'netflix-movies-list');
     displayList(netflixTV, 'netflix-tv-list');
+    displayList(koreanDrama, 'korean-drama-list');
     
     // Setup infinite scroll listeners
     addScrollListener('movies');
     addScrollListener('tvshows');
     addScrollListener('anime');
     addScrollListener('tagalog-movies');
-    // 🆕 SETUP SCROLL LISTENERS FOR NEW CATEGORIES
     addScrollListener('netflix-movies');
     addScrollListener('netflix-tv');
+    addScrollListener('korean-drama');
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
