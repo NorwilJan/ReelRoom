@@ -1,5 +1,5 @@
 // js/home.js
-const API_KEY = '40f1982842db35042e8561b13b38d492'; // ✅ API KEY RE-INSERTED
+const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
@@ -10,19 +10,19 @@ let currentPages = {
   movies: 1,
   tvShows: 1,
   anime: 1,
-  tagalogMovies: 1, // Correct key for page counter
+  tagalogMovies: 1, // Correct key format for page counter
   netflixMovies: 1,
   netflixTV: 1,
-  koreanDrama: 1 // Added for Korean Drama
+  koreanDrama: 1
 };
 let isLoading = {
   movies: false,
   tvshows: false,
   anime: false,
-  'tagalog-movies': false, // Correct key for loading flag
+  'tagalog-movies': false, // Correct key format for loading flag
   'netflix-movies': false,
   'netflix-tv': false,
-  'korean-drama': false // Added for Korean Drama
+  'korean-drama': false
 };
 let slideshowItems = [];
 let currentSlide = 0;
@@ -30,6 +30,7 @@ let slideshowInterval;
 
 /**
  * Utility function to debounce another function call.
+ * Ensures a function is not called until a certain time has passed after the last call.
  */
 function debounce(func, delay) {
   let timeout;
@@ -168,12 +169,13 @@ async function fetchNetflixTV(page = 1) {
 async function fetchKoreanDrama(page = 1) {
   try {
     const res = await fetch(
-      // Targeting TV, Korean language (ko) - Less restrictive filter ensures results show up
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+      // Targeting TV, Korean language (ko), Drama genre (18)
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.results) {
+        // Assume TV type for this category
         data.results.forEach(item => item.media_type = 'tv');
     }
     return data;
@@ -346,7 +348,7 @@ async function loadMore(category) {
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
   
   // Specific key mappings for hyphenated names
-  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // ✅ FIXED: Correct key mapping for Tagalog
+  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
   if (category === 'netflix-movies') pageKey = 'netflixMovies';
   if (category === 'netflix-tv') pageKey = 'netflixTV';
   if (category === 'korean-drama') pageKey = 'koreanDrama';
@@ -565,7 +567,7 @@ async function init() {
   }
 
   try {
-    // 1. Show loading for all sections initially
+    // Show loading for all sections initially
     showLoading('slides');
     showLoading('movies-list');
     showLoading('tvshows-list');
@@ -573,9 +575,8 @@ async function init() {
     showLoading('tagalog-movies-list');
     showLoading('netflix-movies-list');
     showLoading('netflix-tv-list');
-    showLoading('korean-drama-list'); 
+    showLoading('korean-drama-list');
 
-    // 2. Fetch all data concurrently
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
       fetchTrending('movie', currentPages.movies),
       fetchTrending('tv', currentPages.tvShows),
@@ -583,7 +584,7 @@ async function init() {
       fetchTagalogMovies(currentPages.tagalogMovies),
       fetchNetflixMovies(currentPages.netflixMovies),
       fetchNetflixTV(currentPages.netflixTV),
-      fetchKoreanDrama(currentPages.koreanDrama) 
+      fetchKoreanDrama(currentPages.koreanDrama)
     ]);
 
     const movies = moviesData.results || [];
@@ -592,7 +593,7 @@ async function init() {
     const tagalogMovies = tagalogMoviesData.results || [];
     const netflixMovies = netflixMoviesData.results || [];
     const netflixTV = netflixTVData.results || [];
-    const koreanDrama = koreanDramaData.results || []; 
+    const koreanDrama = koreanDramaData.results || [];
 
     // Combine for slideshow
     slideshowItems = [
@@ -607,23 +608,22 @@ async function init() {
 
     displaySlides();
 
-    // 3. Display all lists
     displayList(movies, 'movies-list');
     displayList(tvShows, 'tvshows-list');
     displayList(anime, 'anime-list');
     displayList(tagalogMovies, 'tagalog-movies-list');
     displayList(netflixMovies, 'netflix-movies-list');
     displayList(netflixTV, 'netflix-tv-list');
-    displayList(koreanDrama, 'korean-drama-list'); 
+    displayList(koreanDrama, 'korean-drama-list');
     
-    // 4. Setup infinite scroll listeners
+    // Setup infinite scroll listeners
     addScrollListener('movies');
     addScrollListener('tvshows');
     addScrollListener('anime');
     addScrollListener('tagalog-movies');
     addScrollListener('netflix-movies');
     addScrollListener('netflix-tv');
-    addScrollListener('korean-drama'); 
+    addScrollListener('korean-drama');
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
