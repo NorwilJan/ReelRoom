@@ -20,6 +20,9 @@ let isLoading = {
   'tagalog-movies': false,
   netflix: false
 };
+let slideshowItems = [];
+let currentSlide = 0;
+let slideshowInterval;
 
 /**
  * Utility function to debounce another function call.
@@ -31,6 +34,35 @@ function debounce(func, delay) {
     clearTimeout(timeout);
     timeout = setTimeout(() => func.apply(this, args), delay);
   };
+}
+
+/**
+ * 🔑 New function to test API Key validity on startup.
+ */
+async function testApiKey() {
+    try {
+        const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&page=1`);
+        if (res.status === 401) {
+            // This is the error code for an invalid/expired key
+            throw new Error("TMDB API Key is invalid. Please check your key.");
+        }
+        if (!res.ok) {
+            throw new Error(`TMDB API request failed with status: ${res.status}`);
+        }
+        return true;
+    } catch (error) {
+        console.error("API Key Test Failed:", error.message);
+        const errorMessage = `
+            ❌ **Initialization Failed** ❌
+            Reason: ${error.message}
+            
+            Action Required: Check your '40f1982842db35042e8561b13b38d492' key on TMDB.
+        `;
+        // Display a critical error message globally
+        showError(errorMessage, 'empty-message');
+        document.getElementById('empty-message').style.display = 'block';
+        return false;
+    }
 }
 
 async function fetchTrending(type, page = 1) {
@@ -165,6 +197,7 @@ function showError(message, containerId) {
   if (container) {
     const error = document.createElement('p');
     error.className = 'error-message';
+    error.style.whiteSpace = 'pre-wrap'; // Preserve formatting for API key error
     error.textContent = message;
     container.appendChild(error);
   }
@@ -284,7 +317,8 @@ function addScrollListener(category) {
     // Check if scroll is near the end (within 50px of the far right)
     if (
       !isLoading[category] &&
-      currentPages[category.replace(/-/g, 'Movies') || category] < 5 && // Stop after a few pages to prevent excessive API calls
+      // Limit to 5 pages max to avoid excessive API calls
+      currentPages[category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows')] < 5 && 
       container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
     ) {
       loadMore(category);
@@ -322,7 +356,6 @@ async function loadMore(category) {
     displayList(items, containerId);
 
     if (items.length === 0 && currentPages[pageKey] > 1) {
-      // If we loaded a new page and got no results, it means we hit the end
       console.log(`${category} reached end of content.`);
     }
   } catch (error) {
@@ -493,6 +526,13 @@ const debouncedSearchTMDB = debounce(async () => {
 
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
+  
+  // 1. Initial API Key Check
+  const apiKeyValid = await testApiKey();
+  if (!apiKeyValid) {
+      // Stop initialization if the API key is bad. Error message is already displayed.
+      return;
+  }
 
   try {
     // Show loading for all sections initially
@@ -542,8 +582,9 @@ async function init() {
     addScrollListener('netflix');
 
   } catch (error) {
-    console.error('Error initializing:', error);
-    showError('Failed to load content. Please refresh or check your connection.', 'empty-message');
+    console.error('Fatal initialization error:', error);
+    showError('Failed to load content categories. Please check browser console.', 'empty-message');
+    document.getElementById('empty-message').style.display = 'block';
   }
 }
 
