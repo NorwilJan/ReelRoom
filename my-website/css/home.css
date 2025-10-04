@@ -467,3 +467,12 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   padding: 20px;
   color: #ccc;
 }
+
+/* Mobile fix for logo spacing */
+@media (max-width: 768px) {
+  .logo-text {
+    font-size: 18px;              /* Smaller text to avoid crowding */
+    margin-bottom: 5px;           /* Tiny gap before nav-links stack below */
+    letter-spacing: 1px;          /* Slightly tighter spacing for mobile flow */
+  }
+}
