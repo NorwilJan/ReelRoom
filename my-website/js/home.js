@@ -10,19 +10,19 @@ let currentPages = {
   movies: 1,
   tvShows: 1,
   anime: 1,
-  tagalogMovies: 1, // Correct key format for page counter
+  tagalogMovies: 1,
   netflixMovies: 1,
   netflixTV: 1,
-  koreanDrama: 1
+  koreanDrama: 1 // CONFIRMED: Correct key for page counter
 };
 let isLoading = {
   movies: false,
   tvshows: false,
   anime: false,
-  'tagalog-movies': false, // Correct key format for loading flag
+  'tagalog-movies': false,
   'netflix-movies': false,
   'netflix-tv': false,
-  'korean-drama': false
+  'korean-drama': false // CONFIRMED: Correct key for loading flag
 };
 let slideshowItems = [];
 let currentSlide = 0;
@@ -30,7 +30,6 @@ let slideshowInterval;
 
 /**
  * Utility function to debounce another function call.
- * Ensures a function is not called until a certain time has passed after the last call.
  */
 function debounce(func, delay) {
   let timeout;
@@ -180,6 +179,8 @@ async function fetchKoreanDrama(page = 1) {
     }
     return data;
   } catch (error) {
+    // If TMDB returns an empty list, it's not an error.
+    // If it's a network/API error, we log and show a message.
     console.error('Error fetching Korean Drama:', error);
     showError('Failed to load Korean Drama.', 'korean-drama-list');
     return { results: [], total_pages: 1 };
@@ -348,7 +349,7 @@ async function loadMore(category) {
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
   
   // Specific key mappings for hyphenated names
-  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
+  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; 
   if (category === 'netflix-movies') pageKey = 'netflixMovies';
   if (category === 'netflix-tv') pageKey = 'netflixTV';
   if (category === 'korean-drama') pageKey = 'koreanDrama';
@@ -567,7 +568,7 @@ async function init() {
   }
 
   try {
-    // Show loading for all sections initially
+    // 1. Show loading for all sections initially
     showLoading('slides');
     showLoading('movies-list');
     showLoading('tvshows-list');
@@ -575,8 +576,9 @@ async function init() {
     showLoading('tagalog-movies-list');
     showLoading('netflix-movies-list');
     showLoading('netflix-tv-list');
-    showLoading('korean-drama-list');
+    showLoading('korean-drama-list'); // CONFIRMED: Loading for Korean Drama
 
+    // 2. Fetch all data concurrently
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
       fetchTrending('movie', currentPages.movies),
       fetchTrending('tv', currentPages.tvShows),
@@ -584,7 +586,7 @@ async function init() {
       fetchTagalogMovies(currentPages.tagalogMovies),
       fetchNetflixMovies(currentPages.netflixMovies),
       fetchNetflixTV(currentPages.netflixTV),
-      fetchKoreanDrama(currentPages.koreanDrama)
+      fetchKoreanDrama(currentPages.koreanDrama) // CONFIRMED: Fetching Korean Drama data
     ]);
 
     const movies = moviesData.results || [];
@@ -593,7 +595,7 @@ async function init() {
     const tagalogMovies = tagalogMoviesData.results || [];
     const netflixMovies = netflixMoviesData.results || [];
     const netflixTV = netflixTVData.results || [];
-    const koreanDrama = koreanDramaData.results || [];
+    const koreanDrama = koreanDramaData.results || []; // CONFIRMED: Assigning data
 
     // Combine for slideshow
     slideshowItems = [
@@ -603,27 +605,28 @@ async function init() {
       tagalogMovies[0] || {},
       netflixMovies[0] || {}, 
       netflixTV[0] || {},
-      koreanDrama[0] || {} 
+      koreanDrama[0] || {} // CONFIRMED: Including in slideshow
     ].filter(item => item.backdrop_path && (item.title || item.name));
 
     displaySlides();
 
+    // 3. Display all lists
     displayList(movies, 'movies-list');
     displayList(tvShows, 'tvshows-list');
     displayList(anime, 'anime-list');
     displayList(tagalogMovies, 'tagalog-movies-list');
     displayList(netflixMovies, 'netflix-movies-list');
     displayList(netflixTV, 'netflix-tv-list');
-    displayList(koreanDrama, 'korean-drama-list');
+    displayList(koreanDrama, 'korean-drama-list'); // CONFIRMED: Displaying Korean Drama list
     
-    // Setup infinite scroll listeners
+    // 4. Setup infinite scroll listeners
     addScrollListener('movies');
     addScrollListener('tvshows');
     addScrollListener('anime');
     addScrollListener('tagalog-movies');
     addScrollListener('netflix-movies');
     addScrollListener('netflix-tv');
-    addScrollListener('korean-drama');
+    addScrollListener('korean-drama'); // CONFIRMED: Adding scroll listener
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
