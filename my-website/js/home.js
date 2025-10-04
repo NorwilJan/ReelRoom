@@ -11,28 +11,33 @@ let currentPages = {
   tvShows: 1,
   anime: 1,
   tagalogMovies: 1,
-  netflix: 1
+  netflix: 1,
+  netflixMovies: 1
 };
 let isLoading = {
   movies: false,
   tvshows: false,
   anime: false,
   'tagalog-movies': false,
-  netflix: false
+  netflix: false,
+  netflixMovies: false
 };
 let hasMore = {
   movies: true,
   tvshows: true,
   anime: true,
   'tagalog-movies': true,
-  netflix: true
+  netflix: true,
+  netflixMovies: true
 };
 let scrollActive = {
   movies: false,
   tvshows: false,
   anime: false,
   'tagalog-movies': false,
-  netflix: false
+  netflix: false,
+  netflixMovies: false
+};
 };
 let slideshowItems = [];
 let currentSlide = 0;
