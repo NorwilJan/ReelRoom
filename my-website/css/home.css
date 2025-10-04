@@ -18,8 +18,18 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 .nav-links { display: flex; align-items: center; gap: 10px; }
 .nav-links a { color: white; text-decoration: none; margin: 0 5px; }
 
-.search-bar {
-  padding: 5px; border-radius: 5px; border: none;
+/* REPLACED search-bar INPUT with search-icon-btn BUTTON */
+.search-icon-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 5px 10px;
+  transition: color 0.2s;
+}
+.search-icon-btn:hover {
+  color: #ddd;
 }
 
 .banner {
@@ -69,6 +79,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   cursor: pointer;
   font-size: 24px;
   user-select: none;
+  border-radius: 5px;
 }
 
 .prev { left: 10px; }
@@ -107,10 +118,23 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   display: flex;
   overflow-x: auto;
   padding-bottom: 10px;
+  /* Improvement: Hide scrollbar for a cleaner UI */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+}
+
+/* Improvement: Hide scrollbar for Chrome, Safari and Opera */
+.list::-webkit-scrollbar {
+  display: none;
 }
 
 .list img {
   width: 150px;
+  /* Improvement: Ensure consistent image height/ratio */
+  height: 225px; 
+  object-fit: cover;
+  flex-shrink: 0; /* Prevents images from shrinking on smaller lists */
   margin-right: 10px;
   cursor: pointer;
   border-radius: 5px;
@@ -155,6 +179,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
 .modal-body img {
   width: 30%;
+  height: auto; /* Ensure aspect ratio is preserved */
   border-radius: 5px;
 }
 
@@ -164,7 +189,9 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .modal img {
-  width: 25%;
+  /* This selector seems redundant, using modal-body img */
+  /* Keeping it for safety, but updating to modal-body img width */
+  /* width: 25%; */
   border-radius: 5px;
 }
 
@@ -176,22 +203,18 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   font-size: 24px;
 }
 
-.server-selector {
+.server-selector, .season-selector {
   margin: 15px 0;
   text-align: left;
 }
 
-.season-selector {
-  margin: 15px 0;
-  text-align: left;
-}
-
-.season-selector select {
+.season-selector select, .server-selector select {
   padding: 5px;
   border-radius: 5px;
   border: none;
   background: #333;
   color: #fff;
+  min-width: 150px;
 }
 
 .episode-list {
@@ -201,6 +224,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   margin-bottom: 20px;
   max-height: 200px;
   overflow-y: auto;
+  padding-right: 5px; /* Space for scrollbar */
 }
 
 .episode-item {
@@ -208,8 +232,10 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   padding: 10px;
   border-radius: 5px;
   cursor: pointer;
-  flex: 1 1 calc(50% - 10px);
+  flex: 1 1 calc(50% - 5px); /* Adjusted width for 2 columns with 10px gap */
   transition: background 0.3s;
+  display: flex;
+  align-items: center;
 }
 
 .episode-item:hover {
@@ -218,6 +244,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
 .episode-item img {
   width: 50px;
+  height: auto;
   border-radius: 5px;
   margin-right: 10px;
   vertical-align: middle;
@@ -225,6 +252,10 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
 .episode-item span {
   color: #fff;
+  flex-grow: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .search-modal {
@@ -233,31 +264,45 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.9);
   display: none;
-  justify-content: center;
+  justify-content: flex-start; /* Start content near the top */
   align-items: center;
   flex-direction: column;
+  padding-top: 50px;
   z-index: 15;
 }
 
 .search-modal input {
-  width: 300px;
+  width: 90%;
+  max-width: 500px;
   padding: 10px;
   border-radius: 5px;
   border: none;
   margin-bottom: 20px;
+  font-size: 16px;
 }
 
 .search-modal .results {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  /* Using Grid for search results for cleaner layout */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh; /* Contain results on screen */
+  overflow-y: auto;
+  padding: 10px;
 }
 
 .search-modal img {
-  width: 120px;
+  width: 100%; /* Fill grid cell */
+  height: auto;
   border-radius: 5px;
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.search-modal img:hover {
+  transform: scale(1.05);
 }
 
 .search-modal .close {
@@ -270,23 +315,33 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 /* MOBILE DISPLAY START */
 @media (max-width: 768px) {
   .navbar {
-    flex-direction: row;
+    flex-direction: column; /* Improvement: Stack for better mobile flow */
     align-items: flex-start;
   }
 
   .nav-links {
-    flex-direction: row;
+    flex-direction: column; /* Improvement: Stack nav items */
     width: 100%;
     gap: 10px;
     margin-top: 10px;
+    align-items: stretch; /* Stretch links/button to full width */
   }
 
-  .nav-links a, .search-bar {
-    width: 100%;
+  .nav-links a {
+    text-align: center;
+    padding: 5px 0;
+    background: #333;
+    border-radius: 5px;
   }
-
-  .search-bar {
-    margin-top: 10px;
+  
+  /* Hiding the redundant main search bar input */
+  .search-bar { display: none; }
+  
+  .search-icon-btn {
+    align-self: flex-end; /* Keep the search icon to the right */
+    position: absolute;
+    top: 10px;
+    right: 10px;
   }
 
   .banner {
@@ -312,29 +367,21 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 
   .modal-body {
+    flex-direction: column; /* Stack image and text */
     align-items: center;
   }
 
   .modal-body img {
-    width: 40%;
+    width: 50%; /* Larger image when stacked */
   }
 
   .modal-text {
     text-align: center;
   }
 
-  .list {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .list img {
-    width: 120px;
-  }
-
   .episode-list {
     flex-direction: column;
+    max-height: 150px;
   }
 
   .episode-item {
@@ -342,16 +389,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 
   .search-modal input {
-    margin-top: 50px;
-    width: 90%;
-  }
-
-  .search-modal .results {
-    justify-content: center;
-    grid-template-columns: repeat(auto-fill, minmax(45%, 1fr));
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 10px 0;
+    margin-top: 0;
   }
 }
 
@@ -371,7 +409,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 
   .modal-body img {
-    width: 40%;
+    width: 50%;
   }
 
   .search-modal .close {
@@ -429,29 +467,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 }
 
-/* Styles for load more button, error, and loading */
-.load-more {
-  background: #333;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 5px;
-  transition: background 0.3s;
-  flex-shrink: 0;
-  margin: 10px auto;
-  display: block;
-  font-size: 16px;
-}
-
-.load-more:hover {
-  background: #444;
-}
-
-.load-more:disabled {
-  background: #555;
-  cursor: not-allowed;
-}
+/* Load more button styles removed as we are switching to infinite scroll */
 
 .error-message {
   color: #ff6b6b;
