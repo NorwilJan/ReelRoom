@@ -28,7 +28,7 @@ let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
 
-/
+/**
  * Utility function to debounce another function call.
  * Ensures a function is not called until a certain time has passed after the last call.
  */
@@ -40,7 +40,7 @@ function debounce(func, delay) {
   };
 }
 
-/
+/**
  * 🔑 Function to test API Key validity on startup.
  */
 async function testApiKey() {
@@ -56,7 +56,7 @@ async function testApiKey() {
     } catch (error) {
         console.error("API Key Test Failed:", error.message);
         const errorMessage = `
-            ❌ Initialization Failed ❌
+            ❌ **Initialization Failed** ❌
             Reason: ${error.message}
             
             Action Required: Check your '${API_KEY}' key on TMDB.
@@ -73,7 +73,6 @@ async function fetchTrending(type, page = 1) {
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     const data = await res.json();
     if (data.results) {
-        // FIX 1: Ensure media_type property is used correctly
         data.results.forEach(item => item.media_type = item.media_type || type);
     }
     return data;
@@ -258,7 +257,6 @@ function displaySlides() {
   }
 
   slideshowItems.forEach((item, index) => {
-    // FIX 2: Use TMDB's standard 'backdrop_path' property
     if (!item.backdrop_path) return;
     const slide = document.createElement('div');
     slide.className = 'slide';
@@ -322,10 +320,8 @@ function displayList(items, containerId) {
     if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
-    // FIX 3: Use TMDB's standard 'poster_path' property
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-    // FIX 4: Use TMDB's standard 'media_type' property for alt text
-    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ?  (` ${item.media_type}`) : '');
+    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
     img.setAttribute('data-id', item.id);
     img.onclick = () => showDetails(item);
     container.appendChild(img);
@@ -352,7 +348,7 @@ async function loadMore(category) {
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
   
   // Specific key mappings for hyphenated names
-  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; 
+  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
   if (category === 'netflix-movies') pageKey = 'netflixMovies';
   if (category === 'netflix-tv') pageKey = 'netflixTV';
   if (category === 'korean-drama') pageKey = 'koreanDrama';
@@ -412,7 +408,6 @@ async function showDetails(item) {
   currentEpisode = 1;
   document.getElementById('modal-title').textContent = item.title || item.name || 'Unknown';
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-  // FIX 5: Use TMDB's standard 'poster_path' property
   document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
   // Rating out of 5 stars (10/2)
   document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
@@ -420,7 +415,6 @@ async function showDetails(item) {
 
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
-  // FIX 6: Use TMDB's standard 'media_type' property for TV check
   const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
 
   if (isTVShow) {
@@ -487,7 +481,6 @@ function changeServer() {
   if (!currentItem) return;
   const server = document.getElementById('server').value;
   // Determine type from media_type property
-  // FIX 7: Use TMDB's standard 'media_type' property
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   let embedURL = '';
 
@@ -543,7 +536,6 @@ const debouncedSearchTMDB = debounce(async () => {
 
     container.innerHTML = ''; // Clear loading
     data.results
-      // FIX 8: Use TMDB's standard 'media_type' and 'poster_path' properties
       .filter(item => item.media_type !== 'person' && item.poster_path)
       .forEach(item => {
         const img = document.createElement('img');
@@ -612,8 +604,6 @@ async function init() {
       netflixMovies[0] || {}, 
       netflixTV[0] || {},
       koreanDrama[0] || {} 
-      // FIX 9: The filter below now correctly uses backdrop_path,
-      // which was also corrected inside displaySlides()
     ].filter(item => item.backdrop_path && (item.title || item.name));
 
     displaySlides();
