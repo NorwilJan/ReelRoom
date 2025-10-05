@@ -347,18 +347,20 @@ body {
   font-size: 30px;
 }
 
+/* --- MODIFIED FOR NORMAL SIZE APPEARANCE --- */
 #search-input {
   width: 90%;
-  max-width: 600px;
+  max-width: 450px; /* Reduced max-width for a "normal size" look */
   display: block;
   margin: 0 auto 20px;
-  padding: 15px;
-  font-size: 18px;
-  border-radius: 25px;
-  border: 2px solid #555;
-  background-color: #222;
+  padding: 10px 15px; /* Reduced padding for a smaller height */
+  font-size: 16px; /* Slightly smaller font */
+  border-radius: 20px; /* Slightly smaller border-radius */
+  border: 1px solid #777; /* Lighter border */
+  background-color: transparent; /* Changed to transparent for a lighter look */
   color: #fff;
 }
+/* ------------------------------------------- */
 
 .results {
   display: flex;
@@ -457,6 +459,29 @@ body {
     margin-right: 0;
     margin-bottom: 15px;
   }
+  
+  /* --- MOBILE FIXES FOR ALL VIEW (DISCOVER PAGE) --- */
+  .all-view-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  
+  .all-view-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Match grid image height to list-item image height on mobile */
+  .all-view-grid img { 
+    min-height: 180px; 
+  }
+
+  /* Make filter select boxes full width on mobile */
+  .all-view-controls select {
+    width: 100%;
+    min-width: initial;
+  }
+  /* ---------------------------------------------------- */
 }
 
 /* ------------------------------------------- */
@@ -542,15 +567,4 @@ body {
 
 .all-view-grid img:hover {
   transform: scale(1.03);
-}
-
-@media (max-width: 768px) {
-  .all-view-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-  }
-  .all-view-controls {
-    flex-direction: column;
-    gap: 10px;
-  }
 }
