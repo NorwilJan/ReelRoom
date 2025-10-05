@@ -75,7 +75,7 @@ function getStarRating(voteAverage) {
 
 /** Tests the API key validity and returns a boolean. */
 async function testApiKey() {
-    if (API_KEY === 'YOUR_API_KEY' || !API_KEY) {
+    if (API_KEY === '40f1982842db35042e8561b13b38d492' || !API_KEY) {
         document.getElementById('empty-message').innerHTML = '<p style="color:red;">Error: Please set your TMDB API Key in js/home.js.</p>';
         document.getElementById('empty-message').style.display = 'block';
         return false;
