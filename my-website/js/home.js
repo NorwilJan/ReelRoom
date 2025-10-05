@@ -2,7 +2,7 @@
 // CONFIGURATION AND CONSTANTS
 // IMPORTANT: Replace YOUR_API_KEY with your actual TMDB API key.
 // ==================================================================================
-const API_KEY = 'YOUR_API_KEY'; // <--- Make sure this is your key!
+const API_KEY = '40f1982842db35042e8561b13b38d492'; // <--- Make sure this is your key!
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/w500';
 const FALLBACK_IMAGE = 'assets/fallback.jpg'; // Assuming you have a fallback image asset
