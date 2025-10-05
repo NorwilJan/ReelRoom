@@ -1,11 +1,11 @@
 // ==================================================================================
 // CONFIGURATION AND CONSTANTS
-// IMPORTANT: Replace YOUR_API_KEY with your actual TMDB API key.
 // ==================================================================================
-const API_KEY = '40f1982842db35042e8561b13b38d492'; // <--- Make sure this is your key!
+// TMDB API KEY (Inserted by user request)
+const API_KEY = '40f1982842db35042e8561b13b38d492'; 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/w500';
-const FALLBACK_IMAGE = 'assets/fallback.jpg'; // Assuming you have a fallback image asset
+const FALLBACK_IMAGE = 'assets/fallback.jpg'; 
 
 // Global state variables for pagination and loading
 let currentSlide = 0;
@@ -18,7 +18,7 @@ let currentPages = {
   netflixMovies: 1,
   netflixTV: 1,
   koreanDrama: 1,
-  allView: 1 // New key for the full-screen view pagination
+  allView: 1
 };
 let isLoading = {
   movies: false,
@@ -35,6 +35,7 @@ let currentAllViewCategory = null;
 let allViewTotalPages = 1;
 let movieGenres = []; 
 let tvGenres = []; 
+let currentMediaType = 'movie'; // Tracks type for modal
 
 // ==================================================================================
 // UTILITY FUNCTIONS
@@ -75,18 +76,24 @@ function getStarRating(voteAverage) {
 
 /** Tests the API key validity and returns a boolean. */
 async function testApiKey() {
-    if (API_KEY === '40f1982842db35042e8561b13b38d492' || !API_KEY) {
-        document.getElementById('empty-message').innerHTML = '<p style="color:red;">Error: Please set your TMDB API Key in js/home.js.</p>';
+    if (!API_KEY || API_KEY.length !== 32) {
+        document.getElementById('empty-message').innerHTML = '<p style="color:red;">Error: API Key is missing or invalid length. Check js/home.js.</p>';
         document.getElementById('empty-message').style.display = 'block';
         return false;
     }
-    const res = await fetch(`${BASE_URL}/trending/all/day?api_key=${API_KEY}`);
-    if (!res.ok) {
-        document.getElementById('empty-message').innerHTML = `<p style="color:red;">Error: API Key failed to load content (Status: ${res.status}). Check your key.</p>`;
+    try {
+        const res = await fetch(`${BASE_URL}/trending/all/day?api_key=${API_KEY}`);
+        if (!res.ok) {
+            document.getElementById('empty-message').innerHTML = `<p style="color:red;">Error: API Key failed to load content (Status: ${res.status}). Check your key.</p>`;
+            document.getElementById('empty-message').style.display = 'block';
+            return false;
+        }
+        return true;
+    } catch(error) {
+        document.getElementById('empty-message').innerHTML = `<p style="color:red;">Network Error: Could not reach TMDB. Check console for details.</p>`;
         document.getElementById('empty-message').style.display = 'block';
         return false;
     }
-    return true;
 }
 
 /** Fetches trending content for the banner. */
@@ -128,6 +135,12 @@ async function fetchFilteredContent(type, filters, page = 1) {
     data.results.forEach(item => item.media_type = type);
   }
   return data;
+}
+
+/** Fetches detailed info for modal. */
+async function fetchDetails(id, mediaType) {
+    const res = await fetch(`${BASE_URL}/${mediaType}/${id}?api_key=${API_KEY}&append_to_response=seasons`);
+    return res.json();
 }
 
 // Specialized fetch functions (using the general one)
@@ -301,7 +314,6 @@ function resetSlideshowInterval() {
   clearInterval(slideshowInterval);
   startSlideshowInterval();
 }
-
 
 // ==================================================================================
 // FULL-SCREEN ALL VIEW (DISCOVER PAGE) LOGIC
@@ -498,12 +510,211 @@ function closeAllView() {
 
 
 // ==================================================================================
-// DETAIL MODAL LOGIC (Requires fetchDetails and other modal functions - Omitted for brevity)
+// DETAIL MODAL LOGIC (Video Player)
 // ==================================================================================
-// NOTE: Your existing modal functions (showDetails, closeModal, changeServer, etc.) 
-// must be present here but are omitted to keep the focus on the new features.
 
-// [Insert your existing showDetails(), closeModal(), etc. functions here]
+let currentMediaId = null;
+let currentSeasons = [];
+let currentSelectedSeason = 1;
+
+/** Constructs the streaming URL based on server, ID, type, season, and episode. */
+function buildStreamingUrl(server, id, mediaType, season = null, episode = null) {
+    let type = mediaType === 'movie' ? 'movie' : 'tv';
+    let url = `https://${server}/embed/${type}/${id}`;
+    
+    if (type === 'tv' && season && episode) {
+        url += `/${season}/${episode}`;
+    }
+    return url;
+}
+
+/** Populates the season selector for TV shows. */
+function populateSeasonSelector(seasons) {
+    const selector = document.getElementById('season');
+    selector.innerHTML = '';
+    currentSeasons = seasons.sort((a, b) => a.season_number - b.season_number);
+
+    currentSeasons.forEach(season => {
+        // Exclude Season 00 (Specials) for simplicity unless it's the only one
+        if (season.season_number > 0 || currentSeasons.length === 1) { 
+            const option = document.createElement('option');
+            option.value = season.season_number;
+            option.textContent = `Season ${season.season_number}`;
+            selector.appendChild(option);
+        }
+    });
+
+    if (currentSeasons.some(s => s.season_number > 0)) {
+        document.getElementById('season-selector').style.display = 'block';
+        currentSelectedSeason = parseInt(selector.value) || 1;
+    } else {
+        document.getElementById('season-selector').style.display = 'none';
+    }
+    
+    // Load episodes for the default/selected season
+    loadEpisodes();
+}
+
+/** Loads and displays episode buttons for the selected season. */
+function loadEpisodes() {
+    const seasonNum = parseInt(document.getElementById('season').value);
+    const episodeList = document.getElementById('episode-list');
+    episodeList.innerHTML = '';
+    
+    const season = currentSeasons.find(s => s.season_number === seasonNum);
+    
+    if (!season || season.episode_count === 0) {
+        episodeList.innerHTML = '<p style="color:#ccc;">Episode details not available.</p>';
+        // Still load the season link if possible
+        changeServer(); 
+        return;
+    }
+
+    // Since TMDB season details don't always have a clean list of episodes,
+    // we create buttons based on the count, assuming 1-based indexing.
+    for (let i = 1; i <= season.episode_count; i++) {
+        const btn = document.createElement('button');
+        btn.classList.add('episode-btn');
+        btn.textContent = `E${i}`;
+        btn.setAttribute('data-episode', i);
+        btn.onclick = () => {
+            // Remove active class from all buttons
+            document.querySelectorAll('.episode-btn').forEach(b => b.classList.remove('active'));
+            // Add active class to the clicked button
+            btn.classList.add('active');
+            changeServer(seasonNum, i);
+        };
+        episodeList.appendChild(btn);
+    }
+    
+    // Auto-select the first episode if available
+    const firstEpisodeBtn = document.querySelector('.episode-btn');
+    if (firstEpisodeBtn) {
+        firstEpisodeBtn.classList.add('active');
+        changeServer(seasonNum, 1);
+    } else {
+        changeServer(seasonNum); // Load base season if no episodes
+    }
+}
+
+
+/** Displays content details in the modal and sets up the player. */
+async function showDetails(item) {
+    const mediaType = item.media_type === 'movie' ? 'movie' : 'tv';
+    currentMediaType = mediaType;
+    currentMediaId = item.id;
+    
+    // Clear previous state
+    document.getElementById('season-selector').style.display = 'none';
+    document.getElementById('episode-list').innerHTML = '';
+    document.getElementById('modal-video').src = '';
+    
+    // Fetch detailed info
+    const details = await fetchDetails(item.id, mediaType);
+    
+    document.getElementById('modal-title').textContent = details.title || details.name;
+    document.getElementById('modal-rating').innerHTML = getStarRating(details.vote_average);
+    document.getElementById('modal-description').textContent = details.overview;
+    document.getElementById('modal-image').src = details.poster_path ? `${IMG_URL}${details.poster_path}` : FALLBACK_IMAGE;
+
+    if (mediaType === 'tv' && details.seasons) {
+        populateSeasonSelector(details.seasons);
+    } else {
+        // For movies, just change the server to load the movie URL
+        changeServer();
+    }
+
+    document.getElementById('modal').style.display = 'block';
+}
+
+/** Updates the iframe source when the server, season, or episode changes. */
+function changeServer(season = null, episode = null) {
+    const server = document.getElementById('server').value;
+    
+    if (currentMediaType === 'tv') {
+        season = season || parseInt(document.getElementById('season').value);
+        // Only get episode if it's explicitly passed or if an episode button is active
+        episode = episode || (document.querySelector('.episode-btn.active') ? parseInt(document.querySelector('.episode-btn.active').dataset.episode) : 1);
+    }
+
+    const iframeUrl = buildStreamingUrl(server, currentMediaId, currentMediaType, season, episode);
+    document.getElementById('modal-video').src = iframeUrl;
+}
+
+/** Closes the detail modal. */
+function closeModal() { 
+    document.getElementById('modal').style.display = 'none';
+    document.getElementById('modal-video').src = ''; // Stop video playback
+}
+
+
+// ==================================================================================
+// SEARCH MODAL LOGIC
+// ==================================================================================
+
+/** Opens the search modal. */
+function openSearchModal() { 
+    document.getElementById('search-modal').style.display = 'block';
+    document.getElementById('search-input').focus();
+}
+
+/** Closes the search modal. */
+function closeSearchModal() { 
+    document.getElementById('search-modal').style.display = 'none';
+    document.getElementById('search-results').innerHTML = '';
+    document.getElementById('search-input').value = '';
+}
+
+/** Performs the search against TMDB. */
+async function searchTMDB() {
+    const query = document.getElementById('search-input').value.trim();
+    const resultsContainer = document.getElementById('search-results');
+    resultsContainer.innerHTML = '';
+
+    if (query.length < 3) {
+        resultsContainer.innerHTML = '<p style="text-align:center; color:#555;">Type at least 3 characters to search.</p>';
+        return;
+    }
+
+    try {
+        const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`);
+        const data = await res.json();
+        const results = data.results.filter(item => item.media_type !== 'person' && item.poster_path);
+
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<p style="text-align:center; color:#ccc;">No results found.</p>';
+            return;
+        }
+
+        results.forEach(item => {
+            const resultItem = document.createElement('div');
+            resultItem.classList.add('search-result-item');
+            resultItem.onclick = () => {
+                closeSearchModal();
+                showDetails(item);
+            };
+
+            const img = document.createElement('img');
+            img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+            img.alt = (item.title || item.name || 'Unknown');
+
+            const title = document.createElement('p');
+            title.textContent = (item.title || item.name || 'Unknown');
+
+            resultItem.appendChild(img);
+            resultItem.appendChild(title);
+            resultsContainer.appendChild(resultItem);
+        });
+
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsContainer.innerHTML = '<p style="text-align:center; color:red;">An error occurred during search.</p>';
+    }
+}
+
+/** Debounced version of the search function. */
+const debouncedSearchTMDB = debounce(searchTMDB, 300);
+
 
 // ==================================================================================
 // INITIALIZATION
