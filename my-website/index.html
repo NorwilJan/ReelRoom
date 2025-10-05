@@ -33,39 +33,61 @@
   </div>
 
   <div class="row">
-    <h2>Trending Movies</h2>
+    <h2>
+      <span>Trending Movies</span>
+      <button class="view-all-btn" data-category="movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
+    </h2>
     <div class="list" id="movies-list"></div>
   </div>
 
   <div class="row">
-    <h2>Trending TV Shows</h2>
+    <h2>
+      <span>Trending TV Shows</span>
+      <button class="view-all-btn" data-category="tvshows" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
+    </h2>
     <div class="list" id="tvshows-list"></div>
   </div>
 
   <div class="row">
-    <h2>Trending Anime</h2>
+    <h2>
+      <span>Trending Anime</span>
+      <button class="view-all-btn" data-category="anime" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
+    </h2>
     <div class="list" id="anime-list"></div>
   </div>
 
   <div class="row">
-    <h2>Trending Tagalog Movies</h2>
+    <h2>
+      <span>Trending Tagalog Movies</span>
+      <button class="view-all-btn" data-category="tagalog-movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
+    </h2>
     <div class="list" id="tagalog-movies-list"></div>
   </div>
 
   <div class="row">
-    <h2>Trending Netflix Movies</h2>
+    <h2>
+      <span>Trending Netflix Movies</span>
+      <button class="view-all-btn" data-category="netflix-movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
+    </h2>
     <div class="list" id="netflix-movies-list"></div>
   </div>
 
   <div class="row">
-    <h2>Trending Netflix TV Shows</h2>
+    <h2>
+      <span>Trending Netflix TV Shows</span>
+      <button class="view-all-btn" data-category="netflix-tv" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
+    </h2>
     <div class="list" id="netflix-tv-list"></div>
   </div>
 
   <div class="row">
-    <h2>Trending Korean Drama</h2>
+    <h2>
+      <span>Trending Korean Drama</span>
+      <button class="view-all-btn" data-category="korean-drama" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
+    </h2>
     <div class="list" id="korean-drama-list"></div>
   </div>
+  
   <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
 
   <div class="modal" id="modal">
@@ -102,6 +124,23 @@
     <div class="results" id="search-results"></div>
   </div>
 
+  <div class="all-view-container" id="all-view-container">
+    <span class="back-btn" onclick="closeAllView()">&times;</span>
+    <h2 id="all-view-title"></h2>
+    
+    <div class="all-view-controls">
+      <select id="genre-filter" onchange="filterAllView()">
+        <option value="">All Genres</option>
+      </select>
+      <select id="year-filter" onchange="filterAllView()">
+        <option value="">All Years</option>
+      </select>
+    </div>
+    
+    <div class="all-view-grid" id="all-view-grid">
+      </div>
+    <p class="loading" id="all-view-loading" style="display: none;">Loading more...</p>
+  </div>
   <footer class="footer">
     <div class="footer-content">
       <p>&copy; 2025 ReelRoom. All rights reserved.</p>
