@@ -1,5 +1,567 @@
+CSS
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background-color: #000;
+  color: #fff;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background-color: #111;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.logo-text {
+  color: red;
+  font-size: 24px;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.nav-links a {
+  color: #fff;
+  text-decoration: none;
+  margin-left: 20px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: red;
+}
+
+.search-icon-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  margin-left: 20px;
+  transition: color 0.2s;
+}
+
+.search-icon-btn:hover {
+  color: red;
+}
+
+/* Banner/Slideshow styles */
+.banner {
+  margin-top: 60px; /* Space below fixed navbar */
+  height: 400px;
+  overflow: hidden;
+  position: relative;
+}
+
+.slideshow-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.slides {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s ease-in-out;
+}
+
+.slide-item {
+  min-width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.slide-content {
+  background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.slide-title {
+  font-size: 36px;
+  margin: 0;
+  color: #fff;
+}
+
+.slide-rating {
+  font-size: 18px;
+  color: gold;
+  margin-top: 5px;
+}
+
+.prev, .next {
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  width: auto;
+  padding: 16px;
+  margin-top: -22px;
+  color: white;
+  font-weight: bold;
+  font-size: 25px;
+  transition: 0.6s ease;
+  border-radius: 0 3px 3px 0;
+  user-select: none;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.next {
+  right: 0;
+  border-radius: 3px 0 0 3px;
+}
+
+.prev:hover, .next:hover {
+  background-color: rgba(255, 0, 0, 0.8);
+}
+
+.dots {
+  position: absolute;
+  bottom: 10px;
+  width: 100%;
+  text-align: center;
+}
+
+.dot {
+  cursor: pointer;
+  height: 10px;
+  width: 10px;
+  margin: 0 4px;
+  background-color: #bbb;
+  border-radius: 50%;
+  display: inline-block;
+  transition: background-color 0.6s ease;
+}
+
+.active, .dot:hover {
+  background-color: red;
+}
+
+/* Row List Styles */
+.row {
+  padding: 20px 30px;
+}
+
+/* Updated: Style for the clickable category title */
+.row h2 {
+  margin-bottom: 10px;
+  display: flex; 
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Updated: Style for the "View All" button/icon */
+.view-all-btn {
+  background: none;
+  border: none;
+  color: red;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 5px;
+  transition: color 0.2s, transform 0.2s;
+  font-weight: bold;
+}
+
+.view-all-btn:hover {
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.list {
+  display: flex;
+  overflow-x: scroll;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 20px;
+  scroll-behavior: smooth;
+}
+
+.list::-webkit-scrollbar {
+  display: none;
+}
+
+.list-item {
+  margin-right: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  width: 150px;
+}
+
+.list-item:hover {
+  transform: scale(1.05);
+}
+
+.list-item img {
+  width: 100%;
+  height: 225px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.list-item p {
+  margin-top: 5px;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.9);
+}
+
+.modal-content {
+  background-color: #111;
+  margin: 5% auto;
+  padding: 20px;
+  border: 1px solid #333;
+  width: 80%;
+  max-width: 900px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-body {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.modal-body img {
+  width: 200px;
+  height: auto;
+  object-fit: cover;
+  margin-right: 20px;
+  border-radius: 5px;
+}
+
+.modal-text {
+  flex-grow: 1;
+}
+
+#modal-title {
+  color: red;
+  margin-top: 0;
+}
+
+.stars {
+  color: gold;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.server-selector, .season-selector {
+  margin-bottom: 15px;
+  color: #ccc;
+}
+
+.server-selector select, .season-selector select {
+  padding: 5px;
+  margin-left: 10px;
+  border-radius: 3px;
+  background-color: #333;
+  color: #fff;
+  border: none;
+}
+
+.episode-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid #333;
+  border-radius: 5px;
+}
+
+.episode-btn {
+  background-color: #333;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.episode-btn.active, .episode-btn:hover {
+  background-color: red;
+}
+
+/* Search Modal Styles */
+.search-modal {
+  display: none;
+  position: fixed;
+  z-index: 50;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.95);
+  padding-top: 50px;
+}
+
+.search-modal .close {
+  position: absolute;
+  top: 15px;
+  right: 30px;
+  font-size: 30px;
+}
+
+#search-input {
+  width: 90%;
+  max-width: 600px;
+  display: block;
+  margin: 0 auto 20px;
+  padding: 15px;
+  font-size: 18px;
+  border-radius: 25px;
+  border: 2px solid #555;
+  background-color: #222;
+  color: #fff;
+}
+
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  max-width: 90%;
+  margin: 0 auto;
+  padding-bottom: 50px;
+}
+
+.search-result-item {
+  width: 150px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  text-align: center;
+}
+
+.search-result-item:hover {
+  transform: scale(1.05);
+}
+
+.search-result-item img {
+  width: 100%;
+  height: 225px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.search-result-item p {
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+/* Footer Styles */
+.footer {
+  background-color: #111;
+  padding: 20px 30px;
+  margin-top: 40px;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-content p {
+  margin: 5px 0;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.footer-links a {
+  color: red;
+  text-decoration: none;
+  margin: 0 10px;
+  font-size: 14px;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 10px 20px;
+  }
+  .banner {
+    height: 300px;
+    margin-top: 45px;
+  }
+  .slide-title {
+    font-size: 24px;
+  }
+  .row {
+    padding: 15px 20px;
+  }
+  .list-item, .search-result-item {
+    width: 120px;
+  }
+  .list-item img, .search-result-item img {
+    height: 180px;
+  }
+  .modal-content {
+    width: 95%;
+    margin: 20px auto;
+  }
+  .modal-body {
+    flex-direction: column;
+  }
+  .modal-body img {
+    width: 100%;
+    max-height: 250px;
+    margin-right: 0;
+    margin-bottom: 15px;
+  }
+}
+
+/* ------------------------------------------- */
+/* ALL VIEW DISCOVER PAGE STYLES */
+/* ------------------------------------------- */
+
+/* Full-Screen All View Container */
+.all-view-container {
+  display: none; /* Initially hidden */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  z-index: 5;
+  overflow-y: scroll; /* Enable vertical scroll for infinite loading */
+  padding: 60px 20px 20px; /* Space for navbar/close button */
+}
+
+/* Header inside the all-view */
+.all-view-container h2 {
+  color: #fff;
+  padding: 0 0 20px 0;
+  margin: 0;
+  text-align: left;
+}
+
+/* Back button in the all-view */
+.back-btn {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  color: red;
+  font-size: 30px;
+  cursor: pointer;
+  z-index: 6;
+}
+
+/* Filter Controls */
+.all-view-controls {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.all-view-controls select {
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: 1px solid #444;
+  background: #222;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.all-view-controls select:focus {
+  outline: none;
+  border-color: red;
+}
+
+/* Grid for displaying all content */
+.all-view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+  gap: 15px;
+  padding-bottom: 50px;
+}
+
+/* Styling for images in the full grid */
+.all-view-grid img {
+  width: 100%;
+  height: auto;
+  min-height: 225px; 
+  object-fit: cover;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.all-view-grid img:hover {
+  transform: scale(1.03);
+}
+
+@media (max-width: 768px) {
+  .all-view-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .all-view-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+
+JS
+
 // js/home.js
-const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
+const API_KEY = '40f1982842db35042e8561b13b38d492';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
@@ -10,16 +572,17 @@ let currentPages = {
   movies: 1,
   tvShows: 1,
   anime: 1,
-  tagalogMovies: 1, // Correct key format for page counter
+  tagalogMovies: 1, 
   netflixMovies: 1,
   netflixTV: 1,
-  koreanDrama: 1
+  koreanDrama: 1,
+  allView: 1 // Page counter for the 'View All' mode
 };
 let isLoading = {
   movies: false,
   tvshows: false,
   anime: false,
-  'tagalog-movies': false, // Correct key format for loading flag
+  'tagalog-movies': false, 
   'netflix-movies': false,
   'netflix-tv': false,
   'korean-drama': false
@@ -28,9 +591,14 @@ let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
 
+// Global state for All View/Discover page
+let currentAllViewCategory = null; 
+let allViewTotalPages = 1;
+let movieGenres = []; 
+let tvGenres = []; 
+
 /**
  * Utility function to debounce another function call.
- * Ensures a function is not called until a certain time has passed after the last call.
  */
 function debounce(func, delay) {
   let timeout;
@@ -67,6 +635,21 @@ async function testApiKey() {
     }
 }
 
+// ==================================================================================
+// TMDB FETCH FUNCTIONS
+// ==================================================================================
+
+async function fetchGenres(type) {
+  try {
+    const res = await fetch(`${BASE_URL}/genre/${type}/list?api_key=${API_KEY}`);
+    const data = await res.json();
+    return data.genres || [];
+  } catch (error) {
+    console.error(`Error fetching ${type} genres:`, error);
+    return [];
+  }
+}
+
 async function fetchTrending(type, page = 1) {
   try {
     const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
@@ -83,108 +666,25 @@ async function fetchTrending(type, page = 1) {
   }
 }
 
-async function fetchTrendingAnime(page = 1) {
-  try {
-    const movieRes = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
-    );
-    if (!movieRes.ok) throw new Error(`Movies HTTP ${movieRes.status}`);
-    const movieData = await movieRes.json();
-    const movies = (movieData.results || []).map(item => ({...item, media_type: 'movie'}));
-
-    const tvRes = await fetch(
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
-    );
-    if (!tvRes.ok) throw new Error(`TV HTTP ${tvRes.status}`);
-    const tvData = await tvRes.json();
-    const tvShows = (tvData.results || []).map(item => ({...item, media_type: 'tv'}));
-
-    const combined = [...movies, ...tvShows]
-      .filter(item => item.poster_path)
-      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-      .slice(0, 20); 
-
-    return { results: combined, total_pages: Math.max(movieData.total_pages || 1, tvData.total_pages || 1) };
-  } catch (error) {
-    console.error('Error fetching trending anime:', error);
-    showError('Failed to load anime. Check API key or connection.', 'anime-list');
-    return { results: [], total_pages: 1 };
+async function fetchFilteredContent(type, filters, page = 1) {
+  const filterString = Object.entries(filters).map(([key, value]) => `&${key}=${value}`).join('');
+  const url = `${BASE_URL}/discover/${type}?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&page=${page}${filterString}`;
+  
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.results) {
+    data.results.forEach(item => item.media_type = type);
   }
+  return data;
 }
 
-async function fetchTagalogMovies(page = 1) {
-  try {
-    const res = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_original_language=tl`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        data.results.forEach(item => item.media_type = 'movie');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Tagalog movies:', error);
-    showError('Failed to load Tagalog movies.', 'tagalog-movies-list');
-    return { results: [], total_pages: 1 };
-  }
-}
+// Specialized fetch functions (using the general one)
+const fetchTrendingAnime = (page) => fetchFilteredContent('tv', { 'with_genres': 16, 'with_original_language': 'ja' }, page);
+const fetchTagalogMovies = (page) => fetchFilteredContent('movie', { 'with_original_language': 'tl' }, page);
+const fetchNetflixMovies = (page) => fetchFilteredContent('movie', { 'with_watch_providers': 8, 'watch_region': 'US' }, page);
+const fetchNetflixTV = (page) => fetchFilteredContent('tv', { 'with_watch_providers': 8, 'watch_region': 'US' }, page);
+const fetchKoreanDrama = (page) => fetchFilteredContent('tv', { 'with_original_language': 'ko', 'with_genres': 18 }, page);
 
-async function fetchNetflixMovies(page = 1) {
-  try {
-    const res = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        data.results.forEach(item => item.media_type = 'movie');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Netflix movies:', error);
-    showError('Failed to load Netflix movies.', 'netflix-movies-list');
-    return { results: [], total_pages: 1 };
-  }
-}
-
-async function fetchNetflixTV(page = 1) {
-  try {
-    const res = await fetch(
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        data.results.forEach(item => item.media_type = 'tv');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Netflix TV:', error);
-    showError('Failed to load Netflix TV shows.', 'netflix-tv-list');
-    return { results: [], total_pages: 1 };
-  }
-}
-
-async function fetchKoreanDrama(page = 1) {
-  try {
-    const res = await fetch(
-      // Targeting TV, Korean language (ko), Drama genre (18)
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        // Assume TV type for this category
-        data.results.forEach(item => item.media_type = 'tv');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Korean Drama:', error);
-    showError('Failed to load Korean Drama.', 'korean-drama-list');
-    return { results: [], total_pages: 1 };
-  }
-}
 
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
@@ -209,6 +709,10 @@ async function fetchEpisodes(tvId, seasonNumber) {
     return [];
   }
 }
+
+// ==================================================================================
+// UTILITY & DISPLAY FUNCTIONS
+// ==================================================================================
 
 function removeLoadingAndError(containerId) {
     const container = document.getElementById(containerId);
@@ -259,9 +763,14 @@ function displaySlides() {
   slideshowItems.forEach((item, index) => {
     if (!item.backdrop_path) return;
     const slide = document.createElement('div');
-    slide.className = 'slide';
+    slide.className = 'slide-item';
     slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
-    slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
+    
+    const content = document.createElement('div');
+    content.classList.add('slide-content');
+    content.innerHTML = `<h3 class="slide-title">${item.title || item.name || 'Unknown'}</h3>`;
+
+    slide.appendChild(content);
     slide.onclick = () => showDetails(item);
     slidesContainer.appendChild(slide);
 
@@ -279,7 +788,7 @@ function displaySlides() {
 }
 
 function showSlide() {
-  const slides = document.querySelectorAll('.slide');
+  const slides = document.querySelectorAll('.slide-item');
   const dots = document.querySelectorAll('.dot');
   if (slides.length === 0) return;
   slides.forEach((slide, index) => {
@@ -296,35 +805,48 @@ function showSlide() {
 }
 
 function changeSlide(n) {
-  const slides = document.querySelectorAll('.slide');
+  const slides = document.querySelectorAll('.slide-item');
   if (slides.length === 0) return;
   currentSlide = (currentSlide + n + slides.length) % slides.length;
   showSlide();
 }
 
-function displayList(items, containerId) {
+function displayList(items, containerId, append = false) {
   const container = document.getElementById(containerId);
   if (!container) {
     console.error(`Container ${containerId} not found`);
     return;
   }
   
-  removeLoadingAndError(containerId);
-
+  if (!append) {
+      removeLoadingAndError(containerId);
+      container.innerHTML = '';
+  }
+  
   if (items.length === 0 && container.children.length === 0) {
     container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
     return;
   }
 
   items.forEach(item => {
-    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
+    // Check if the item already exists in the container
+    if (container.querySelector(`[data-id="${item.id}"]`)) return;
+
+    const listItem = document.createElement('div');
+    listItem.classList.add('list-item');
+    listItem.setAttribute('data-id', item.id);
+    listItem.onclick = () => showDetails(item);
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
-    img.setAttribute('data-id', item.id);
-    img.onclick = () => showDetails(item);
-    container.appendChild(img);
+    img.alt = (item.title || item.name || 'Unknown');
+
+    const title = document.createElement('p');
+    title.textContent = (item.title || item.name || 'Unknown');
+    
+    listItem.appendChild(img);
+    listItem.appendChild(title);
+    container.appendChild(listItem);
   });
 }
 
@@ -333,32 +855,24 @@ function addScrollListener(category) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
-  container.onscroll = function () {
+  container.onscroll = debounce(function () {
     if (
       !isLoading[category] &&
       container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
     ) {
       loadMore(category);
     }
-  };
+  }, 100);
 }
 
 async function loadMore(category) {
-  // Translate category string to the correct key name for currentPages (e.g., 'tvshows' -> 'tvShows')
-  let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
+  // Translate category string to the correct key name for currentPages
+  let pageKey = category.replace(/-/g, '').replace('tvshows', 'tvShows');
   
-  // Specific key mappings for hyphenated names
-  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
-  if (category === 'netflix-movies') pageKey = 'netflixMovies';
-  if (category === 'netflix-tv') pageKey = 'netflixTV';
-  if (category === 'korean-drama') pageKey = 'koreanDrama';
-
   if (isLoading[category]) return;
 
   isLoading[category] = true;
   const containerId = category + '-list';
-  
-  showLoading(containerId);
   
   currentPages[pageKey]++;
 
@@ -369,53 +883,61 @@ async function loadMore(category) {
     } else if (category === 'tvshows') {
       data = await fetchTrending('tv', currentPages[pageKey]);
     } else if (category === 'anime') {
-      data = await fetchTrendingAnime(currentPages[pageKey]);
+      data = await fetchFilteredContent('tv', { 'with_genres': 16, 'with_original_language': 'ja' }, currentPages[pageKey]);
     } else if (category === 'tagalog-movies') {
-      data = await fetchTagalogMovies(currentPages[pageKey]);
+      data = await fetchFilteredContent('movie', { 'with_original_language': 'tl' }, currentPages[pageKey]);
     } else if (category === 'netflix-movies') {
-      data = await fetchNetflixMovies(currentPages[pageKey]);
+      data = await fetchFilteredContent('movie', { 'with_watch_providers': 8, 'watch_region': 'US' }, currentPages[pageKey]);
     } else if (category === 'netflix-tv') {
-      data = await fetchNetflixTV(currentPages[pageKey]);
+      data = await fetchFilteredContent('tv', { 'with_watch_providers': 8, 'watch_region': 'US' }, currentPages[pageKey]);
     } else if (category === 'korean-drama') {
-      data = await fetchKoreanDrama(currentPages[pageKey]);
+      data = await fetchFilteredContent('tv', { 'with_original_language': 'ko', 'with_genres': 18 }, currentPages[pageKey]);
     }
 
     const items = data.results || [];
     
-    // Stop loading if the API returns no results for the next page
     if (items.length === 0) {
         currentPages[pageKey]--; 
         console.log(`${category} reached end of available content.`);
-        document.getElementById(containerId)?.querySelector('.loading')?.remove();
         isLoading[category] = false;
         return;
     }
     
-    displayList(items, containerId);
+    displayList(items, containerId, true);
 
   } catch (error) {
     console.error(`Error loading more for ${category}:`, error);
-    showError(`Failed to load more ${category}.`, containerId);
   } finally {
     isLoading[category] = false;
-    document.getElementById(containerId)?.querySelector('.loading')?.remove();
   }
 }
+
+// ==================================================================================
+// DETAIL MODAL LOGIC (Your Integrated Player Setup)
+// ==================================================================================
 
 async function showDetails(item) {
   currentItem = item;
   currentSeason = 1;
   currentEpisode = 1;
+  
+  // Rating conversion: TMDB uses 10-point scale, converting to simple stars here
+  const ratingHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2)) + 
+                     '☆'.repeat(5 - Math.round((item.vote_average || 0) / 2));
+                     
   document.getElementById('modal-title').textContent = item.title || item.name || 'Unknown';
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
   document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-  // Rating out of 5 stars (10/2)
-  document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
-  document.getElementById('server').value = 'player.videasy.net'; // Default server
+  document.getElementById('modal-rating').innerHTML = ratingHTML;
+  document.getElementById('server').value = 'player.videasy.net'; // Default server: Vidplayer
 
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
   const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
+
+  // Clear episode list and hide season selector initially
+  episodeList.innerHTML = '';
+  seasonSelector.style.display = 'none';
 
   if (isTVShow) {
     seasonSelector.style.display = 'block';
@@ -423,25 +945,25 @@ async function showDetails(item) {
     const seasonSelect = document.getElementById('season');
     seasonSelect.innerHTML = '';
     
-    // Filter out season 0 (Specials) and populate the dropdown
-    seasons.filter(s => s.season_number > 0).forEach(season => {
+    // Populate dropdown, generally skipping Season 0 (Specials) unless it's the only season
+    const validSeasons = seasons.filter(s => s.season_number > 0);
+    
+    validSeasons.forEach(season => {
       const option = document.createElement('option');
       option.value = season.season_number;
       option.textContent = `Season ${season.season_number}`;
       seasonSelect.appendChild(option);
     });
     
-    // Set the initial season to the first available season, or 1
-    currentSeason = seasons.find(s => s.season_number > 0)?.season_number || 1;
+    currentSeason = validSeasons[0]?.season_number || 1;
     seasonSelect.value = currentSeason;
     
     await loadEpisodes();
   } else {
-    seasonSelector.style.display = 'none';
-    episodeList.innerHTML = '';
+    // For movies, just load the server
+    changeServer();
   }
 
-  changeServer();
   document.getElementById('modal').style.display = 'flex';
 }
 
@@ -452,50 +974,60 @@ async function loadEpisodes() {
   const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
   const episodeList = document.getElementById('episode-list');
   episodeList.innerHTML = '';
-  currentEpisode = 1; // Reset episode when season changes
+  currentEpisode = 1;
 
   episodes.forEach(episode => {
-    const div = document.createElement('div');
-    div.className = 'episode-item';
-    const img = episode.still_path
-      ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" />`
-      : '';
-    div.innerHTML = `${img}<span>E${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
-    div.onclick = () => {
-      currentEpisode = episode.episode_number;
-      changeServer();
-      // Optional: highlight selected episode
-      document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
-      div.classList.add('active');
+    // Only display episodes with an episode number greater than 0
+    if (episode.episode_number <= 0) return;
+    
+    const btn = document.createElement('button');
+    btn.classList.add('episode-btn');
+    btn.textContent = `E${episode.episode_number}`;
+    btn.setAttribute('data-episode', episode.episode_number);
+    
+    btn.onclick = () => {
+        document.querySelectorAll('.episode-btn').forEach(e => e.classList.remove('active'));
+        btn.classList.add('active');
+        currentEpisode = episode.episode_number;
+        changeServer();
     };
-    episodeList.appendChild(div);
+    episodeList.appendChild(btn);
   });
   
-  // Auto-select and load the first episode
-  if (episodes.length > 0) {
-      episodeList.querySelector('.episode-item')?.click();
+  // Auto-select and load the first episode button
+  const firstEpisodeBtn = episodeList.querySelector('.episode-btn');
+  if (firstEpisodeBtn) {
+      firstEpisodeBtn.click(); // This calls the onclick handler, which sets currentEpisode and calls changeServer
+  } else {
+      // If no episodes are listed (e.g., season not yet detailed), just load the season base link
+      changeServer();
   }
 }
 
 function changeServer() {
   if (!currentItem) return;
   const server = document.getElementById('server').value;
-  // Determine type from media_type property
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   let embedURL = '';
 
-  if (server === 'vidsrc.cc') {
-    embedURL = type === 'tv'
-      ? `https://vidsrc.cc/v2/embed/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
-      : `https://vidsrc.cc/v2/embed/movie/${currentItem.id}`;
-  } else if (server === 'vidsrc.me') {
-    embedURL = type === 'tv'
-      ? `https://vidsrc.net/embed/tv/?tmdb=${currentItem.id}&season=${currentSeason}&episode=${currentEpisode}`
-      : `https://vidsrc.net/embed/movie/?tmdb=${currentItem.id}`;
-  } else if (server === 'player.videasy.net') {
-    embedURL = type === 'tv'
-      ? `https://player.videasy.net/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
-      : `https://player.videasy.net/movie/${currentItem.id}`;
+  if (type === 'movie') {
+    // Movie URLs don't need season/episode
+    if (server === 'vidsrc.cc') {
+      embedURL = `https://vidsrc.cc/v2/embed/movie/${currentItem.id}`;
+    } else if (server === 'vidsrc.me') {
+      embedURL = `https://vidsrc.net/embed/movie/?tmdb=${currentItem.id}`;
+    } else if (server === 'player.videasy.net') {
+      embedURL = `https://player.videasy.net/movie/${currentItem.id}`;
+    }
+  } else {
+    // TV show URLs use currentSeason and currentEpisode
+    if (server === 'vidsrc.cc') {
+      embedURL = `https://vidsrc.cc/v2/embed/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`;
+    } else if (server === 'vidsrc.me') {
+      embedURL = `https://vidsrc.net/embed/tv/?tmdb=${currentItem.id}&season=${currentSeason}&episode=${currentEpisode}`;
+    } else if (server === 'player.videasy.net') {
+      embedURL = `https://player.videasy.net/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`;
+    }
   }
 
   document.getElementById('modal-video').src = embedURL;
@@ -508,6 +1040,10 @@ function closeModal() {
   document.getElementById('season-selector').style.display = 'none';
 }
 
+// ==================================================================================
+// SEARCH MODAL LOGIC
+// ==================================================================================
+
 function openSearchModal() {
   document.getElementById('search-modal').style.display = 'flex';
   document.getElementById('search-input').focus();
@@ -519,33 +1055,45 @@ function closeSearchModal() {
   document.getElementById('search-input').value = '';
 }
 
-// Debounced version of searchTMDB
 const debouncedSearchTMDB = debounce(async () => {
   const query = document.getElementById('search-input').value;
   const container = document.getElementById('search-results');
   container.innerHTML = '';
   
-  if (!query.trim()) return;
+  if (!query.trim() || query.length < 3) {
+      container.innerHTML = '<p style="text-align:center; color:#555;">Type at least 3 characters to search.</p>';
+      return;
+  }
 
-  container.innerHTML = '<p class="loading">Searching...</p>';
+  container.innerHTML = '<p class="loading" style="text-align:center; color:#ccc;">Searching...</p>';
 
   try {
-    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
+    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&include_adult=false`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    container.innerHTML = ''; // Clear loading
+    container.innerHTML = '';
     data.results
       .filter(item => item.media_type !== 'person' && item.poster_path)
       .forEach(item => {
+        const resultItem = document.createElement('div');
+        resultItem.classList.add('search-result-item');
+        
         const img = document.createElement('img');
         img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
         img.alt = item.title || item.name || 'Unknown';
-        img.onclick = () => {
+        
+        const title = document.createElement('p');
+        title.textContent = (item.title || item.name || 'Unknown');
+        
+        resultItem.appendChild(img);
+        resultItem.appendChild(title);
+
+        resultItem.onclick = () => {
           closeSearchModal();
           showDetails(item);
         };
-        container.appendChild(img);
+        container.appendChild(resultItem);
       });
       
     if (container.children.length === 0) {
@@ -556,7 +1104,202 @@ const debouncedSearchTMDB = debounce(async () => {
     console.error('Error searching:', error);
     showError('Search failed. Try again.', 'search-results');
   }
-}, 300); // 300ms debounce delay
+}, 300);
+
+// ==================================================================================
+// FULL-SCREEN ALL VIEW (DISCOVER PAGE) LOGIC
+// ==================================================================================
+
+/** Populates the Year dropdown with the current year and past years. */
+function populateYearFilter() {
+    const select = document.getElementById('year-filter');
+    const currentYear = new Date().getFullYear();
+    // Clear existing options, keeping "All Years"
+    select.innerHTML = '<option value="">All Years</option>'; 
+    
+    for (let year = currentYear; year >= 1950; year--) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        select.appendChild(option);
+    }
+}
+
+/** Populates the Genre dropdown based on the category type. */
+function populateGenreFilter(mediaType) {
+    const select = document.getElementById('genre-filter');
+    select.innerHTML = '<option value="">All Genres</option>'; // Reset
+    
+    const genres = mediaType === 'movie' ? movieGenres : tvGenres;
+    
+    genres.forEach(genre => {
+        const option = document.createElement('option');
+        option.value = genre.id;
+        option.textContent = genre.name;
+        select.appendChild(option);
+    });
+}
+
+/** Renders items in the full-screen grid. */
+function displayAllView(items, append = false) {
+    const container = document.getElementById('all-view-grid');
+    const loadingIndicator = document.getElementById('all-view-loading');
+    
+    if (!append) {
+        container.innerHTML = '';
+        loadingIndicator.style.display = 'none';
+    }
+
+    if (items.length === 0 && !append) {
+        container.innerHTML = '<p style="color: #ccc; text-align: center; grid-column: 1 / -1;">No content available with current filters.</p>';
+        return;
+    }
+
+    items.forEach(item => {
+        if (!item.poster_path || container.querySelector(`[data-id="${item.id}"]`)) return; 
+
+        const img = document.createElement('img');
+        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+        img.alt = (item.title || item.name || 'Unknown');
+        img.setAttribute('data-id', item.id);
+        
+        img.onclick = () => {
+            closeAllView();
+            showDetails(item);
+        };
+        container.appendChild(img);
+    });
+}
+
+/** Opens the full-screen "All View" and loads content. */
+async function openAllView(category) {
+    const container = document.getElementById('all-view-container');
+    const titleElement = document.getElementById('all-view-title');
+    
+    // Find the title from the button's parent structure
+    const row = document.querySelector(`button[data-category="${category}"]`).closest('.row');
+    const categoryTitle = row.querySelector('span').textContent;
+
+    // Reset state
+    currentAllViewCategory = category;
+    currentPages.allView = 1; 
+    allViewTotalPages = 1;
+    container.scrollTop = 0;
+
+    // Determine media type for filter population
+    const mediaType = (category.includes('tv') || category.includes('drama') || category.includes('anime')) ? 'tv' : 'movie';
+    populateGenreFilter(mediaType);
+    
+    // Reset filters
+    document.getElementById('genre-filter').value = "";
+    document.getElementById('year-filter').value = "";
+
+    // Show view
+    titleElement.textContent = categoryTitle;
+    container.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+
+    // Fetch initial data (page 1)
+    await loadAllViewData(1, true);
+
+    // Setup vertical infinite scroll
+    container.onscroll = debounce(() => {
+        if (
+            container.scrollTop + container.clientHeight >= container.scrollHeight - 500 &&
+            currentPages.allView < allViewTotalPages
+        ) {
+            loadAllViewData(currentPages.allView + 1);
+        }
+    }, 100);
+}
+
+/** Handler for filter changes: resets pagination and reloads data. */
+function filterAllView() {
+    if (!currentAllViewCategory) return;
+    
+    currentPages.allView = 1;
+    allViewTotalPages = 1;
+    loadAllViewData(1, true); 
+}
+
+/** Fetches content for the full-screen All View, applying filters. */
+async function loadAllViewData(pageNumber, initialLoad = false) {
+    const category = currentAllViewCategory;
+    const loadingIndicator = document.getElementById('all-view-loading');
+    const allViewGrid = document.getElementById('all-view-grid');
+
+    if (!category) return;
+    if (pageNumber > allViewTotalPages && !initialLoad) return;
+    
+    if (!initialLoad) loadingIndicator.style.display = 'block';
+    if (initialLoad) allViewGrid.innerHTML = ''; 
+
+    try {
+        let url;
+        let mediaType = (category.includes('tv') || category.includes('drama') || category.includes('anime')) ? 'tv' : 'movie';
+
+        // Read filter values
+        const selectedGenre = document.getElementById('genre-filter').value;
+        const selectedYear = document.getElementById('year-filter').value;
+        
+        let genreParam = selectedGenre ? `&with_genres=${selectedGenre}` : '';
+        let yearParam = selectedYear ? `&primary_release_year=${selectedYear}` : '';
+        let baseParams = `api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&page=${pageNumber}${genreParam}${yearParam}`;
+
+        // Construct the URL based on the initial category, applying filters
+        if (category === 'movies') {
+          url = `${BASE_URL}/discover/movie?${baseParams}`;
+        } else if (category === 'tvshows') {
+          url = `${BASE_URL}/discover/tv?${baseParams}`;
+        } else if (category === 'anime') {
+          url = `${BASE_URL}/discover/tv?${baseParams}&with_genres=16&with_original_language=ja`;
+        } else if (category === 'tagalog-movies') {
+          url = `${BASE_URL}/discover/movie?${baseParams}&with_original_language=tl`;
+        } else if (category === 'netflix-movies') {
+          url = `${BASE_URL}/discover/movie?${baseParams}&with_watch_providers=8&watch_region=US`;
+        } else if (category === 'netflix-tv') {
+          url = `${BASE_URL}/discover/tv?${baseParams}&with_watch_providers=8&watch_region=US`;
+        } else if (category === 'korean-drama') {
+          url = `${BASE_URL}/discover/tv?${baseParams}&with_original_language=ko&with_genres=18`;
+        }
+        
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        if (data.results) {
+            data.results.forEach(item => item.media_type = item.media_type || mediaType);
+        }
+
+        if (data) {
+            allViewTotalPages = data.total_pages || 1;
+            currentPages.allView = pageNumber;
+            displayAllView(data.results || [], !initialLoad);
+        }
+
+    } catch (error) {
+        console.error(`Error loading data for All View (${category}):`, error);
+        if (initialLoad) {
+            allViewGrid.innerHTML = '<p class="error-message" style="grid-column: 1 / -1;">Failed to load content.</p>';
+        }
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+/** Closes the full-screen "All View" and restores homepage scroll. */
+function closeAllView() {
+    document.getElementById('all-view-container').style.display = 'none';
+    document.body.style.overflow = 'auto'; 
+    currentAllViewCategory = null; 
+    document.getElementById('all-view-grid').innerHTML = '';
+    document.getElementById('all-view-container').onscroll = null; 
+}
+
+
+// ==================================================================================
+// INITIALIZATION
+// ==================================================================================
 
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
@@ -565,6 +1308,13 @@ async function init() {
   if (!apiKeyValid) {
       return;
   }
+
+  // Fetch and store genres and populate years once
+  [movieGenres, tvGenres] = await Promise.all([
+      fetchGenres('movie'),
+      fetchGenres('tv')
+  ]);
+  populateYearFilter();
 
   try {
     // Show loading for all sections initially
