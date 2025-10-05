@@ -460,7 +460,7 @@ body {
 }
 
 /* ------------------------------------------- */
-/* NEW: ALL VIEW DISCOVER PAGE STYLES */
+/* ALL VIEW DISCOVER PAGE STYLES */
 /* ------------------------------------------- */
 
 /* Full-Screen All View Container */
@@ -496,7 +496,7 @@ body {
   z-index: 6;
 }
 
-/* NEW: Filter Controls */
+/* Filter Controls */
 .all-view-controls {
   display: flex;
   gap: 20px;
