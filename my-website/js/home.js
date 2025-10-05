@@ -28,7 +28,7 @@ let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
 
-/**
+/
  * Utility function to debounce another function call.
  * Ensures a function is not called until a certain time has passed after the last call.
  */
@@ -40,7 +40,7 @@ function debounce(func, delay) {
   };
 }
 
-/**
+/
  * 🔑 Function to test API Key validity on startup.
  */
 async function testApiKey() {
@@ -56,7 +56,7 @@ async function testApiKey() {
     } catch (error) {
         console.error("API Key Test Failed:", error.message);
         const errorMessage = `
-            ❌ **Initialization Failed** ❌
+            ❌ Initialization Failed ❌
             Reason: ${error.message}
             
             Action Required: Check your '${API_KEY}' key on TMDB.
@@ -321,7 +321,7 @@ function displayList(items, containerId) {
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
+    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ?  (` ${item.media_type}`) : '');
     img.setAttribute('data-id', item.id);
     img.onclick = () => showDetails(item);
     container.appendChild(img);
@@ -344,14 +344,14 @@ function addScrollListener(category) {
 }
 
 async function loadMore(category) {
-  // Translate category string to the correct key name for currentPages (e.g., 'tvshows' -> 'tvShows')
+  // Translate category string to the correct key name for currentPages
   let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
   
   // Specific key mappings for hyphenated names
-  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
+  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; 
   if (category === 'netflix-movies') pageKey = 'netflixMovies';
   if (category === 'netflix-tv') pageKey = 'netflixTV';
-  if (category === 'korean-drama') pageKey = 'koreanDrama';
+  if (category === 'korean-drama') pageKey = 'koreanDrama'; // FIX IS HERE
 
   if (isLoading[category]) return;
 
