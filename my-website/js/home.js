@@ -1,11 +1,11 @@
-// js/home.js
+// js/home.js (Cleaned)
 const API_KEY = '40f1982842db35042e8561b13b38d492';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
-let currentSeason = 1;
-let currentEpisode = 1;
+
+// Page counter for infinite scroll.
 let currentPages = {
   movies: 1,
   tvShows: 1,
@@ -16,15 +16,7 @@ let currentPages = {
   koreanDrama: 1,
   allView: 1 // Page counter for the 'View All' mode
 };
-let isLoading = {
-  movies: false,
-  tvshows: false,
-  anime: false,
-  'tagalog-movies': false, 
-  'netflix-movies': false,
-  'netflix-tv': false,
-  'korean-drama': false
-};
+
 let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
@@ -157,6 +149,7 @@ function removeLoadingAndError(containerId) {
     if (container) {
         container.querySelector('.loading')?.remove();
         container.querySelector('.error-message')?.remove();
+        container.classList.remove('loading-active'); // Cleaned: Remove loading state class
     }
 }
 
@@ -183,6 +176,7 @@ function showLoading(containerId) {
   loading.className = 'loading';
   loading.textContent = 'Loading...';
   container.appendChild(loading);
+  container.classList.add('loading-active'); // Cleaned: Set loading state class
 }
 
 function displaySlides() {
@@ -294,8 +288,9 @@ function addScrollListener(category) {
   if (!container) return;
   
   container.onscroll = debounce(function () {
+    // Cleaned: Check loading state via class on the container
     if (
-      !isLoading[category] &&
+      !container.classList.contains('loading-active') &&
       container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
     ) {
       loadMore(category);
@@ -306,11 +301,13 @@ function addScrollListener(category) {
 async function loadMore(category) {
   // Translate category string to the correct key name for currentPages
   let pageKey = category.replace(/-/g, '').replace('tvshows', 'tvShows');
-  
-  if (isLoading[category]) return;
-
-  isLoading[category] = true;
   const containerId = category + '-list';
+  const container = document.getElementById(containerId);
+
+  // Cleaned: Check loading state via class on the container
+  if (container.classList.contains('loading-active')) return;
+
+  container.classList.add('loading-active');
   
   currentPages[pageKey]++;
 
@@ -337,7 +334,6 @@ async function loadMore(category) {
     if (items.length === 0) {
         currentPages[pageKey]--; 
         console.log(`${category} reached end of available content.`);
-        isLoading[category] = false;
         return;
     }
     
@@ -346,7 +342,7 @@ async function loadMore(category) {
   } catch (error) {
     console.error(`Error loading more for ${category}:`, error);
   } finally {
-    isLoading[category] = false;
+    container.classList.remove('loading-active');
   }
 }
 
@@ -356,8 +352,6 @@ async function loadMore(category) {
 
 async function showDetails(item) {
   currentItem = item;
-  currentSeason = 1;
-  currentEpisode = 1;
   
   // Rating conversion: TMDB uses 10-point scale, converting to simple stars here
   const ratingHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2)) + 
@@ -393,8 +387,8 @@ async function showDetails(item) {
       seasonSelect.appendChild(option);
     });
     
-    currentSeason = validSeasons[0]?.season_number || 1;
-    seasonSelect.value = currentSeason;
+    // Cleaned: Don't need a global 'currentSeason'. Get it from the selector.
+    seasonSelect.value = validSeasons[0]?.season_number || 1;
     
     await loadEpisodes();
   } else {
@@ -408,11 +402,10 @@ async function showDetails(item) {
 async function loadEpisodes() {
   if (!currentItem) return;
   const seasonNumber = document.getElementById('season').value;
-  currentSeason = seasonNumber;
+  // Cleaned: No need to set a global currentSeason
   const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
   const episodeList = document.getElementById('episode-list');
   episodeList.innerHTML = '';
-  currentEpisode = 1;
 
   episodes.forEach(episode => {
     // Only display episodes with an episode number greater than 0
@@ -426,7 +419,7 @@ async function loadEpisodes() {
     btn.onclick = () => {
         document.querySelectorAll('.episode-btn').forEach(e => e.classList.remove('active'));
         btn.classList.add('active');
-        currentEpisode = episode.episode_number;
+        // Cleaned: No need to set a global currentEpisode
         changeServer();
     };
     episodeList.appendChild(btn);
@@ -435,7 +428,7 @@ async function loadEpisodes() {
   // Auto-select and load the first episode button
   const firstEpisodeBtn = episodeList.querySelector('.episode-btn');
   if (firstEpisodeBtn) {
-      firstEpisodeBtn.click(); // This calls the onclick handler, which sets currentEpisode and calls changeServer
+      firstEpisodeBtn.click(); // This calls the onclick handler, which calls changeServer
   } else {
       // If no episodes are listed (e.g., season not yet detailed), just load the season base link
       changeServer();
@@ -447,6 +440,11 @@ function changeServer() {
   const server = document.getElementById('server').value;
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   let embedURL = '';
+
+  // Cleaned: Get season and episode directly from the DOM/active elements
+  const currentSeason = document.getElementById('season')?.value || 1;
+  const activeEpisodeBtn = document.querySelector('.episode-btn.active');
+  const currentEpisode = activeEpisodeBtn ? activeEpisodeBtn.getAttribute('data-episode') : 1;
 
   if (type === 'movie') {
     // Movie URLs don't need season/episode
@@ -739,6 +737,15 @@ function closeAllView() {
 // INITIALIZATION
 // ==================================================================================
 
+// List of all categories to be progressively loaded
+const CATEGORY_MAP = [
+    { name: 'Trending Anime', category: 'anime', fetchFn: fetchTrendingAnime, listId: 'anime-list' },
+    { name: 'Trending Tagalog Movies', category: 'tagalog-movies', fetchFn: fetchTagalogMovies, listId: 'tagalog-movies-list' },
+    { name: 'Trending Netflix Movies', category: 'netflix-movies', fetchFn: fetchNetflixMovies, listId: 'netflix-movies-list' },
+    { name: 'Trending Netflix TV Shows', category: 'netflix-tv', fetchFn: fetchNetflixTV, listId: 'netflix-tv-list' },
+    { name: 'Trending Korean Drama', category: 'korean-drama', fetchFn: fetchKoreanDrama, listId: 'korean-drama-list' }
+];
+
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
   
@@ -747,75 +754,71 @@ async function init() {
       return;
   }
 
-  // Fetch and store genres and populate years once
-  [movieGenres, tvGenres] = await Promise.all([
-      fetchGenres('movie'),
-      fetchGenres('tv')
-  ]);
-  populateYearFilter();
-
+  // Show loading for all sections initially
+  CATEGORY_MAP.forEach(cat => showLoading(cat.listId));
+  showLoading('slides');
+  showLoading('movies-list');
+  showLoading('tvshows-list');
+  
   try {
-    // Show loading for all sections initially
-    showLoading('slides');
-    showLoading('movies-list');
-    showLoading('tvshows-list');
-    showLoading('anime-list');
-    showLoading('tagalog-movies-list');
-    showLoading('netflix-movies-list');
-    showLoading('netflix-tv-list');
-    showLoading('korean-drama-list');
-
-    const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
+    // 1. CRITICAL LOAD: Fetch Movies and TV Shows (for Banner and first two rows)
+    const [moviesData, tvShowsData] = await Promise.all([
       fetchTrending('movie', currentPages.movies),
       fetchTrending('tv', currentPages.tvShows),
-      fetchTrendingAnime(currentPages.anime),
-      fetchTagalogMovies(currentPages.tagalogMovies),
-      fetchNetflixMovies(currentPages.netflixMovies),
-      fetchNetflixTV(currentPages.netflixTV),
-      fetchKoreanDrama(currentPages.koreanDrama)
     ]);
-
+    
     const movies = moviesData.results || [];
     const tvShows = tvShowsData.results || [];
-    const anime = animeData.results || [];
-    const tagalogMovies = tagalogMoviesData.results || [];
-    const netflixMovies = netflixMoviesData.results || [];
-    const netflixTV = netflixTVData.results || [];
-    const koreanDrama = koreanDramaData.results || [];
 
-    // Combine for slideshow
+    // Combine for slideshow and display immediately
     slideshowItems = [
       ...movies.slice(0, 2),
       ...tvShows.slice(0, 2),
-      anime[0] || {},
-      tagalogMovies[0] || {},
-      netflixMovies[0] || {}, 
-      netflixTV[0] || {},
-      koreanDrama[0] || {} 
     ].filter(item => item.backdrop_path && (item.title || item.name));
-
+    
     displaySlides();
 
     displayList(movies, 'movies-list');
     displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixMovies, 'netflix-movies-list');
-    displayList(netflixTV, 'netflix-tv-list');
-    displayList(koreanDrama, 'korean-drama-list');
     
-    // Setup infinite scroll listeners
+    // Setup infinite scroll listeners for the first two rows
     addScrollListener('movies');
     addScrollListener('tvshows');
-    addScrollListener('anime');
-    addScrollListener('tagalog-movies');
-    addScrollListener('netflix-movies');
-    addScrollListener('netflix-tv');
-    addScrollListener('korean-drama');
+
+    // 2. ASYNCHRONOUS GENRE/YEAR POPULATION 
+    [movieGenres, tvGenres] = await Promise.all([
+        fetchGenres('movie'),
+        fetchGenres('tv')
+    ]);
+    populateYearFilter();
+
+    // 3. PROGRESSIVE LOAD: Fetch remaining categories one by one
+    for (const { category, fetchFn, listId } of CATEGORY_MAP) {
+        try {
+            const data = await fetchFn(currentPages[category.replace(/-/g, '').replace('tvshows', 'tvShows')]);
+            const items = data.results || [];
+            
+            // Update slideshow with one item from this category
+            if (items.length > 0) {
+                const bannerItem = items.find(item => item.backdrop_path) || items[0];
+                if (bannerItem && bannerItem.backdrop_path && slideshowItems.length < 7) {
+                    slideshowItems.push(bannerItem);
+                    displaySlides(); // Re-render the banner to include the new item
+                }
+            }
+            
+            displayList(items, listId);
+            addScrollListener(category);
+            
+        } catch (err) {
+            console.error(`Error loading category ${category}:`, err);
+            showError(`Failed to load ${category} content.`, listId);
+        }
+    }
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
-    showError('Failed to load content categories. Please check browser console.', 'empty-message');
+    showError('Failed to load critical content. Please check browser console.', 'empty-message');
     document.getElementById('empty-message').style.display = 'block';
   }
 }
