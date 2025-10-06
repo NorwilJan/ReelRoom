@@ -403,6 +403,12 @@ async function showDetails(item) {
   }
 
   document.getElementById('modal').style.display = 'flex';
+  
+  // --- FIX: Hide All View container if it's currently open (i.e., when coming from 'View All') ---
+  if (currentAllViewCategory) {
+      document.getElementById('all-view-container').style.display = 'none';
+  }
+  // ---
 }
 
 async function loadEpisodes() {
@@ -481,7 +487,7 @@ function closeModal() {
   document.getElementById('season-selector').style.display = 'none';
 
   if (currentAllViewCategory) {
-    // If the user came from All View, restore it instantly and asynchronously.
+    // If the user came from All View, restore it instantly.
     restoreAllView();
   } else {
     // Standard return to homepage, restore body scroll
@@ -612,10 +618,8 @@ function displayAllView(items, append = false) {
         img.alt = (item.title || item.name || 'Unknown');
         img.setAttribute('data-id', item.id);
         
-        // When clicking a movie from All View, we use closeAllView() to clear the container, 
-        // then showDetails will load the modal.
+        // --- FIX: Removed closeAllView() here to preserve state ---
         img.onclick = () => {
-            closeAllView();
             showDetails(item);
         };
         container.appendChild(img);
@@ -669,25 +673,21 @@ async function openAllView(category) {
 
 
 /**
- * Restores the All View container without resetting filters or scroll position.
- * This is used specifically when returning from the Movie Detail Modal.
+ * FIX: Restores the All View container without resetting filters or scroll position.
  */
 function restoreAllView() {
     const container = document.getElementById('all-view-container');
     
     if (!currentAllViewCategory) return;
     
-    // 1. CRITICAL FIX: Instantly show the container to prevent returning to the homepage scroll.
+    // 1. Instantly show the container to prevent returning to the homepage scroll.
     container.style.display = 'block';
     
     // 2. Lock the body scroll
     document.body.style.overflow = 'hidden';
 
-    // 3. Reload the data using the current page number and filters.
-    // We pass 'true' to initialLoad so the grid clears and rebuilds from the start,
-    // reflecting any potential filter changes made before the modal was opened, 
-    // while keeping the scroll position.
-    loadAllViewData(currentPages.allView, true);
+    // 3. Reload the data using the current page number and filters (page 1) to refresh the grid.
+    loadAllViewData(1, true);
 }
 
 
@@ -708,8 +708,10 @@ async function loadAllViewData(pageNumber, initialLoad = false) {
     const allViewGrid = document.getElementById('all-view-grid');
 
     if (!category) return;
-    if (pageNumber > allViewTotalPages && !initialLoad) return;
-    
+    // We remove the total page check here during restoreAllView/initialLoad, 
+    // as we might be restoring to a page higher than 1.
+    // The loadMore scroll listener handles the check for pageNumber > allViewTotalPages.
+
     if (!initialLoad) loadingIndicator.style.display = 'block';
     if (initialLoad) allViewGrid.innerHTML = ''; 
 
@@ -737,7 +739,7 @@ async function loadAllViewData(pageNumber, initialLoad = false) {
         } else if (category === 'netflix-movies') {
           url = `${BASE_URL}/discover/movie?${baseParams}&with_watch_providers=8&watch_region=US`;
         } else if (category === 'netflix-tv') {
-          url = `${BASE_URL}/discover/tv?${baseParams}&with_watch_providers=8&watch_region=US`;
+          url = `${BASE_BASE}/discover/tv?${baseParams}&with_watch_providers=8&watch_region=US`;
         } else if (category === 'korean-drama') {
           url = `${BASE_URL}/discover/tv?${baseParams}&with_original_language=ko&with_genres=18`;
         }
