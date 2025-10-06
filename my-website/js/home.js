@@ -476,6 +476,17 @@ function closeModal() {
   document.getElementById('modal-video').src = '';
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
+
+  // --- FIX: Check if the user was in the "All View" (Discover Page) ---
+  if (currentAllViewCategory) {
+    // If a category is set, show the All View container again
+    document.getElementById('all-view-container').style.display = 'block';
+    // Ensure the main body scroll remains locked while the All View is open
+    document.body.style.overflow = 'hidden'; 
+  } else {
+    // Otherwise, return to the default homepage state (scroll unlocked)
+    document.body.style.overflow = 'auto';
+  }
 }
 
 // ==================================================================================
@@ -696,7 +707,7 @@ async function loadAllViewData(pageNumber, initialLoad = false) {
         } else if (category === 'netflix-movies') {
           url = `${BASE_URL}/discover/movie?${baseParams}&with_watch_providers=8&watch_region=US`;
         } else if (category === 'netflix-tv') {
-          url = `${BASE_BASE}/discover/tv?${baseParams}&with_watch_providers=8&watch_region=US`;
+          url = `${BASE_URL}/discover/tv?${baseParams}&with_watch_providers=8&watch_region=US`;
         } else if (category === 'korean-drama') {
           url = `${BASE_URL}/discover/tv?${baseParams}&with_original_language=ko&with_genres=18`;
         }
