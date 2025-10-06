@@ -4,21 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ReelRoom</title>
-  
   <link rel="stylesheet" href="css/home.css">
+  <link rel="preload" href="css/home.css" as="style">
+  <link rel="preload" href="js/home.js" as="script">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script defer src="js/home.js"></script>
-  </head>
+</head>
 
 <body>
   <div class="navbar">
-    <h1 class="logo-text">REELROOM</h1>
+    <img src="logo.png" alt="ReelRoom Logo" />
     <div class="nav-links">
       <a href="index.html">Home</a>
-      <button class="search-icon-btn" onclick="openSearchModal()">
-        <i class="fas fa-search"></i>
-      </button>
+      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" />
     </div>
   </div>
 
@@ -32,61 +31,30 @@
   </div>
 
   <div class="row">
-    <h2>
-      <span>Trending Movies</span>
-      <button class="view-all-btn" data-category="movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
+    <h2>Trending Movies</h2>
     <div class="list" id="movies-list"></div>
   </div>
 
   <div class="row">
-    <h2>
-      <span>Trending TV Shows</span>
-      <button class="view-all-btn" data-category="tvshows" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
+    <h2>Trending TV Shows</h2>
     <div class="list" id="tvshows-list"></div>
   </div>
 
   <div class="row">
-    <h2>
-      <span>Trending Anime</span>
-      <button class="view-all-btn" data-category="anime" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
+    <h2>Trending Anime</h2>
     <div class="list" id="anime-list"></div>
   </div>
 
   <div class="row">
-    <h2>
-      <span>Trending Tagalog Movies</span>
-      <button class="view-all-btn" data-category="tagalog-movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
+    <h2>Trending Tagalog Movies</h2>
     <div class="list" id="tagalog-movies-list"></div>
   </div>
 
   <div class="row">
-    <h2>
-      <span>Trending Netflix Movies</span>
-      <button class="view-all-btn" data-category="netflix-movies" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="netflix-movies-list"></div>
+    <h2>Trending Netflix</h2>
+    <div class="list" id="netflix-list"></div>
   </div>
 
-  <div class="row">
-    <h2>
-      <span>Trending Netflix TV Shows</span>
-      <button class="view-all-btn" data-category="netflix-tv" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="netflix-tv-list"></div>
-  </div>
-
-  <div class="row">
-    <h2>
-      <span>Trending Korean Drama</span>
-      <button class="view-all-btn" data-category="korean-drama" onclick="openAllView(this.dataset.category)">VIEW ALL &raquo;</button>
-    </h2>
-    <div class="list" id="korean-drama-list"></div>
-  </div>
-  
   <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
 
   <div class="modal" id="modal">
@@ -105,7 +73,7 @@
         <select id="server" onchange="changeServer()">
           <option value="vidsrc.cc">Vidsrc.cc</option>
           <option value="vidsrc.me">Vidsrc.me</option>
-          <option value="player.videasy.net" selected>Vidplayer (player.videasy.net)</option>
+          <option value="player.videasy.net">Player.Videasy.net</option>
         </select>
       </div>
       <div class="season-selector" id="season-selector" style="display: none;">
@@ -119,27 +87,10 @@
 
   <div class="search-modal" id="search-modal">
     <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." onkeyup="debouncedSearchTMDB()" />
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" />
     <div class="results" id="search-results"></div>
   </div>
 
-  <div class="all-view-container" id="all-view-container">
-    <span class="back-btn" onclick="closeAllView()">&times;</span>
-    <h2 id="all-view-title"></h2>
-    
-    <div class="all-view-controls">
-      <select id="genre-filter" onchange="filterAllView()">
-        <option value="">All Genres</option>
-      </select>
-      <select id="year-filter" onchange="filterAllView()">
-        <option value="">All Years</option>
-      </select>
-    </div>
-    
-    <div class="all-view-grid" id="all-view-grid">
-      </div>
-    <p class="loading" id="all-view-loading" style="display: none;">Loading more...</p>
-  </div>
   <footer class="footer">
     <div class="footer-content">
       <p>&copy; 2025 ReelRoom. All rights reserved.</p>
