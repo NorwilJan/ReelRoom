@@ -471,20 +471,25 @@ function changeServer() {
   document.getElementById('modal-video').src = embedURL;
 }
 
+/**
+ * FIX: Modified to re-open the 'All View' page if the user navigated from it.
+ */
 function closeModal() {
   document.getElementById('modal').style.display = 'none';
   document.getElementById('modal-video').src = '';
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
 
-  // --- FIX: Check if the user was in the "All View" (Discover Page) ---
   if (currentAllViewCategory) {
-    // If a category is set, show the All View container again
-    document.getElementById('all-view-container').style.display = 'block';
-    // Ensure the main body scroll remains locked while the All View is open
-    document.body.style.overflow = 'hidden'; 
+    // Save the category, clear the global state (to prevent recursion), then re-open the view.
+    const tempCategory = currentAllViewCategory;
+    currentAllViewCategory = null; 
+    
+    // Re-call openAllView, which ensures the full-screen container is visible 
+    // and reloads the current filtered data (as filters in the dropdowns are still set).
+    openAllView(tempCategory);
   } else {
-    // Otherwise, return to the default homepage state (scroll unlocked)
+    // Standard return to homepage, restore body scroll
     document.body.style.overflow = 'auto';
   }
 }
@@ -629,20 +634,24 @@ async function openAllView(category) {
     const row = document.querySelector(`button[data-category="${category}"]`).closest('.row');
     const categoryTitle = row.querySelector('span').textContent;
 
-    // Reset state
+    // Save the state if this is the initial click from the homepage
+    if (currentAllViewCategory !== category) {
+        currentPages.allView = 1; 
+        allViewTotalPages = 1;
+        container.scrollTop = 0;
+        
+        // Reset filters only on fresh category click from homepage
+        document.getElementById('genre-filter').value = "";
+        document.getElementById('year-filter').value = "";
+    }
+    
+    // Set the category after the conditional check above
     currentAllViewCategory = category;
-    currentPages.allView = 1; 
-    allViewTotalPages = 1;
-    container.scrollTop = 0;
 
     // Determine media type for filter population
     const mediaType = (category.includes('tv') || category.includes('drama') || category.includes('anime')) ? 'tv' : 'movie';
     populateGenreFilter(mediaType);
     
-    // Reset filters
-    document.getElementById('genre-filter').value = "";
-    document.getElementById('year-filter').value = "";
-
     // Show view
     titleElement.textContent = categoryTitle;
     container.style.display = 'block';
