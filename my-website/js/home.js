@@ -472,7 +472,7 @@ function changeServer() {
 }
 
 /**
- * FIX: Modified to re-open the 'All View' page if the user navigated from it.
+ * FIX: Modified to use the restoreAllView function if the user navigated from the All View.
  */
 function closeModal() {
   document.getElementById('modal').style.display = 'none';
@@ -481,13 +481,8 @@ function closeModal() {
   document.getElementById('season-selector').style.display = 'none';
 
   if (currentAllViewCategory) {
-    // Save the category, clear the global state (to prevent recursion), then re-open the view.
-    const tempCategory = currentAllViewCategory;
-    currentAllViewCategory = null; 
-    
-    // Re-call openAllView, which ensures the full-screen container is visible 
-    // and reloads the current filtered data (as filters in the dropdowns are still set).
-    openAllView(tempCategory);
+    // If the user came from All View, restore it instantly and asynchronously.
+    restoreAllView();
   } else {
     // Standard return to homepage, restore body scroll
     document.body.style.overflow = 'auto';
@@ -617,6 +612,8 @@ function displayAllView(items, append = false) {
         img.alt = (item.title || item.name || 'Unknown');
         img.setAttribute('data-id', item.id);
         
+        // When clicking a movie from All View, we use closeAllView() to clear the container, 
+        // then showDetails will load the modal.
         img.onclick = () => {
             closeAllView();
             showDetails(item);
@@ -634,18 +631,27 @@ async function openAllView(category) {
     const row = document.querySelector(`button[data-category="${category}"]`).closest('.row');
     const categoryTitle = row.querySelector('span').textContent;
 
-    // Save the state if this is the initial click from the homepage
+    // --- Only reset state if the category is changing ---
     if (currentAllViewCategory !== category) {
+        // Reset state on a fresh category click from homepage
         currentPages.allView = 1; 
         allViewTotalPages = 1;
         container.scrollTop = 0;
-        
-        // Reset filters only on fresh category click from homepage
         document.getElementById('genre-filter').value = "";
         document.getElementById('year-filter').value = "";
+        
+        // Setup scroll listener (needs to be done only once per category change)
+        container.onscroll = debounce(() => {
+            if (
+                container.scrollTop + container.clientHeight >= container.scrollHeight - 500 &&
+                currentPages.allView < allViewTotalPages
+            ) {
+                loadAllViewData(currentPages.allView + 1);
+            }
+        }, 100);
     }
     
-    // Set the category after the conditional check above
+    // Set the category (must happen before the fetch)
     currentAllViewCategory = category;
 
     // Determine media type for filter population
@@ -657,19 +663,33 @@ async function openAllView(category) {
     container.style.display = 'block';
     document.body.style.overflow = 'hidden';
 
-    // Fetch initial data (page 1)
+    // Fetch initial data (page 1).
     await loadAllViewData(1, true);
-
-    // Setup vertical infinite scroll
-    container.onscroll = debounce(() => {
-        if (
-            container.scrollTop + container.clientHeight >= container.scrollHeight - 500 &&
-            currentPages.allView < allViewTotalPages
-        ) {
-            loadAllViewData(currentPages.allView + 1);
-        }
-    }, 100);
 }
+
+
+/**
+ * Restores the All View container without resetting filters or scroll position.
+ * This is used specifically when returning from the Movie Detail Modal.
+ */
+function restoreAllView() {
+    const container = document.getElementById('all-view-container');
+    
+    if (!currentAllViewCategory) return;
+    
+    // 1. CRITICAL FIX: Instantly show the container to prevent returning to the homepage scroll.
+    container.style.display = 'block';
+    
+    // 2. Lock the body scroll
+    document.body.style.overflow = 'hidden';
+
+    // 3. Reload the data using the current page number and filters.
+    // We pass 'true' to initialLoad so the grid clears and rebuilds from the start,
+    // reflecting any potential filter changes made before the modal was opened, 
+    // while keeping the scroll position.
+    loadAllViewData(currentPages.allView, true);
+}
+
 
 /** Handler for filter changes: resets pagination and reloads data. */
 function filterAllView() {
@@ -677,6 +697,7 @@ function filterAllView() {
     
     currentPages.allView = 1;
     allViewTotalPages = 1;
+    document.getElementById('all-view-container').scrollTop = 0; // Reset scroll on filter change
     loadAllViewData(1, true); 
 }
 
