@@ -14,10 +14,12 @@
 
 <body>
   <div class="navbar">
-    <img src="logo.png" alt="ReelRoom Logo" />
+    <h1 class="logo-text">REELROOM</h1>
     <div class="nav-links">
       <a href="index.html">Home</a>
-      <input type="text" class="search-bar" placeholder="Search..." onfocus="openSearchModal()" />
+      <button class="search-icon-btn" onclick="openSearchModal()">
+        <i class="fas fa-search"></i>
+      </button>
     </div>
   </div>
 
@@ -51,10 +53,19 @@
   </div>
 
   <div class="row">
-    <h2>Trending Netflix</h2>
-    <div class="list" id="netflix-list"></div>
+    <h2>Trending Netflix Movies</h2>
+    <div class="list" id="netflix-movies-list"></div>
   </div>
 
+  <div class="row">
+    <h2>Trending Netflix TV Shows</h2>
+    <div class="list" id="netflix-tv-list"></div>
+  </div>
+
+  <div class="row">
+    <h2>Trending Korean Drama</h2>
+    <div class="list" id="korean-drama-list"></div>
+  </div>
   <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
 
   <div class="modal" id="modal">
@@ -87,7 +98,7 @@
 
   <div class="search-modal" id="search-modal">
     <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." oninput="searchTMDB()" />
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." onkeyup="debouncedSearchTMDB()" />
     <div class="results" id="search-results"></div>
   </div>
 
