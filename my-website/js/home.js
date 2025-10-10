@@ -443,12 +443,16 @@ function applyFilters() {
     const year = document.getElementById('filter-year').value;
     const genre = document.getElementById('filter-genre').value;
     
+    // 1. Close the filter modal
     document.getElementById('filter-modal').style.display = 'none';
     
     const newFilters = { year: year, genre: genre };
 
-    // Apply filters to the current row and reload its content
+    // 2. Apply filters to the current row (updates the filter button text)
     loadRowContent(currentCategoryToFilter, newFilters);
+    
+    // 3. IMMEDIATELY open the full view for infinite scrolling of the filtered content
+    openFullView(currentCategoryToFilter);
 }
 
 // --- DETAILS MODAL LOGIC ---
