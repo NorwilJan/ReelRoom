@@ -252,7 +252,8 @@ function updateFilterButtons(category, filters) {
         const genreName = filters.genre ? (GENRES.find(g => g.id == filters.genre)?.name || 'Genre') : '';
         const yearText = filters.year || '';
         
-        filterBtn.textContent = `Filtered (${genreName} ${yearText})`;
+        // Ensure to always show the filter icon with the text
+        filterBtn.textContent = `Filtered ${genreName} ${yearText}`.trim();
         filterBtn.style.background = 'red';
         filterBtn.style.color = 'white';
         clearBtn.style.display = 'inline-block';
@@ -311,7 +312,7 @@ function openFullView(category) {
         <div class="results" id="${category}-full-list"></div>
     `;
 
-    // Reset pagination for the new infinite scroll view
+    // *** FIX: Reset pagination to 0 so the first call increments it to page 1
     categoryState[category].page = 0; 
     loadMoreFullView(category, filters);
     
@@ -440,7 +441,6 @@ function applyFilters() {
 
 // --- DETAILS MODAL LOGIC (Assuming existing functions are here) ---
 
-// Dummy functions for server/episode logic to ensure the JS is complete
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
     const res = await fetch(`${BASE_URL}/tv/${tvId}?api_key=${API_KEY}`);
