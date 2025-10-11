@@ -23,6 +23,7 @@ let categoryState = {
 
 let currentFullView = null; // Tracks the category currently in the full view
 let currentCategoryToFilter = null; // Tracks the category targeted by the filter modal
+let scrollPosition = 0; // NEW: To save the scroll position of the full view grid
 
 // Simplified Genre IDs for the filter dropdown
 const GENRES = [
@@ -318,6 +319,9 @@ function openFullView(category) {
     
     const listContainer = document.getElementById(`${category}-full-list`);
     listContainer.onscroll = function () {
+        // Save the scroll position whenever the user scrolls
+        scrollPosition = listContainer.scrollTop; 
+        
         if (
             !categoryState[category].isLoading &&
             listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
@@ -331,6 +335,7 @@ function closeFullView() {
     const modal = document.getElementById('full-view-modal');
     if (modal) modal.remove();
     currentFullView = null;
+    scrollPosition = 0; // Reset scroll position when closing the full view
 }
 
 // Helper to display images in the grid (similar to search results)
@@ -343,10 +348,10 @@ function displayFullList(items, containerId) {
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
-    img.onclick = () => {
-        closeFullView(); 
-        showDetails(item);
-    };
+    
+    // 📢 CHANGE: Only close the movie details modal, NOT the full view modal
+    img.onclick = () => showDetails(item, true); 
+    
     container.appendChild(img);
   });
 }
@@ -397,6 +402,11 @@ async function loadMoreFullView(category, filters) {
   } finally {
     state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
+    
+    // Restore scroll position after content loads (only needed for the first load)
+    if (currentPage === 1 && scrollPosition > 0) {
+        container.scrollTop = scrollPosition;
+    }
   }
 }
 
@@ -440,8 +450,7 @@ function openFilterModal(category) {
 }
 
 /**
- * 📢 REVISED FUNCTION: Updates the row content, but does NOT auto-open the full view. 
- * The user must now click "Show More" after filtering, which is much clearer.
+ * 📢 FINAL REVISED FUNCTION: Updates filters and IMMEDIATELY auto-opens the full view.
  */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
@@ -453,12 +462,12 @@ function applyFilters() {
     
     const newFilters = { year: year, genre: genre };
 
-    // 2. Update the filter state and reload the main content row.
-    // This provides immediate visual feedback to the user on the home screen.
-    loadRowContent(category, newFilters);
+    // 2. Update the filter state and the visual button indicator
+    categoryState[category].filters = newFilters;
+    updateFilterButtons(category, newFilters);
     
-    // 3. NO auto-open of openFullView(category) here!
-    // The user will now see the filtered results in the row and click "Show More" manually.
+    // 3. IMMEDIATELY open the full view as requested.
+    openFullView(category);
 }
 
 // --- DETAILS MODAL LOGIC ---
@@ -487,7 +496,8 @@ async function fetchEpisodes(tvId, seasonNumber) {
   }
 }
 
-async function showDetails(item) {
+// 📢 CHANGE: Added optional parameter to indicate if the full view is open
+async function showDetails(item, isFullViewOpen = false) {
   currentItem = item;
   currentSeason = 1;
   currentEpisode = 1;
@@ -525,6 +535,11 @@ async function showDetails(item) {
 
   changeServer();
   document.getElementById('modal').style.display = 'flex';
+  
+  // 📢 NEW: Hide the full view modal temporarily if it was open
+  if (isFullViewOpen) {
+      document.getElementById('full-view-modal').style.display = 'none';
+  }
 }
 
 async function loadEpisodes() {
@@ -585,6 +600,12 @@ function closeModal() {
   document.getElementById('modal-video').src = '';
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
+  
+  // 📢 NEW: If the full view modal was open before, show it again.
+  const fullViewModal = document.getElementById('full-view-modal');
+  if (fullViewModal) {
+      fullViewModal.style.display = 'flex';
+  }
 }
 
 
