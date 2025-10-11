@@ -471,11 +471,8 @@ function applyFilters() {
     categoryState[category].scrollPosition = 0;
     updateFilterButtons(category, newFilters);
 
-    if (confirm(`Filters applied for ${CATEGORIES.find(c => c.id === category)?.label || category}. Open full view to see results?`)) {
-        openFullView(category);
-    } else {
-        loadRowContent(category, newFilters);
-    }
+    // MODIFIED: Directly open full view with applied filters, no confirmation
+    openFullView(category);
 }
 
 // --- DETAILS MODAL LOGIC ---
