@@ -442,17 +442,19 @@ function openFilterModal(category) {
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
     const genre = document.getElementById('filter-genre').value;
-    
+    const category = currentCategoryToFilter; // Use a dedicated variable
+
     // 1. Close the filter modal
     document.getElementById('filter-modal').style.display = 'none';
     
     const newFilters = { year: year, genre: genre };
 
-    // 2. Apply filters to the current row (updates the filter button text)
-    loadRowContent(currentCategoryToFilter, newFilters);
+    // 2. IMPORTANT: Update the filter state and the visual button indicator
+    categoryState[category].filters = newFilters;
+    updateFilterButtons(category, newFilters);
     
     // 3. IMMEDIATELY open the full view for infinite scrolling of the filtered content
-    openFullView(currentCategoryToFilter);
+    openFullView(category);
 }
 
 // --- DETAILS MODAL LOGIC ---
@@ -654,13 +656,15 @@ async function init() {
   });
 
   document.querySelectorAll('.filter-btn').forEach(button => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault(); // Prevent default link behavior if applicable
       openFilterModal(button.getAttribute('data-category'));
     });
   });
   
   document.querySelectorAll('.clear-filter-btn').forEach(button => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault(); // Prevent default link behavior if applicable
       clearFilters(button.getAttribute('data-category'));
     });
   });
