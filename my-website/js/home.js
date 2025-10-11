@@ -16,7 +16,9 @@ const CONFIG = {
     ITEMS_PER_ROW: 15,
     SLIDESHOW_INTERVAL: 5000,
     MAX_YEARS: 20,
-    SLIDESHOW_ITEM_COUNT: 7
+    SLIDESHOW_ITEM_COUNT: 7,
+    // NEW: Define the category to be replaced by the user's genre pick
+    TRENDING_CATEGORY_ID: 'movies' // Assuming 'movies' is the "trending movie row" you want to replace
 };
 
 // Centralized category configuration
@@ -33,11 +35,20 @@ const CATEGORIES = [
 // Category state with scroll position
 let categoryState = CATEGORIES.reduce((state, cat) => ({
     ...state,
-    [cat.id]: { page: 1, isLoading: false, filters: {}, scrollPosition: 0 }
+    [cat.id]: { 
+        page: 1, 
+        isLoading: false, 
+        filters: {}, 
+        scrollPosition: 0, 
+        isFullView: false, // NEW: Track if it's in full view mode
+        isInfiniteScroll: false // NEW: Track if it's in infinite scroll mode
+    }
 }), {});
 
 let currentFullView = null;
 let currentCategoryToFilter = null;
+// NEW: State for the category that replaces the trending row
+let trendingReplacement = null;
 
 // Simplified Genre IDs for the filter dropdown
 const GENRES = [
@@ -91,10 +102,23 @@ async function testApiKey() {
 
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
+        // Determine the type and configuration based on the category ID or the temporary trending replacement
+        let catConfig = CATEGORIES.find(c => c.id === category);
+        let catType = catConfig ? catConfig.type : 'movie';
+        let extraParams = catConfig ? catConfig.params : '';
+
+        // If this is the trending replacement, use the temporary config
+        if (category === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement && trendingReplacement.filters) {
+            // This is a temporary category based on a genre pick, so we'll use a dynamic label/params
+            catConfig = { id: category, type: 'movie', label: trendingReplacement.label, params: '' };
+        }
+        
+        if (!catConfig) throw new Error('Unknown category.');
+
+
         const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
         let filterParams = filters.year ? `&primary_release_year=${filters.year}` : '';
         let genreParams = '';
-        let extraParams = CATEGORIES.find(c => c.id === category)?.params || '';
 
         // Handle genre combination: merge base category genres with user-selected genre
         if (filters.genre) {
@@ -108,10 +132,7 @@ async function fetchCategoryContent(category, page, filters = {}) {
             genreParams = `&with_genres=${combinedGenres}`;
         }
 
-        const catConfig = CATEGORIES.find(c => c.id === category);
-        if (!catConfig) throw new Error('Unknown category.');
-
-        const fetchURL = `${BASE_URL}/discover/${catConfig.type}?api_key=${API_KEY}${extraParams}${baseParams}${filterParams}${genreParams}`;
+        const fetchURL = `${BASE_URL}/discover/${catType}?api_key=${API_KEY}${extraParams}${baseParams}${filterParams}${genreParams}`;
         console.log(`Fetching ${category} with URL: ${fetchURL}`); // Debug log
 
         const res = await fetch(fetchURL);
@@ -123,7 +144,7 @@ async function fetchCategoryContent(category, page, filters = {}) {
         const data = await res.json();
 
         if (data.results) {
-            data.results.forEach(item => item.media_type = item.media_type || catConfig.type);
+            data.results.forEach(item => item.media_type = item.media_type || catType);
         }
         return data;
     } catch (error) {
@@ -258,13 +279,16 @@ function changeSlide(n) {
 
 // --- MAIN PAGE LIST DISPLAY ---
 
-function displayItems(items, containerId, isFullView = false) {
+function displayItems(items, containerId, append = false) { // MODIFIED: Added 'append'
     const container = document.getElementById(containerId);
     if (!container) return;
-    if (!isFullView) container.innerHTML = '';
+    
+    // NEW: Only clear if not appending
+    if (!append) container.innerHTML = '';
+    
     removeLoadingAndError(containerId);
 
-    if (items.length === 0) {
+    if (items.length === 0 && !append) { // MODIFIED: Check for !append to not overwrite existing content when appending
         container.innerHTML = `
             <p style="color: #ccc; text-align: center; width: 100%;">
                 No content matches your filters.
@@ -276,16 +300,18 @@ function displayItems(items, containerId, isFullView = false) {
     }
 
     items.forEach(item => {
-        if (isFullView && container.querySelector(`img[data-id="${item.id}"]`)) return;
+        // Check if item already exists (important for infinite scroll)
+        if (container.querySelector(`img[data-id="${item.id}"]`)) return;
+        
         const img = document.createElement('img');
         img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
         img.alt = `${item.title || item.name || 'Unknown'} (${item.media_type}, ${item.release_date || item.first_air_date || 'N/A'})`;
         img.setAttribute('data-id', item.id);
         img.loading = 'lazy';
         img.tabIndex = 0;
-        img.onclick = () => showDetails(item, isFullView);
+        img.onclick = () => showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); // MODIFIED: Pass state to showDetails
         img.onkeydown = (e) => {
-            if (e.key === 'Enter' || e.key === ' ') showDetails(item, isFullView);
+            if (e.key === 'Enter' || e.key === ' ') showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); // MODIFIED: Pass state to showDetails
         };
         container.appendChild(img);
     });
@@ -293,10 +319,22 @@ function displayItems(items, containerId, isFullView = false) {
 
 // --- FULL VIEW / INFINITE SCROLL LOGIC ---
 
-function updateFilterButtons(category, filters) {
+function updateRowUI(category, filters) {
     const row = document.getElementById(`${category}-row`);
+    if (!row) return; // For temporary rows like the trending replacement
+
+    const rowTitle = row.querySelector('.category-title');
     const filterBtn = row.querySelector('.filter-btn');
     const clearBtn = row.querySelector('.clear-filter-btn');
+    const showMoreLink = row.querySelector('.show-more-link');
+
+    // Update Title if it's the trending replacement
+    if (category === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement && trendingReplacement.label) {
+        rowTitle.textContent = trendingReplacement.label;
+    } else {
+        const catConfig = CATEGORIES.find(c => c.id === category);
+        rowTitle.textContent = catConfig ? catConfig.label : category;
+    }
 
     const isFiltered = filters.year || filters.genre;
 
@@ -307,14 +345,17 @@ function updateFilterButtons(category, filters) {
         filterBtn.style.background = 'red';
         filterBtn.style.color = 'white';
         clearBtn.style.display = 'inline-block';
+        showMoreLink.textContent = 'Show All (Filtered)'; // MODIFIED: Indicate filtered state
     } else {
         filterBtn.innerHTML = '<i class="fas fa-filter"></i> Filter';
         filterBtn.style.background = '#444';
         filterBtn.style.color = '#fff';
         clearBtn.style.display = 'none';
+        showMoreLink.textContent = 'Show More';
     }
 }
 
+// MODIFIED: loadRowContent is now primarily for the initial load of the row.
 async function loadRowContent(category, filters = {}) {
     const state = categoryState[category];
     if (state.isLoading) return;
@@ -323,25 +364,129 @@ async function loadRowContent(category, filters = {}) {
     const containerId = `${category}-list`;
     showLoading(containerId);
 
-    const data = await fetchCategoryContent(category, 1, filters);
-
+    // Reset page and infinite scroll state
+    state.page = 1; 
     state.filters = filters;
+    state.isFullView = false;
+    state.isInfiniteScroll = false; // Reset to false
+
+    const data = await fetchCategoryContent(category, state.page, filters);
+
+    // Initial load: Only show ITEMS_PER_ROW
     displayItems(data.results.slice(0, CONFIG.ITEMS_PER_ROW), containerId);
-    updateFilterButtons(category, filters);
+    updateRowUI(category, filters);
+
+    // NEW: If there are more items than the row limit, and the user hasn't pressed 'Show More', 
+    // we want to initiate infinite scroll for the row itself.
+    if (data.total_pages > 1) {
+        // Attach infinite scroll logic to the row container
+        const rowListContainer = document.getElementById(containerId);
+        // Only attach if not already attached and we have more than one page of content
+        if (!rowListContainer.getAttribute('data-scroll-attached')) {
+            rowListContainer.setAttribute('data-scroll-attached', 'true');
+            // The row itself should handle the scroll, which is not typical for a single-row design.
+            // We'll use an IntersectionObserver on the *last item* of the initial load.
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !state.isFullView) {
+                        // User has scrolled to the last item and is still in the row view
+                        if (!state.isLoading && data.total_pages > state.page) {
+                            state.isInfiniteScroll = true; // Activate infinite scroll for this row
+                            loadMoreRowContent(category, filters);
+                        }
+                        observer.unobserve(entry.target); // Stop observing the old last item
+                    }
+                });
+            }, { rootMargin: '100px' });
+            
+            // Observe the last item loaded
+            const lastItem = rowListContainer.lastElementChild;
+            if (lastItem) observer.observe(lastItem);
+            
+            // To ensure the observer is set up, the infinite scroll will be triggered in loadMoreRowContent
+            // The show-more button is still there as a fallback/alternative.
+        }
+    }
+
 
     state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
 }
 
+// NEW: Function to load more content specifically for the main row (infinite scroll on the row)
+async function loadMoreRowContent(category, filters) {
+    const state = categoryState[category];
+    const containerId = `${category}-list`;
+
+    if (state.isLoading || !state.isInfiniteScroll) return; // Only load if in infinite scroll mode
+
+    state.isLoading = true;
+    showLoading(containerId);
+
+    state.page++; 
+    let currentPage = state.page;
+
+    try {
+        const data = await fetchCategoryContent(category, currentPage, filters);
+        const items = data.results || [];
+
+        if (items.length === 0) {
+            state.page--;
+            console.log(`${category} row reached end of content.`);
+            state.isInfiniteScroll = false; // Disable infinite scroll if no more results
+            return;
+        }
+
+        displayItems(items, containerId, true); // Append items
+
+        // Setup observer for the *new* last item
+        const rowListContainer = document.getElementById(containerId);
+        const newLastItem = rowListContainer.lastElementChild;
+        if (newLastItem) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !state.isFullView) {
+                        if (!state.isLoading && data.total_pages > state.page) {
+                            loadMoreRowContent(category, filters);
+                        }
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { rootMargin: '100px' });
+            observer.observe(newLastItem);
+        } else {
+             state.isInfiniteScroll = false; // Disable if somehow no new items
+        }
+
+    } catch (error) {
+        console.error(`Error loading more row content for ${category}:`, error);
+        showError(`Failed to load more row content for ${category}: ${error.message}`, containerId);
+        state.page--;
+    } finally {
+        state.isLoading = false;
+        document.getElementById(containerId)?.querySelector('.loading')?.remove();
+    }
+}
+
 function clearFilters(category) {
+    // NEW: Clear trending replacement if this is the trending category
+    if (category === CONFIG.TRENDING_CATEGORY_ID) {
+        trendingReplacement = null;
+    }
     categoryState[category].filters = {};
     categoryState[category].scrollPosition = 0;
+    // MODIFIED: Re-load the row content, which will reset the view and filters
     loadRowContent(category);
 }
 
 function openFullView(category) {
     currentFullView = category;
-    const filters = categoryState[category].filters;
+    const state = categoryState[category];
+    const filters = state.filters;
+
+    // MODIFIED: Set the state to indicate full view
+    state.isFullView = true;
+    state.isInfiniteScroll = false; // Disable row infinite scroll
 
     const fullViewContainer = document.createElement('div');
     fullViewContainer.id = 'full-view-modal';
@@ -349,37 +494,49 @@ function openFullView(category) {
     fullViewContainer.style.display = 'flex';
     document.body.appendChild(fullViewContainer);
 
-    const title = CATEGORIES.find(c => c.id === category)?.label || category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
+    // Determine the title, accounting for the trending replacement
+    let title = CATEGORIES.find(c => c.id === category)?.label || category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    if (category === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement && trendingReplacement.label) {
+        title = trendingReplacement.label;
+    }
+    
     fullViewContainer.innerHTML = `
         <span class="close" onclick="closeFullView()" style="color: red;" tabIndex="0" onkeydown="if(event.key === 'Enter') closeFullView()">&times;</span>
         <h2 style="text-transform: uppercase;">${title}</h2>
         <div class="results" id="${category}-full-list"></div>
     `;
 
-    categoryState[category].page = 0;
+    // MODIFIED: Reset page to 0 and load first page in full view
+    state.page = 0;
     loadMoreFullView(category, filters);
 
     const listContainer = document.getElementById(`${category}-full-list`);
     listContainer.onscroll = function () {
-        categoryState[category].scrollPosition = listContainer.scrollTop;
+        state.scrollPosition = listContainer.scrollTop;
         if (
-            !categoryState[category].isLoading &&
+            !state.isLoading &&
             listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
         ) {
             loadMoreFullView(category, filters);
         }
     };
 
-    if (categoryState[category].scrollPosition) {
-        listContainer.scrollTop = categoryState[category].scrollPosition;
+    if (state.scrollPosition) {
+        listContainer.scrollTop = state.scrollPosition;
     }
 }
 
 function closeFullView() {
+    const category = currentFullView;
     const modal = document.getElementById('full-view-modal');
     if (modal) modal.remove();
     currentFullView = null;
+    if (categoryState[category]) {
+        categoryState[category].isFullView = false;
+        // Re-initiate row infinite scroll logic if it was loading more before
+        // This is handled by loadRowContent on clearFilters, but we reset the flag here
+        // If the user hasn't scrolled far enough, the row will just display the initial items
+    }
 }
 
 async function loadMoreFullView(category, filters) {
@@ -418,6 +575,7 @@ async function loadMoreFullView(category, filters) {
             return;
         }
 
+        // MODIFIED: Append is true for full view infinite scroll
         displayItems(items, containerId, true);
 
     } catch (error) {
@@ -428,6 +586,7 @@ async function loadMoreFullView(category, filters) {
         state.isLoading = false;
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
         if (currentPage === 1 && state.scrollPosition > 0) {
+            // Restore scroll position only on the first page load in full view
             container.scrollTop = state.scrollPosition;
         }
     }
@@ -460,6 +619,20 @@ function populateFilterOptions() {
             if (e.key === 'Enter') select.focus();
         };
     });
+    
+    // NEW: Populate genre picker for the trending movie row replacement
+    const trendingGenreSelect = document.getElementById('trending-genre-picker');
+    if (trendingGenreSelect) {
+        trendingGenreSelect.innerHTML = '<option value="">Pick a Genre...</option>';
+        GENRES.forEach(genre => {
+            const option = new Option(genre.name, genre.id);
+            trendingGenreSelect.appendChild(option);
+        });
+        // Check if a replacement is already active
+        if (trendingReplacement && trendingReplacement.filters.genre) {
+            trendingGenreSelect.value = trendingReplacement.filters.genre;
+        }
+    }
 }
 
 function openFilterModal(category) {
@@ -486,12 +659,41 @@ function applyFilters() {
     const newFilters = { year: year, genre: genre };
     categoryState[category].filters = newFilters;
     categoryState[category].scrollPosition = 0;
-    updateFilterButtons(category, newFilters);
-
+    
+    // MODIFIED: Immediately open full view after applying filters, as requested
     openFullView(category);
 }
 
-// --- DETAILS MODAL LOGIC ---
+// NEW: Function to handle the trending genre pick
+function applyTrendingGenre() {
+    const genreId = document.getElementById('trending-genre-picker').value;
+    const category = CONFIG.TRENDING_CATEGORY_ID;
+    
+    if (!genreId) {
+        // If the user selects "Pick a Genre...", revert to default 'movies'
+        clearFilters(category);
+        return;
+    }
+    
+    const genreName = GENRES.find(g => g.id == genreId)?.name;
+    const newFilters = { genre: genreId, year: '' }; // Only filter by genre, clear year
+    
+    // Set the global state for the replacement
+    trendingReplacement = {
+        label: `${genreName} Movies`,
+        filters: newFilters
+    };
+    
+    // Apply filters to the 'movies' category state
+    categoryState[category].filters = newFilters;
+    categoryState[category].scrollPosition = 0;
+    
+    // Re-load the 'movies' row with the new genre filter
+    loadRowContent(category, newFilters);
+}
+
+
+// --- DETAILS MODAL LOGIC (UNCHANGED) ---
 
 async function fetchSeasonsAndEpisodes(tvId) {
     try {
@@ -652,11 +854,14 @@ function closeModal() {
 
     const fullViewModal = document.getElementById('full-view-modal');
     if (fullViewModal) {
-        fullViewModal.style.display = 'flex';
+        // MODIFIED: Do not display full view modal if it was open. It was closed by showDetails
+        // Instead, we just let the user re-open it if they want.
+        // If you absolutely want it to pop back up, uncomment the lines below:
+        // fullViewModal.style.display = 'flex';
     }
 }
 
-// --- SEARCH MODAL LOGIC ---
+// --- SEARCH MODAL LOGIC (UNCHANGED) ---
 
 function openSearchModal() {
     document.getElementById('search-modal').style.display = 'flex';
@@ -717,6 +922,29 @@ const debouncedSearchTMDB = debounce(async () => {
 
 // --- INITIALIZATION ---
 
+// NEW: Function to create the trending genre picker
+function createTrendingGenrePicker() {
+    const pickerContainer = document.getElementById(`${CONFIG.TRENDING_CATEGORY_ID}-row`)?.querySelector('.category-header');
+    if (!pickerContainer) return;
+    
+    // Create the select element for genre picking
+    const select = document.createElement('select');
+    select.id = 'trending-genre-picker';
+    select.className = 'filter-select';
+    select.style.marginLeft = '10px';
+    select.onchange = applyTrendingGenre;
+    
+    // Find the category title element
+    const title = pickerContainer.querySelector('.category-title');
+    
+    // Insert the select element after the title
+    if (title) {
+        title.insertAdjacentElement('afterend', select);
+    } else {
+        pickerContainer.appendChild(select);
+    }
+}
+
 async function init() {
     document.getElementById('empty-message').style.display = 'none';
 
@@ -724,13 +952,16 @@ async function init() {
     if (!apiKeyValid) {
         return;
     }
-
+    
+    // NEW: Create and populate the trending genre picker before populating other filters
+    createTrendingGenrePicker();
     populateFilterOptions();
 
     document.querySelectorAll('.show-more-link').forEach(link => {
         link.tabIndex = 0;
         link.addEventListener('click', (e) => {
             e.preventDefault();
+            // MODIFIED: Load Full View
             openFullView(link.getAttribute('data-category'));
         });
         link.addEventListener('keydown', (e) => {
@@ -776,7 +1007,13 @@ async function init() {
         displaySlides();
 
         CATEGORIES.forEach((cat, index) => {
-            displayItems(categoryData[index].results.slice(0, CONFIG.ITEMS_PER_ROW), `${cat.id}-list`);
+            // Check if this is the trending category and a replacement genre is set
+            let filters = {};
+            if (cat.id === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement) {
+                filters = trendingReplacement.filters;
+            }
+            // MODIFIED: Use loadRowContent to ensure filters and UI are updated and infinite scroll is set up
+            loadRowContent(cat.id, filters); 
         });
 
         setupLazyLoading();
