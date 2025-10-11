@@ -78,27 +78,30 @@ async function testApiKey() {
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
         const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
-        // Correctly apply year and genre filters
-        const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
+        const yearParam = filters.year ? `&primary_release_year=${filters.year}` : '';
+        const userGenreParam = filters.genre ? `&with_genres=${filters.genre}` : '';
+        
         let fetchURL = '';
         let mediaType = category.includes('movie') ? 'movie' : 'tv';
 
         if (category === 'movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${yearParam}${userGenreParam}`;
         } else if (category === 'tvshows') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${yearParam}${userGenreParam}`;
         } else if (category === 'anime') {
-            // Anime base filters: genre 16 and Japanese language, augmented by user filters
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja${baseParams}${filterParams}`;
+            // FIX: Append user-selected genre to the base anime genre (16) using comma separation
+            const animeGenres = filters.genre ? `16,${filters.genre}` : '16';
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=${animeGenres}&with_original_language=ja${baseParams}${yearParam}`;
         } else if (category === 'tagalog-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${filterParams}`;
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${yearParam}${userGenreParam}`;
         } else if (category === 'netflix-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${yearParam}${userGenreParam}`;
         } else if (category === 'netflix-tv') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${yearParam}${userGenreParam}`;
         } else if (category === 'korean-drama') {
-            // KDrama base filters: Korean language and Drama genre 18, augmented by user filters
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18${baseParams}${filterParams}`;
+            // FIX: Append user-selected genre to the base KDrama genre (18) using comma separation
+            const kdramaGenres = filters.genre ? `18,${filters.genre}` : '18';
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=${kdramaGenres}&with_original_language=ko${baseParams}${yearParam}`;
         } else {
             throw new Error('Unknown category.');
         }
