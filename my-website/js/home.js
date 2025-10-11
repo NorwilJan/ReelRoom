@@ -92,12 +92,27 @@ async function testApiKey() {
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
         const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
-        const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
-        let fetchURL = '';
+        let filterParams = filters.year ? `&primary_release_year=${filters.year}` : '';
+        let genreParams = '';
+        let extraParams = CATEGORIES.find(c => c.id === category)?.params || '';
+
+        // Handle genre combination: merge base category genres with user-selected genre
+        if (filters.genre) {
+            let baseGenres = '';
+            const genreMatch = extraParams.match(/&with_genres=([^&]*)/);
+            if (genreMatch) {
+                baseGenres = genreMatch[1];
+                extraParams = extraParams.replace(genreMatch[0], ''); // Remove base genres from extraParams
+            }
+            const combinedGenres = baseGenres ? `${baseGenres},${filters.genre}` : filters.genre;
+            genreParams = `&with_genres=${combinedGenres}`;
+        }
+
         const catConfig = CATEGORIES.find(c => c.id === category);
         if (!catConfig) throw new Error('Unknown category.');
 
-        fetchURL = `${BASE_URL}/discover/${catConfig.type}?api_key=${API_KEY}${catConfig.params}${baseParams}${filterParams}`;
+        const fetchURL = `${BASE_URL}/discover/${catConfig.type}?api_key=${API_KEY}${extraParams}${baseParams}${filterParams}${genreParams}`;
+        console.log(`Fetching ${category} with URL: ${fetchURL}`); // Debug log
 
         const res = await fetch(fetchURL);
         if (!res.ok) {
@@ -464,6 +479,8 @@ function applyFilters() {
     const genre = document.getElementById('filter-genre').value;
     const category = currentCategoryToFilter;
 
+    console.log(`Applying filters for ${category}: year=${year}, genre=${genre}`); // Debug log
+
     document.getElementById('filter-modal').style.display = 'none';
 
     const newFilters = { year: year, genre: genre };
@@ -471,7 +488,6 @@ function applyFilters() {
     categoryState[category].scrollPosition = 0;
     updateFilterButtons(category, newFilters);
 
-    // MODIFIED: Directly open full view with applied filters, no confirmation
     openFullView(category);
 }
 
