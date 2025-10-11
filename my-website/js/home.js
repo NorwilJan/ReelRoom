@@ -1,7 +1,6 @@
 // js/home.js
-const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
+const API_KEY = '40f1982842db35042e8561b13b38d492';
 const BASE_URL = 'https://api.themoviedb.org/3';
-// FIX APPLIED: Corrected image domain for thumbnail loading
 const IMG_URL = 'https://image.tmdb.org/t/p/original'; 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
@@ -22,9 +21,9 @@ let categoryState = {
     'korean-drama': { page: 1, isLoading: false, filters: {} }
 };
 
-let currentFullView = null; // Tracks the category currently in the full view
-let currentCategoryToFilter = null; // Tracks the category targeted by the filter modal
-let scrollPosition = 0; // To save the scroll position of the full view grid
+let currentFullView = null;
+let currentCategoryToFilter = null;
+let scrollPosition = 0;
 
 // Simplified Genre IDs for the filter dropdown
 const GENRES = [
@@ -86,7 +85,7 @@ async function fetchCategoryContent(category, page, filters = {}) {
         if (category === 'movies') {
             fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
         } else if (category === 'tvshows') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_URL}${baseParams}${filterParams}`;
         } else if (category === 'anime') {
             fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja${baseParams}${filterParams}`;
         } else if (category === 'tagalog-movies') {
@@ -289,7 +288,9 @@ function clearFilters(category) {
 
 function openFullView(category) {
     currentFullView = category;
-    const filters = categoryState[category].filters;
+    
+    // 🔑 FIX: Get filters from categoryState to ensure "Show More" respects them
+    const filters = categoryState[category].filters; 
     
     // Check if modal already exists
     let fullViewContainer = document.getElementById('full-view-modal');
@@ -311,6 +312,7 @@ function openFullView(category) {
             // Save the scroll position
             scrollPosition = listContainer.scrollTop; 
             
+            // Pass the category's currently applied filters to loadMoreFullView
             if (
                 !categoryState[category].isLoading &&
                 listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
@@ -374,8 +376,8 @@ async function loadMoreFullView(category, filters) {
   let currentPage = state.page;
 
   try {
-    // Crucial step: use the filters stored in the state
-    const data = await fetchCategoryContent(category, currentPage, state.filters);
+    // FIX: Ensure we use the filters passed in, which are pulled from state in openFullView
+    const data = await fetchCategoryContent(category, currentPage, filters);
 
     const items = data.results || [];
     
@@ -683,6 +685,7 @@ async function init() {
   document.querySelectorAll('.show-more-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
+      // This button now correctly uses the existing applied filters via openFullView
       openFullView(link.getAttribute('data-category'));
     });
   });
