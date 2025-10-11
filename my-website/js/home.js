@@ -1,78 +1,47 @@
 // js/home.js
 const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
-const IMG_URL = 'https://image.tmdb.org/t/p/w500'; // Use w500 for thumbnails
-const DETAIL_IMG_URL = 'https://image.tmdb.org/t/p/original'; // Use original for details modal and slideshow
+const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
 let currentSeason = 1;
 let currentEpisode = 1;
+let currentPages = {
+  movies: 1,
+  tvShows: 1,
+  anime: 1,
+  tagalogMovies: 1, // Correct key format for page counter
+  netflixMovies: 1,
+  netflixTV: 1,
+  koreanDrama: 1
+};
+let isLoading = {
+  movies: false,
+  tvshows: false,
+  anime: false,
+  'tagalog-movies': false, // Correct key format for loading flag
+  'netflix-movies': false,
+  'netflix-tv': false,
+  'korean-drama': false
+};
 let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
 
-// Configuration object for magic numbers
-const CONFIG = {
-    ITEMS_PER_ROW: 15,
-    SLIDESHOW_INTERVAL: 5000,
-    MAX_YEARS: 20,
-    SLIDESHOW_ITEM_COUNT: 7,
-    // Define the category to be replaced by the user's genre pick
-    TRENDING_CATEGORY_ID: 'movies' 
-};
-
-// Centralized category configuration
-const CATEGORIES = [
-    { id: 'movies', type: 'movie', label: 'Movies', params: '' },
-    { id: 'tvshows', type: 'tv', label: 'TV Shows', params: '' },
-    { id: 'anime', type: 'tv', label: 'Anime', params: '&with_genres=16&with_original_language=ja' },
-    { id: 'tagalog-movies', type: 'movie', label: 'Tagalog Movies', params: '&with_original_language=tl' },
-    { id: 'netflix-movies', type: 'movie', label: 'Netflix Movies', params: '&with_watch_providers=8&watch_region=US' },
-    { id: 'netflix-tv', type: 'tv', label: 'Netflix TV', params: '&with_watch_providers=8&watch_region=US' },
-    { id: 'korean-drama', type: 'tv', label: 'Korean Drama', params: '&with_original_language=ko&with_genres=18' }
-];
-
-// Category state with scroll position
-let categoryState = CATEGORIES.reduce((state, cat) => ({
-    ...state,
-    [cat.id]: { 
-        page: 1, 
-        isLoading: false, 
-        filters: {}, 
-        scrollPosition: 0, 
-        isFullView: false, 
-        isInfiniteScroll: false 
-    }
-}), {});
-
-let currentFullView = null;
-let currentCategoryToFilter = null;
-// State for the category that replaces the trending row
-let trendingReplacement = null;
-
-// Simplified Genre IDs for the filter dropdown
-const GENRES = [
-    { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' },
-    { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' },
-    { id: 18, name: 'Drama' }, { id: 10751, name: 'Family' },
-    { id: 27, name: 'Horror' }, { id: 878, name: 'Science Fiction' },
-    { id: 53, name: 'Thriller' }, { id: 10749, name: 'Romance' },
-    { id: 16, name: 'Animation' }, { id: 9648, name: 'Mystery' }
-];
-
 /**
  * Utility function to debounce another function call.
+ * Ensures a function is not called until a certain time has passed after the last call.
  */
 function debounce(func, delay) {
-    let timeout;
-    return function (...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), delay);
+  };
 }
 
 /**
- * Function to test API Key validity on startup.
+ * 🔑 Function to test API Key validity on startup.
  */
 async function testApiKey() {
     try {
@@ -98,64 +67,148 @@ async function testApiKey() {
     }
 }
 
-// --- CORE FETCH FUNCTION (Handles all categories and filters) ---
-
-async function fetchCategoryContent(category, page, filters = {}) {
-    try {
-        // Determine the type and configuration based on the category ID
-        let catConfig = CATEGORIES.find(c => c.id === category);
-        let catType = catConfig ? catConfig.type : 'movie';
-        let extraParams = catConfig ? catConfig.params : '';
-
-        if (!catConfig) throw new Error('Unknown category.');
-
-
-        const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
-        let filterParams = filters.year ? `&primary_release_year=${filters.year}` : '';
-        let genreParams = '';
-
-        // Handle genre combination: merge base category genres with user-selected genre
-        if (filters.genre) {
-            let baseGenres = '';
-            const genreMatch = extraParams.match(/&with_genres=([^&]*)/);
-            if (genreMatch) {
-                baseGenres = genreMatch[1];
-                extraParams = extraParams.replace(genreMatch[0], ''); // Remove base genres from extraParams
-            }
-            // Use user's selected genre
-            const combinedGenres = baseGenres ? `${baseGenres},${filters.genre}` : filters.genre;
-            genreParams = `&with_genres=${combinedGenres}`;
-        }
-        
-        // FIX: Ensure the correct media type is used if this is the trending replacement
-        if (category === CONFIG.TRENDING_CATEGORY_ID) {
-             catType = 'movie'; // Always movie for the trending row replacement
-        }
-
-
-        const fetchURL = `${BASE_URL}/discover/${catType}?api_key=${API_KEY}${extraParams}${baseParams}${filterParams}${genreParams}`;
-        console.log(`Fetching ${category} (Page ${page}) with URL: ${fetchURL}`); // Debug log
-
-        const res = await fetch(fetchURL);
-        if (!res.ok) {
-            if (res.status === 429) throw new Error('Rate limit exceeded. Please try again later.');
-            if (res.status === 404) throw new Error('Content not found for this category.');
-            throw new Error(`HTTP ${res.status}: Failed to fetch ${catConfig.label}.`);
-        }
-        const data = await res.json();
-
-        if (data.results) {
-            data.results.forEach(item => item.media_type = item.media_type || catType);
-        }
-        return data;
-    } catch (error) {
-        console.error(`Error fetching ${category}:`, error);
-        showError(`Failed to load ${CATEGORIES.find(c => c.id === category)?.label || category}: ${error.message}`, `${category}-list`);
-        return { results: [], total_pages: 1 };
+async function fetchTrending(type, page = 1) {
+  try {
+    const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+    if (data.results) {
+        data.results.forEach(item => item.media_type = item.media_type || type);
     }
+    return data;
+  } catch (error) {
+    console.error(`Error fetching trending ${type}:`, error);
+    showError(`Failed to load ${type}. Check API key or connection.`, `${type}-list`);
+    return { results: [], total_pages: 1 };
+  }
 }
 
-// --- UI UTILITIES ---
+async function fetchTrendingAnime(page = 1) {
+  try {
+    const movieRes = await fetch(
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
+    );
+    if (!movieRes.ok) throw new Error(`Movies HTTP ${movieRes.status}`);
+    const movieData = await movieRes.json();
+    const movies = (movieData.results || []).map(item => ({...item, media_type: 'movie'}));
+
+    const tvRes = await fetch(
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
+    );
+    if (!tvRes.ok) throw new Error(`TV HTTP ${tvRes.status}`);
+    const tvData = await tvRes.json();
+    const tvShows = (tvData.results || []).map(item => ({...item, media_type: 'tv'}));
+
+    const combined = [...movies, ...tvShows]
+      .filter(item => item.poster_path)
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+      .slice(0, 20); 
+
+    return { results: combined, total_pages: Math.max(movieData.total_pages || 1, tvData.total_pages || 1) };
+  } catch (error) {
+    console.error('Error fetching trending anime:', error);
+    showError('Failed to load anime. Check API key or connection.', 'anime-list');
+    return { results: [], total_pages: 1 };
+  }
+}
+
+async function fetchTagalogMovies(page = 1) {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_original_language=tl`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.results) {
+        data.results.forEach(item => item.media_type = 'movie');
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching Tagalog movies:', error);
+    showError('Failed to load Tagalog movies.', 'tagalog-movies-list');
+    return { results: [], total_pages: 1 };
+  }
+}
+
+async function fetchNetflixMovies(page = 1) {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.results) {
+        data.results.forEach(item => item.media_type = 'movie');
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching Netflix movies:', error);
+    showError('Failed to load Netflix movies.', 'netflix-movies-list');
+    return { results: [], total_pages: 1 };
+  }
+}
+
+async function fetchNetflixTV(page = 1) {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.results) {
+        data.results.forEach(item => item.media_type = 'tv');
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching Netflix TV:', error);
+    showError('Failed to load Netflix TV shows.', 'netflix-tv-list');
+    return { results: [], total_pages: 1 };
+  }
+}
+
+async function fetchKoreanDrama(page = 1) {
+  try {
+    const res = await fetch(
+      // Targeting TV, Korean language (ko), Drama genre (18)
+      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.results) {
+        // Assume TV type for this category
+        data.results.forEach(item => item.media_type = 'tv');
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching Korean Drama:', error);
+    showError('Failed to load Korean Drama.', 'korean-drama-list');
+    return { results: [], total_pages: 1 };
+  }
+}
+
+async function fetchSeasonsAndEpisodes(tvId) {
+  try {
+    const res = await fetch(`${BASE_URL}/tv/${tvId}?api_key=${API_KEY}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.seasons || [];
+  } catch (error) {
+    console.error('Error fetching seasons:', error);
+    return [];
+  }
+}
+
+async function fetchEpisodes(tvId, seasonNumber) {
+  try {
+    const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.episodes || [];
+  } catch (error) {
+    console.error('Error fetching episodes:', error);
+    return [];
+  }
+}
 
 function removeLoadingAndError(containerId) {
     const container = document.getElementById(containerId);
@@ -166,842 +219,417 @@ function removeLoadingAndError(containerId) {
 }
 
 function showError(message, containerId) {
-    removeLoadingAndError(containerId);
-    const container = document.getElementById(containerId);
-    if (container) {
-        const error = document.createElement('p');
-        error.className = 'error-message';
-        error.style.whiteSpace = 'pre-wrap';
-        error.textContent = message;
-        container.appendChild(error);
-    }
+  removeLoadingAndError(containerId);
+  const container = document.getElementById(containerId);
+  if (container) {
+    const error = document.createElement('p');
+    error.className = 'error-message';
+    error.style.whiteSpace = 'pre-wrap';
+    error.textContent = message;
+    container.appendChild(error);
+  }
 }
 
 function showLoading(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    if (container.querySelector('.loading')) return;
-
-    container.querySelector('.error-message')?.remove();
-
-    const loading = document.createElement('p');
-    loading.className = 'loading';
-    loading.textContent = 'Loading...';
-    container.appendChild(loading);
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (container.querySelector('.loading')) return;
+  
+  container.querySelector('.error-message')?.remove();
+  
+  const loading = document.createElement('p');
+  loading.className = 'loading';
+  loading.textContent = 'Loading...';
+  container.appendChild(loading);
 }
-
-// Lazy load category rows using IntersectionObserver
-function setupLazyLoading() {
-    const rows = document.querySelectorAll('.category-row');
-    const observer = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const category = entry.target.getAttribute('data-category');
-                // FIX: Ensure we use the current filters when lazy loading the row
-                loadRowContent(category, categoryState[category].filters);
-                observer.unobserve(entry.target);
-            }
-        });
-    }, { rootMargin: '100px' });
-
-    rows.forEach(row => observer.observe(row));
-}
-
-// --- SLIDESHOW LOGIC (UNCHANGED) ---
 
 function displaySlides() {
-    const slidesContainer = document.getElementById('slides');
-    const dotsContainer = document.getElementById('dots');
+  const slidesContainer = document.getElementById('slides');
+  const dotsContainer = document.getElementById('dots');
+  
+  slidesContainer.innerHTML = '';
+  dotsContainer.innerHTML = '';
+  removeLoadingAndError('slides');
 
-    slidesContainer.innerHTML = '';
-    dotsContainer.innerHTML = '';
-    removeLoadingAndError('slides');
+  if (slideshowItems.length === 0) {
+    slidesContainer.innerHTML = '<h1 class="loading">No featured content available</h1>';
+    return;
+  }
 
-    if (slideshowItems.length === 0) {
-        slidesContainer.innerHTML = '<h1 class="loading">No featured content available</h1>';
-        return;
-    }
+  slideshowItems.forEach((item, index) => {
+    if (!item.backdrop_path) return;
+    const slide = document.createElement('div');
+    slide.className = 'slide';
+    slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
+    slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
+    slide.onclick = () => showDetails(item);
+    slidesContainer.appendChild(slide);
 
-    slideshowItems.forEach((item, index) => {
-        if (!item.backdrop_path) return;
-        const slide = document.createElement('div');
-        slide.className = 'slide';
-        slide.style.backgroundImage = `url(${DETAIL_IMG_URL}${item.backdrop_path})`;
-        slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
-        slide.onclick = () => showDetails(item);
-        slide.tabIndex = 0;
-        slide.onkeydown = (e) => {
-            if (e.key === 'Enter' || e.key === ' ') showDetails(item);
-        };
-        slidesContainer.appendChild(slide);
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    if (index === currentSlide) dot.className += ' active';
+    dot.onclick = () => {
+      currentSlide = index;
+      showSlide();
+    };
+    dotsContainer.appendChild(dot);
+  });
 
-        const dot = document.createElement('span');
-        dot.className = 'dot';
-        dot.tabIndex = 0;
-        if (index === currentSlide) dot.className += ' active';
-        dot.onclick = () => {
-            currentSlide = index;
-            showSlide();
-        };
-        dot.onkeydown = (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                currentSlide = index;
-                showSlide();
-            }
-        };
-        dotsContainer.appendChild(dot);
-    });
-
-    showSlide();
+  showSlide();
 }
 
 function showSlide() {
-    const slides = document.querySelectorAll('.slide');
-    const dots = document.querySelectorAll('.dot');
-    if (slides.length === 0) return;
-    slides.forEach((slide, index) => {
-        slide.style.transform = `translateX(-${currentSlide * 100}%)`;
-    });
-    dots.forEach((dot, index) => {
-        dot.className = index === currentSlide ? 'dot active' : 'dot';
-    });
-    clearInterval(slideshowInterval);
-    slideshowInterval = setInterval(() => {
-        currentSlide = (currentSlide + 1) % slides.length;
-        showSlide();
-    }, CONFIG.SLIDESHOW_INTERVAL);
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.dot');
+  if (slides.length === 0) return;
+  slides.forEach((slide, index) => {
+    slide.style.transform = `translateX(-${currentSlide * 100}%)`;
+  });
+  dots.forEach((dot, index) => {
+    dot.className = index === currentSlide ? 'dot active' : 'dot';
+  });
+  clearInterval(slideshowInterval);
+  slideshowInterval = setInterval(() => {
+    currentSlide = (currentSlide + 1) % slides.length;
+    showSlide();
+  }, 5000);
 }
 
 function changeSlide(n) {
-    const slides = document.querySelectorAll('.slide');
-    if (slides.length === 0) return;
-    currentSlide = (currentSlide + n + slides.length) % slides.length;
-    showSlide();
+  const slides = document.querySelectorAll('.slide');
+  if (slides.length === 0) return;
+  currentSlide = (currentSlide + n + slides.length) % slides.length;
+  showSlide();
 }
 
-// --- MAIN PAGE LIST DISPLAY ---
+function displayList(items, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) {
+    console.error(`Container ${containerId} not found`);
+    return;
+  }
+  
+  removeLoadingAndError(containerId);
 
-function displayItems(items, containerId, append = false) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    if (!append) container.innerHTML = '';
-    
-    removeLoadingAndError(containerId);
+  if (items.length === 0 && container.children.length === 0) {
+    container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
+    return;
+  }
 
-    if (items.length === 0 && !append) { 
-        container.innerHTML = `
-            <p style="color: #ccc; text-align: center; width: 100%;">
-                No content matches your filters.
-                <button class="reset-filters-btn" onclick="clearFilters('${containerId.split('-list')[0]}')">
-                    Reset Filters
-                </button>
-            </p>`;
+  items.forEach(item => {
+    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
+
+    const img = document.createElement('img');
+    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
+    img.setAttribute('data-id', item.id);
+    img.onclick = () => showDetails(item);
+    container.appendChild(img);
+  });
+}
+
+function addScrollListener(category) {
+  const containerId = category + '-list';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  container.onscroll = function () {
+    if (
+      !isLoading[category] &&
+      container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
+    ) {
+      loadMore(category);
+    }
+  };
+}
+
+async function loadMore(category) {
+  // Translate category string to the correct key name for currentPages (e.g., 'tvshows' -> 'tvShows')
+  let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
+  
+  // Specific key mappings for hyphenated names
+  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
+  if (category === 'netflix-movies') pageKey = 'netflixMovies';
+  if (category === 'netflix-tv') pageKey = 'netflixTV';
+  if (category === 'korean-drama') pageKey = 'koreanDrama';
+
+  if (isLoading[category]) return;
+
+  isLoading[category] = true;
+  const containerId = category + '-list';
+  
+  showLoading(containerId);
+  
+  currentPages[pageKey]++;
+
+  try {
+    let data;
+    if (category === 'movies') {
+      data = await fetchTrending('movie', currentPages[pageKey]);
+    } else if (category === 'tvshows') {
+      data = await fetchTrending('tv', currentPages[pageKey]);
+    } else if (category === 'anime') {
+      data = await fetchTrendingAnime(currentPages[pageKey]);
+    } else if (category === 'tagalog-movies') {
+      data = await fetchTagalogMovies(currentPages[pageKey]);
+    } else if (category === 'netflix-movies') {
+      data = await fetchNetflixMovies(currentPages[pageKey]);
+    } else if (category === 'netflix-tv') {
+      data = await fetchNetflixTV(currentPages[pageKey]);
+    } else if (category === 'korean-drama') {
+      data = await fetchKoreanDrama(currentPages[pageKey]);
+    }
+
+    const items = data.results || [];
+    
+    // Stop loading if the API returns no results for the next page
+    if (items.length === 0) {
+        currentPages[pageKey]--; 
+        console.log(`${category} reached end of available content.`);
+        document.getElementById(containerId)?.querySelector('.loading')?.remove();
+        isLoading[category] = false;
         return;
     }
+    
+    displayList(items, containerId);
 
-    items.forEach(item => {
-        // Check if item already exists (important for infinite scroll)
-        if (container.querySelector(`img[data-id="${item.id}"]`)) return;
-        
-        const img = document.createElement('img');
-        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-        img.alt = `${item.title || item.name || 'Unknown'} (${item.media_type}, ${item.release_date || item.first_air_date || 'N/A'})`;
-        img.setAttribute('data-id', item.id);
-        img.loading = 'lazy';
-        img.tabIndex = 0;
-        img.onclick = () => showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); 
-        img.onkeydown = (e) => {
-            if (e.key === 'Enter' || e.key === ' ') showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); 
-        };
-        container.appendChild(img);
-    });
-}
-
-// --- FULL VIEW / INFINITE SCROLL LOGIC ---
-
-function updateRowUI(category, filters) {
-    const row = document.getElementById(`${category}-row`);
-    if (!row) return; 
-
-    const rowTitle = row.querySelector('.category-title');
-    const filterBtn = row.querySelector('.filter-btn');
-    const clearBtn = row.querySelector('.clear-filter-btn');
-    const showMoreLink = row.querySelector('.show-more-link');
-
-    // Update Title if it's the trending replacement
-    if (category === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement && trendingReplacement.label) {
-        rowTitle.textContent = trendingReplacement.label;
-    } else {
-        const catConfig = CATEGORIES.find(c => c.id === category);
-        rowTitle.textContent = catConfig ? catConfig.label : category;
-    }
-
-    const isFiltered = filters.year || filters.genre;
-
-    if (isFiltered) {
-        const genreName = filters.genre ? (GENRES.find(g => g.id == filters.genre)?.name || 'Genre') : '';
-        const yearText = filters.year || '';
-        filterBtn.textContent = `Filtered ${genreName} ${yearText}`.trim();
-        filterBtn.style.background = 'red';
-        filterBtn.style.color = 'white';
-        clearBtn.style.display = 'inline-block';
-        showMoreLink.textContent = 'Show All (Filtered)'; 
-    } else {
-        filterBtn.innerHTML = '<i class="fas fa-filter"></i> Filter';
-        filterBtn.style.background = '#444';
-        filterBtn.style.color = '#fff';
-        clearBtn.style.display = 'none';
-        showMoreLink.textContent = 'Show More';
-    }
-}
-
-async function loadRowContent(category, filters = {}) {
-    const state = categoryState[category];
-    if (state.isLoading) return;
-
-    state.isLoading = true;
-    const containerId = `${category}-list`;
-    showLoading(containerId);
-
-    // Reset page and infinite scroll state
-    state.page = 1; 
-    state.filters = filters;
-    state.isFullView = false;
-    state.isInfiniteScroll = false; 
-
-    const data = await fetchCategoryContent(category, state.page, filters);
-
-    // Initial load: Only show ITEMS_PER_ROW
-    displayItems(data.results.slice(0, CONFIG.ITEMS_PER_ROW), containerId);
-    updateRowUI(category, filters);
-
-    // NEW: Infinite scroll setup for the row itself
-    if (data.total_pages > 1) {
-        const rowListContainer = document.getElementById(containerId);
-        
-        // Remove previous observers by checking and clearing the attribute
-        rowListContainer.removeAttribute('data-scroll-attached');
-        
-        // Only proceed if there are actual results to observe
-        if (data.results.length > 0) {
-            rowListContainer.setAttribute('data-scroll-attached', 'true');
-
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting && !state.isFullView) {
-                        if (!state.isLoading && data.total_pages > state.page) {
-                            state.isInfiniteScroll = true; 
-                            loadMoreRowContent(category, filters);
-                        }
-                        observer.unobserve(entry.target); 
-                    }
-                });
-            }, { rootMargin: '100px' });
-            
-            const lastItem = rowListContainer.lastElementChild;
-            if (lastItem) observer.observe(lastItem);
-        }
-    }
-
-
-    state.isLoading = false;
+  } catch (error) {
+    console.error(`Error loading more for ${category}:`, error);
+    showError(`Failed to load more ${category}.`, containerId);
+  } finally {
+    isLoading[category] = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
+  }
 }
 
-function loadMoreRowContent(category, filters) {
-    const state = categoryState[category];
-    const containerId = `${category}-list`;
+async function showDetails(item) {
+  currentItem = item;
+  currentSeason = 1;
+  currentEpisode = 1;
+  document.getElementById('modal-title').textContent = item.title || item.name || 'Unknown';
+  document.getElementById('modal-description').textContent = item.overview || 'No description available.';
+  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+  // Rating out of 5 stars (10/2)
+  document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
+  document.getElementById('server').value = 'player.videasy.net'; // Default server
 
-    // FIX: Add a check for isFullView, as it should stop loading the row if full view is active
-    if (state.isLoading || !state.isInfiniteScroll || state.isFullView) return; 
+  const seasonSelector = document.getElementById('season-selector');
+  const episodeList = document.getElementById('episode-list');
+  const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
 
-    state.isLoading = true;
-    showLoading(containerId);
-
-    state.page++; 
-    let currentPage = state.page;
-
-    // FIX: Pass the current category filters
-    fetchCategoryContent(category, currentPage, filters).then(data => {
-        const items = data.results || [];
-
-        if (items.length === 0) {
-            state.page--;
-            console.log(`${category} row reached end of content.`);
-            state.isInfiniteScroll = false; 
-            document.getElementById(containerId)?.querySelector('.loading')?.remove();
-            state.isLoading = false;
-            return;
-        }
-
-        displayItems(items, containerId, true); 
-
-        // Setup observer for the *new* last item
-        const rowListContainer = document.getElementById(containerId);
-        const newLastItem = rowListContainer.lastElementChild;
-        if (newLastItem) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting && !state.isFullView) {
-                        if (!state.isLoading && data.total_pages > state.page) {
-                            loadMoreRowContent(category, filters);
-                        }
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { rootMargin: '100px' });
-            observer.observe(newLastItem);
-        } else {
-             state.isInfiniteScroll = false; 
-        }
-
-        state.isLoading = false;
-        document.getElementById(containerId)?.querySelector('.loading')?.remove();
-
-    }).catch(error => {
-        console.error(`Error loading more row content for ${category}:`, error);
-        showError(`Failed to load more row content for ${category}: ${error.message}`, containerId);
-        state.page--;
-        state.isLoading = false;
-        document.getElementById(containerId)?.querySelector('.loading')?.remove();
-    });
-}
-
-function clearFilters(category) {
-    if (category === CONFIG.TRENDING_CATEGORY_ID) {
-        trendingReplacement = null;
-    }
-    categoryState[category].filters = {};
-    categoryState[category].scrollPosition = 0;
-    loadRowContent(category);
-}
-
-function openFullView(category) {
-    currentFullView = category;
-    const state = categoryState[category];
+  if (isTVShow) {
+    seasonSelector.style.display = 'block';
+    const seasons = await fetchSeasonsAndEpisodes(item.id);
+    const seasonSelect = document.getElementById('season');
+    seasonSelect.innerHTML = '';
     
-    // FIX: Get filters directly from state
-    const filters = state.filters; 
-
-    state.isFullView = true;
-    state.isInfiniteScroll = false; 
-
-    const fullViewContainer = document.createElement('div');
-    fullViewContainer.id = 'full-view-modal';
-    fullViewContainer.className = 'search-modal';
-    fullViewContainer.style.display = 'flex';
-    document.body.appendChild(fullViewContainer);
-
-    // Determine the title, accounting for the trending replacement
-    let title = CATEGORIES.find(c => c.id === category)?.label || category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    if (category === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement && trendingReplacement.label) {
-        title = trendingReplacement.label;
-    }
-    
-    fullViewContainer.innerHTML = `
-        <span class="close" onclick="closeFullView()" style="color: red;" tabIndex="0" onkeydown="if(event.key === 'Enter') closeFullView()">&times;</span>
-        <h2 style="text-transform: uppercase;">${title}</h2>
-        <div class="results" id="${category}-full-list"></div>
-    `;
-
-    // Reset page to 0 and load first page in full view
-    state.page = 0;
-    // FIX: Pass the correct filters to loadMoreFullView
-    loadMoreFullView(category, filters);
-
-    const listContainer = document.getElementById(`${category}-full-list`);
-    listContainer.onscroll = function () {
-        state.scrollPosition = listContainer.scrollTop;
-        if (
-            !state.isLoading &&
-            listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
-        ) {
-            loadMoreFullView(category, filters);
-        }
-    };
-
-    if (state.scrollPosition) {
-        listContainer.scrollTop = state.scrollPosition;
-    }
-}
-
-function closeFullView() {
-    const category = currentFullView;
-    const modal = document.getElementById('full-view-modal');
-    if (modal) modal.remove();
-    currentFullView = null;
-    if (categoryState[category]) {
-        categoryState[category].isFullView = false;
-    }
-}
-
-async function loadMoreFullView(category, filters) {
-    const state = categoryState[category];
-    const containerId = `${category}-full-list`;
-    const container = document.getElementById(containerId);
-
-    if (state.isLoading) return;
-
-    state.isLoading = true;
-    showLoading(containerId);
-
-    state.page++;
-    let currentPage = state.page;
-
-    try {
-        // FIX: Ensure filters are passed to fetchCategoryContent
-        const data = await fetchCategoryContent(category, currentPage, filters);
-        const items = data.results || [];
-
-        if (items.length === 0) {
-            if (currentPage > 1) {
-                state.page--;
-            }
-            console.log(`${category} reached end of available content or found no content matching filter.`);
-            document.getElementById(containerId)?.querySelector('.loading')?.remove();
-            state.isLoading = false;
-            if (container.children.length === 0) {
-                container.innerHTML = `
-                    <p style="color: #ccc; text-align: center; width: 100%;">
-                        No content matches your active filter in the full view.
-                        <button class="reset-filters-btn" onclick="clearFilters('${category}')">
-                            Reset Filters
-                        </button>
-                    </p>`;
-            }
-            return;
-        }
-
-        displayItems(items, containerId, true);
-
-    } catch (error) {
-        console.error(`Error loading more for ${category}:`, error);
-        showError(`Failed to load more ${CATEGORIES.find(c => c.id === category)?.label || category}: ${error.message}`, containerId);
-        state.page--;
-    } finally {
-        state.isLoading = false;
-        document.getElementById(containerId)?.querySelector('.loading')?.remove();
-        if (currentPage === 1 && state.scrollPosition > 0) {
-            container.scrollTop = state.scrollPosition;
-        }
-    }
-}
-
-// --- FILTER MODAL LOGIC (Mostly Unchanged) ---
-
-function populateFilterOptions() {
-    const yearSelect = document.getElementById('filter-year');
-    const genreSelect = document.getElementById('filter-genre');
-
-    yearSelect.innerHTML = '<option value="">Any Year</option>';
-    genreSelect.innerHTML = '<option value="">Any Genre</option>';
-
-    const currentYear = new Date().getFullYear();
-    for (let i = 0; i < CONFIG.MAX_YEARS; i++) {
-        const year = currentYear - i;
-        const option = new Option(year, year);
-        yearSelect.appendChild(option);
-    }
-
-    GENRES.forEach(genre => {
-        const option = new Option(genre.name, genre.id);
-        genreSelect.appendChild(option);
-    });
-
-    [yearSelect, genreSelect].forEach(select => {
-        select.tabIndex = 0;
-        select.onkeydown = (e) => {
-            if (e.key === 'Enter') select.focus();
-        };
+    // Filter out season 0 (Specials) and populate the dropdown
+    seasons.filter(s => s.season_number > 0).forEach(season => {
+      const option = document.createElement('option');
+      option.value = season.season_number;
+      option.textContent = `Season ${season.season_number}`;
+      seasonSelect.appendChild(option);
     });
     
-    // Populate genre picker for the trending movie row replacement
-    const trendingGenreSelect = document.getElementById('trending-genre-picker');
-    if (trendingGenreSelect) {
-        trendingGenreSelect.innerHTML = '<option value="">Pick a Genre...</option>';
-        GENRES.forEach(genre => {
-            const option = new Option(genre.name, genre.id);
-            trendingGenreSelect.appendChild(option);
-        });
-        if (trendingReplacement && trendingReplacement.filters.genre) {
-            trendingGenreSelect.value = trendingReplacement.filters.genre;
-        }
-    }
-}
-
-function openFilterModal(category) {
-    currentCategoryToFilter = category;
-    const title = CATEGORIES.find(c => c.id === category)?.label || category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    document.getElementById('filter-modal-title').textContent = `Filter ${title}`;
-
-    const currentFilters = categoryState[category].filters;
-    document.getElementById('filter-year').value = currentFilters.year || '';
-    document.getElementById('filter-genre').value = currentFilters.genre || '';
-
-    document.getElementById('filter-modal').style.display = 'flex';
-}
-
-function applyFilters() {
-    const year = document.getElementById('filter-year').value;
-    const genre = document.getElementById('filter-genre').value;
-    const category = currentCategoryToFilter;
-
-    document.getElementById('filter-modal').style.display = 'none';
-
-    const newFilters = { year: year, genre: genre };
-    categoryState[category].filters = newFilters;
-    categoryState[category].scrollPosition = 0;
+    // Set the initial season to the first available season, or 1
+    currentSeason = seasons.find(s => s.season_number > 0)?.season_number || 1;
+    seasonSelect.value = currentSeason;
     
-    // Immediately open full view after applying filters
-    openFullView(category);
-}
+    await loadEpisodes();
+  } else {
+    seasonSelector.style.display = 'none';
+    episodeList.innerHTML = '';
+  }
 
-function applyTrendingGenre() {
-    const genreId = document.getElementById('trending-genre-picker').value;
-    const category = CONFIG.TRENDING_CATEGORY_ID;
-    
-    if (!genreId) {
-        clearFilters(category);
-        return;
-    }
-    
-    const genreName = GENRES.find(g => g.id == genreId)?.name;
-    const newFilters = { genre: genreId, year: '' }; 
-    
-    // Set the global state for the replacement
-    trendingReplacement = {
-        label: `${genreName} Movies`,
-        filters: newFilters
-    };
-    
-    // Apply filters to the 'movies' category state
-    categoryState[category].filters = newFilters;
-    categoryState[category].scrollPosition = 0;
-    
-    // Re-load the 'movies' row with the new genre filter
-    loadRowContent(category, newFilters);
-}
-
-
-// --- DETAILS MODAL LOGIC (UNCHANGED) ---
-
-async function fetchSeasonsAndEpisodes(tvId) {
-    try {
-        const res = await fetch(`${BASE_URL}/tv/${tvId}?api_key=${API_KEY}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return data.seasons || [];
-    } catch (error) {
-        console.error('Error fetching seasons:', error);
-        return [];
-    }
-}
-
-async function fetchEpisodes(tvId, seasonNumber) {
-    try {
-        const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return data.episodes || [];
-    } catch (error) {
-        console.error('Error fetching episodes:', error);
-        return [];
-    }
-}
-
-async function showDetails(item, isFullViewOpen = false) {
-    currentItem = item;
-    currentSeason = 1;
-    currentEpisode = 1;
-    document.getElementById('modal-title').textContent = item.title || item.name || 'Unknown';
-    document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-    document.getElementById('modal-image').src = item.poster_path ? `${DETAIL_IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-    document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
-    document.getElementById('server').value = 'player.videasy.net';
-
-    const seasonSelector = document.getElementById('season-selector');
-    const episodeList = document.getElementById('episode-list');
-    const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
-
-    if (isTVShow) {
-        seasonSelector.style.display = 'block';
-        const seasons = await fetchSeasonsAndEpisodes(item.id);
-        const seasonSelect = document.getElementById('season');
-        seasonSelect.innerHTML = '';
-
-        if (seasons.length === 0) {
-            episodeList.innerHTML = '<p style="color: #ccc; text-align: center;">No seasons available.</p>';
-            seasonSelector.style.display = 'none';
-            changeServer();
-            document.getElementById('modal').style.display = 'flex';
-            if (isFullViewOpen) {
-                document.getElementById('full-view-modal').style.display = 'none';
-            }
-            return;
-        }
-
-        seasons.filter(s => s.season_number > 0).forEach(season => {
-            const option = document.createElement('option');
-            option.value = season.season_number;
-            option.textContent = `Season ${season.season_number}`;
-            seasonSelect.appendChild(option);
-        });
-
-        currentSeason = seasons.find(s => s.season_number > 0)?.season_number || 1;
-        seasonSelect.value = currentSeason;
-
-        await loadEpisodes();
-    } else {
-        seasonSelector.style.display = 'none';
-        episodeList.innerHTML = '';
-    }
-
-    changeServer();
-    document.getElementById('modal').style.display = 'flex';
-    if (isFullViewOpen) {
-        document.getElementById('full-view-modal').style.display = 'none';
-    }
+  changeServer();
+  document.getElementById('modal').style.display = 'flex';
 }
 
 async function loadEpisodes() {
-    if (!currentItem) return;
-    const seasonNumber = document.getElementById('season').value;
-    currentSeason = seasonNumber;
-    const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
-    const episodeList = document.getElementById('episode-list');
-    episodeList.innerHTML = '';
-    currentEpisode = 1;
+  if (!currentItem) return;
+  const seasonNumber = document.getElementById('season').value;
+  currentSeason = seasonNumber;
+  const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
+  const episodeList = document.getElementById('episode-list');
+  episodeList.innerHTML = '';
+  currentEpisode = 1; // Reset episode when season changes
 
-    if (episodes.length === 0) {
-        episodeList.innerHTML = '<p style="color: #ccc; text-align: center;">No episodes available for this season.</p>';
-        changeServer();
-        return;
-    }
-
-    episodes.forEach(episode => {
-        const div = document.createElement('div');
-        div.className = 'episode-item';
-        div.tabIndex = 0;
-        const img = episode.still_path
-            ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" loading="lazy" />`
-            : '';
-        div.innerHTML = `${img}<span>E${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
-        div.onclick = () => {
-            currentEpisode = episode.episode_number;
-            changeServer();
-            document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
-            div.classList.add('active');
-        };
-        div.onkeydown = (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                currentEpisode = episode.episode_number;
-                changeServer();
-                document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
-                div.classList.add('active');
-            }
-        };
-        episodeList.appendChild(div);
-    });
-
-    if (episodes.length > 0) {
-        episodeList.querySelector('.episode-item')?.click();
-    }
+  episodes.forEach(episode => {
+    const div = document.createElement('div');
+    div.className = 'episode-item';
+    const img = episode.still_path
+      ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" />`
+      : '';
+    div.innerHTML = `${img}<span>E${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
+    div.onclick = () => {
+      currentEpisode = episode.episode_number;
+      changeServer();
+      // Optional: highlight selected episode
+      document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
+      div.classList.add('active');
+    };
+    episodeList.appendChild(div);
+  });
+  
+  // Auto-select and load the first episode
+  if (episodes.length > 0) {
+      episodeList.querySelector('.episode-item')?.click();
+  }
 }
 
 function changeServer() {
-    if (!currentItem) return;
-    const server = document.getElementById('server').value;
-    const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
-    let embedURL = '';
+  if (!currentItem) return;
+  const server = document.getElementById('server').value;
+  // Determine type from media_type property
+  const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
+  let embedURL = '';
 
-    if (server === 'vidsrc.cc') {
-        embedURL = type === 'tv'
-            ? `https://vidsrc.cc/v2/embed/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
-            : `https://vidsrc.cc/v2/embed/movie/${currentItem.id}`;
-    } else if (server === 'vidsrc.me') {
-        embedURL = type === 'tv'
-            ? `https://vidsrc.net/embed/tv/?tmdb=${currentItem.id}&season=${currentSeason}&episode=${currentEpisode}`
-            : `https://vidsrc.net/embed/movie/?tmdb=${currentItem.id}`;
-    } else if (server === 'player.videasy.net') {
-        embedURL = type === 'tv'
-            ? `https://player.videasy.net/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
-            : `https://player.videasy.net/movie/${currentItem.id}`;
-    }
+  if (server === 'vidsrc.cc') {
+    embedURL = type === 'tv'
+      ? `https://vidsrc.cc/v2/embed/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
+      : `https://vidsrc.cc/v2/embed/movie/${currentItem.id}`;
+  } else if (server === 'vidsrc.me') {
+    embedURL = type === 'tv'
+      ? `https://vidsrc.net/embed/tv/?tmdb=${currentItem.id}&season=${currentSeason}&episode=${currentEpisode}`
+      : `https://vidsrc.net/embed/movie/?tmdb=${currentItem.id}`;
+  } else if (server === 'player.videasy.net') {
+    embedURL = type === 'tv'
+      ? `https://player.videasy.net/tv/${currentItem.id}/${currentSeason}/${currentEpisode}`
+      : `https://player.videasy.net/movie/${currentItem.id}`;
+  }
 
-    const videoElement = document.getElementById('modal-video');
-    videoElement.src = embedURL;
-    videoElement.onerror = () => {
-        showError('Video failed to load. Please try another server.', 'modal');
-        videoElement.src = '';
-    };
+  document.getElementById('modal-video').src = embedURL;
 }
 
 function closeModal() {
-    document.getElementById('modal').style.display = 'none';
-    document.getElementById('modal-video').src = '';
-    document.getElementById('episode-list').innerHTML = '';
-    document.getElementById('season-selector').style.display = 'none';
-
-    const fullViewModal = document.getElementById('full-view-modal');
-    if (fullViewModal) {
-         // You can uncomment this if you want the full view to pop back up after closing details
-         // fullViewModal.style.display = 'flex';
-    }
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('modal-video').src = '';
+  document.getElementById('episode-list').innerHTML = '';
+  document.getElementById('season-selector').style.display = 'none';
 }
 
-// --- SEARCH MODAL LOGIC (UNCHANGED) ---
-
 function openSearchModal() {
-    document.getElementById('search-modal').style.display = 'flex';
-    document.getElementById('search-input').focus();
+  document.getElementById('search-modal').style.display = 'flex';
+  document.getElementById('search-input').focus();
 }
 
 function closeSearchModal() {
-    document.getElementById('search-modal').style.display = 'none';
-    document.getElementById('search-results').innerHTML = '';
-    document.getElementById('search-input').value = '';
+  document.getElementById('search-modal').style.display = 'none';
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-input').value = '';
 }
 
+// Debounced version of searchTMDB
 const debouncedSearchTMDB = debounce(async () => {
-    const query = document.getElementById('search-input').value;
-    const container = document.getElementById('search-results');
-    container.innerHTML = '';
+  const query = document.getElementById('search-input').value;
+  const container = document.getElementById('search-results');
+  container.innerHTML = '';
+  
+  if (!query.trim()) return;
 
-    if (!query.trim()) return;
+  container.innerHTML = '<p class="loading">Searching...</p>';
 
-    container.innerHTML = '<p class="loading">Searching...</p>';
+  try {
+    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
 
-    try {
-        const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}: Search failed.`);
-        const data = await res.json();
-
-        container.innerHTML = '';
-        data.results
-            .filter(item => item.media_type !== 'person' && item.poster_path)
-            .forEach(item => {
-                const img = document.createElement('img');
-                img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-                img.alt = `${item.title || item.name || 'Unknown'} (${item.media_type}, ${item.release_date || item.first_air_date || 'N/A'})`;
-                img.loading = 'lazy';
-                img.tabIndex = 0;
-                img.onclick = () => {
-                    closeSearchModal();
-                    showDetails(item);
-                };
-                img.onkeydown = (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        closeSearchModal();
-                        showDetails(item);
-                    }
-                };
-                container.appendChild(img);
-            });
-
-        if (container.children.length === 0) {
-            container.innerHTML = '<p style="color: #ccc; text-align: center; margin-top: 20px;">No results found for your search.</p>';
-        }
-
-    } catch (error) {
-        console.error('Error searching:', error);
-        showError(`Search failed: ${error.message}`, 'search-results');
+    container.innerHTML = ''; // Clear loading
+    data.results
+      .filter(item => item.media_type !== 'person' && item.poster_path)
+      .forEach(item => {
+        const img = document.createElement('img');
+        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+        img.alt = item.title || item.name || 'Unknown';
+        img.onclick = () => {
+          closeSearchModal();
+          showDetails(item);
+        };
+        container.appendChild(img);
+      });
+      
+    if (container.children.length === 0) {
+        container.innerHTML = '<p style="color: #ccc; text-align: center; margin-top: 20px;">No results found.</p>';
     }
-}, 300);
 
-// --- INITIALIZATION ---
-
-function createTrendingGenrePicker() {
-    const pickerContainer = document.getElementById(`${CONFIG.TRENDING_CATEGORY_ID}-row`)?.querySelector('.category-header');
-    if (!pickerContainer) return;
-    
-    const select = document.createElement('select');
-    select.id = 'trending-genre-picker';
-    select.className = 'filter-select';
-    select.style.marginLeft = '10px';
-    select.onchange = applyTrendingGenre;
-    
-    const title = pickerContainer.querySelector('.category-title');
-    
-    if (title) {
-        title.insertAdjacentElement('afterend', select);
-    } else {
-        pickerContainer.appendChild(select);
-    }
-}
+  } catch (error) {
+    console.error('Error searching:', error);
+    showError('Search failed. Try again.', 'search-results');
+  }
+}, 300); // 300ms debounce delay
 
 async function init() {
-    document.getElementById('empty-message').style.display = 'none';
+  document.getElementById('empty-message').style.display = 'none';
+  
+  const apiKeyValid = await testApiKey();
+  if (!apiKeyValid) {
+      return;
+  }
 
-    const apiKeyValid = await testApiKey();
-    if (!apiKeyValid) {
-        return;
-    }
+  try {
+    // Show loading for all sections initially
+    showLoading('slides');
+    showLoading('movies-list');
+    showLoading('tvshows-list');
+    showLoading('anime-list');
+    showLoading('tagalog-movies-list');
+    showLoading('netflix-movies-list');
+    showLoading('netflix-tv-list');
+    showLoading('korean-drama-list');
+
+    const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
+      fetchTrending('movie', currentPages.movies),
+      fetchTrending('tv', currentPages.tvShows),
+      fetchTrendingAnime(currentPages.anime),
+      fetchTagalogMovies(currentPages.tagalogMovies),
+      fetchNetflixMovies(currentPages.netflixMovies),
+      fetchNetflixTV(currentPages.netflixTV),
+      fetchKoreanDrama(currentPages.koreanDrama)
+    ]);
+
+    const movies = moviesData.results || [];
+    const tvShows = tvShowsData.results || [];
+    const anime = animeData.results || [];
+    const tagalogMovies = tagalogMoviesData.results || [];
+    const netflixMovies = netflixMoviesData.results || [];
+    const netflixTV = netflixTVData.results || [];
+    const koreanDrama = koreanDramaData.results || [];
+
+    // Combine for slideshow
+    slideshowItems = [
+      ...movies.slice(0, 2),
+      ...tvShows.slice(0, 2),
+      anime[0] || {},
+      tagalogMovies[0] || {},
+      netflixMovies[0] || {}, 
+      netflixTV[0] || {},
+      koreanDrama[0] || {} 
+    ].filter(item => item.backdrop_path && (item.title || item.name));
+
+    displaySlides();
+
+    displayList(movies, 'movies-list');
+    displayList(tvShows, 'tvshows-list');
+    displayList(anime, 'anime-list');
+    displayList(tagalogMovies, 'tagalog-movies-list');
+    displayList(netflixMovies, 'netflix-movies-list');
+    displayList(netflixTV, 'netflix-tv-list');
+    displayList(koreanDrama, 'korean-drama-list');
     
-    createTrendingGenrePicker();
-    populateFilterOptions();
+    // Setup infinite scroll listeners
+    addScrollListener('movies');
+    addScrollListener('tvshows');
+    addScrollListener('anime');
+    addScrollListener('tagalog-movies');
+    addScrollListener('netflix-movies');
+    addScrollListener('netflix-tv');
+    addScrollListener('korean-drama');
 
-    document.querySelectorAll('.show-more-link').forEach(link => {
-        link.tabIndex = 0;
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            // FIX: Pass the category for Show More/Full View
-            openFullView(link.getAttribute('data-category'));
-        });
-        link.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') openFullView(link.getAttribute('data-category'));
-        });
-    });
-
-    document.querySelectorAll('.filter-btn').forEach(button => {
-        button.tabIndex = 0;
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            openFilterModal(button.getAttribute('data-category'));
-        });
-        button.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') openFilterModal(button.getAttribute('data-category'));
-        });
-    });
-
-    document.querySelectorAll('.clear-filter-btn').forEach(button => {
-        button.tabIndex = 0;
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            clearFilters(button.getAttribute('data-category'));
-        });
-        button.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') clearFilters(button.getAttribute('data-category'));
-        });
-    });
-
-    try {
-        showLoading('slides');
-        CATEGORIES.forEach(cat => showLoading(`${cat.id}-list`));
-
-        const categoryData = await Promise.all(
-            CATEGORIES.map(cat => fetchCategoryContent(cat.id, 1))
-        );
-
-        const allResults = categoryData
-            .flatMap(data => data.results)
-            .filter(item => item && item.backdrop_path);
-
-        slideshowItems = allResults.slice(0, CONFIG.SLIDESHOW_ITEM_COUNT);
-        displaySlides();
-
-        CATEGORIES.forEach((cat, index) => {
-            // FIX: This initial call ensures filters are applied if they were somehow retained
-            loadRowContent(cat.id, categoryState[cat.id].filters); 
-        });
-
-        setupLazyLoading();
-
-    } catch (error) {
-        console.error('Fatal initialization error:', error);
-        showError(`Failed to load content categories: ${error.message}`, 'empty-message');
-        document.getElementById('empty-message').style.display = 'block';
-    }
+  } catch (error) {
+    console.error('Fatal initialization error:', error);
+    showError('Failed to load content categories. Please check browser console.', 'empty-message');
+    document.getElementById('empty-message').style.display = 'block';
+  }
 }
 
 init();
