@@ -74,7 +74,7 @@ async function testApiKey() {
     }
 }
 
-// --- CORE FETCH FUNCTION (Handles all categories and filters) - REPLACES ALL ORIGINAL FETCH FUNCTIONS ---
+// --- CORE FETCH FUNCTION (Handles all categories and filters) ---
 
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
@@ -101,9 +101,6 @@ async function fetchCategoryContent(category, page, filters = {}) {
             // KDrama base filters: Korean language and Drama genre 18, augmented by user filters
             fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18${baseParams}${filterParams}`;
         } else {
-            // Fallback for general trending if the category isn't discover-based (optional, but good practice)
-            // The original code used /trending which is not filterable by Discover parameters.
-            // For simplicity and to support filters, all categories are now Discover-based.
             throw new Error('Unknown category.');
         }
 
@@ -239,7 +236,10 @@ function changeSlide(n) {
   showSlide();
 }
 
-// Display List is kept but will now clear content for filter logic.
+/**
+ * Restored: displayList now appends items for infinite scroll, but clears for filter changes.
+ * The only way to clear content is via loadRowContent (which is called when filters change).
+ */
 function displayList(items, containerId) {
   const container = document.getElementById(containerId);
   if (!container) {
@@ -247,20 +247,16 @@ function displayList(items, containerId) {
     return;
   }
   
-  // Clear the container completely before displaying new filtered results
-  container.innerHTML = ''; 
   removeLoadingAndError(containerId);
 
-  if (items.length === 0) {
-    container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content matches your filters.</p>';
+  if (items.length === 0 && container.children.length === 0) {
+    container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content available.</p>';
     return;
   }
 
-
   items.forEach(item => {
-    // Note: The previous check for existing items is removed since we clear the container for filtering logic.
-    // This displayList is now only used for the row view.
-    // if (container.querySelector(`img[data-id="${item.id}"]`)) return;
+    // Check if the item already exists before appending (crucial for infinite scroll)
+    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
@@ -271,16 +267,75 @@ function displayList(items, containerId) {
   });
 }
 
+// --- MAIN ROW INFINITE SCROLL LOGIC (RESTORED & ADAPTED) ---
 
-// --- FULL VIEW / INFINITE SCROLL LOGIC (NEW/REPLACED) ---
+function addScrollListener(category) {
+  const containerId = category + '-list';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  // Remove existing listener to prevent duplicates
+  container.onscroll = null; 
+  
+  container.onscroll = function () {
+    const state = categoryState[category];
+    
+    if (
+      !state.isLoading &&
+      container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
+    ) {
+      loadMore(category);
+    }
+  };
+}
+
+async function loadMore(category) {
+  const state = categoryState[category];
+  if (state.isLoading) return;
+
+  state.isLoading = true;
+  const containerId = category + '-list';
+  
+  showLoading(containerId);
+  
+  state.page++;
+
+  try {
+    // Use the filter-aware fetch function
+    const data = await fetchCategoryContent(category, state.page, state.filters);
+
+    const items = data.results || [];
+    
+    // Stop loading if the API returns no results for the next page
+    if (items.length === 0) {
+        state.page--; 
+        console.log(`${category} reached end of available content.`);
+        document.getElementById(containerId)?.querySelector('.loading')?.remove();
+        isLoading[category] = false;
+        return;
+    }
+    
+    // Display the items, which will be appended due to logic in displayList
+    displayList(items, containerId);
+
+  } catch (error) {
+    console.error(`Error loading more for ${category}:`, error);
+    showError(`Failed to load more ${category}.`, containerId);
+    state.page--;
+  } finally {
+    state.isLoading = false;
+    document.getElementById(containerId)?.querySelector('.loading')?.remove();
+  }
+}
+
+// --- FILTER & SHOW MORE LOGIC (ADAPTED) ---
 
 function updateFilterButtons(category, filters) {
     const row = document.getElementById(`${category}-row`);
-    // Assuming you have elements with these classes/ids in your HTML row
     const filterBtn = row.querySelector('.filter-btn');
     const clearBtn = row.querySelector('.clear-filter-btn');
     
-    if (!filterBtn || !clearBtn) return; // Exit if filter/clear buttons don't exist in the HTML
+    if (!filterBtn || !clearBtn) return; 
 
     const isFiltered = filters.year || filters.genre;
 
@@ -308,13 +363,19 @@ async function loadRowContent(category, filters = {}) {
     const containerId = `${category}-list`;
     showLoading(containerId);
 
-    // Fetch only the first page for the main row preview
+    // Reset page to 1 for a new filtered query
+    state.page = 1; 
+
     const data = await fetchCategoryContent(category, 1, filters);
     
     // Update the state with the applied filters
     state.filters = filters;
 
-    displayList(data.results.slice(0, 15), containerId); // Limit to 15 for the row view
+    // Call displayList which will clear the container first since it's the start of a new query
+    const container = document.getElementById(containerId);
+    if(container) container.innerHTML = '';
+    displayList(data.results, containerId); // Display all results from page 1
+    
     updateFilterButtons(category, filters);
     
     state.isLoading = false;
@@ -332,28 +393,26 @@ function openFullView(category) {
     currentFullView = category;
     const filters = categoryState[category].filters; // Use currently applied row filters
     
-    // Create and display a new modal/container for full view
     const fullViewContainer = document.createElement('div');
     fullViewContainer.id = 'full-view-modal';
-    fullViewContainer.className = 'search-modal'; // Reusing search-modal class for styling
+    fullViewContainer.className = 'search-modal'; 
     fullViewContainer.style.display = 'flex';
     document.body.appendChild(fullViewContainer);
 
     const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     
-    // Need to ensure the HTML structure matches for styling/scrolling
     fullViewContainer.innerHTML = `
         <span class="close" onclick="closeFullView()" style="color: red;">&times;</span>
         <h2 style="text-transform: uppercase;">${title}</h2>
         <div class="results" id="${category}-full-list"></div>
     `;
 
-    // Reset pagination to 0 so the first call increments it to page 1
+    // Reset pagination to 0 so the first call increments it to page 1 for the full view
     categoryState[category].page = 0; 
     loadMoreFullView(category, filters, true); // Initial load
     
     const listContainer = document.getElementById(`${category}-full-list`);
-    // Add infinite scroll listener
+    // Add infinite scroll listener for the full view
     listContainer.onscroll = function () {
         scrollPosition = listContainer.scrollTop; 
         
@@ -370,14 +429,14 @@ function closeFullView() {
     const modal = document.getElementById('full-view-modal');
     if (modal) modal.remove();
     currentFullView = null;
-    scrollPosition = 0; // Reset scroll position when closing the full view
+    scrollPosition = 0; 
 }
 
 // Helper to display images in the grid (similar to search results)
 function displayFullList(items, containerId, isFirstLoad = false) {
   const container = document.getElementById(containerId);
   if (isFirstLoad) {
-      container.innerHTML = ''; // Clear on first load for a new filter/view
+      container.innerHTML = ''; 
   }
   
   items.forEach(item => {
@@ -389,7 +448,6 @@ function displayFullList(items, containerId, isFirstLoad = false) {
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
     
-    // Pass true to showDetails to indicate full view is open
     img.onclick = () => showDetails(item, true); 
     
     container.appendChild(img);
@@ -445,14 +503,13 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
   }
 }
 
-// --- FILTER MODAL LOGIC (NEW) ---
+// --- FILTER MODAL LOGIC ---
 
 function populateFilterOptions() {
-    // These need to be present in your HTML: #filter-year, #filter-genre, #filter-modal-title, #filter-modal
     const yearSelect = document.getElementById('filter-year');
     const genreSelect = document.getElementById('filter-genre');
     
-    if (!yearSelect || !genreSelect) return; // Safety check
+    if (!yearSelect || !genreSelect) return; 
 
     yearSelect.innerHTML = '<option value="">Any Year</option>';
     genreSelect.innerHTML = '<option value="">Any Genre</option>';
@@ -484,7 +541,6 @@ function openFilterModal(category) {
     const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     modalTitle.textContent = `Filter ${title}`;
     
-    // Load current filters into the dropdowns
     const currentFilters = categoryState[category].filters;
     document.getElementById('filter-year').value = currentFilters.year || '';
     document.getElementById('filter-genre').value = currentFilters.genre || '';
@@ -493,7 +549,7 @@ function openFilterModal(category) {
 }
 
 /**
- * 📢 FINAL REVISED FUNCTION: Updates filters and IMMEDIATELY auto-opens the full view.
+ * Updates filters and IMMEDIATELY auto-opens the full view.
  */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
@@ -511,14 +567,16 @@ function applyFilters() {
     categoryState[category].filters = newFilters;
     updateFilterButtons(category, newFilters);
     
-    // 3. IMMEDIATELY open the full view
-    openFullView(category);
+    // 3. Re-load the main row content with new filters (this clears the row and loads page 1)
+    loadRowContent(category, newFilters);
+    
+    // 4. Optionally, you can still open the full view automatically, but I removed the auto-open 
+    // here to allow the user to see the filtered row first. If you must auto-open:
+    // openFullView(category);
 }
 
 
-// Original loadMore is removed as it's replaced by openFullView and loadMoreFullView logic
-// The previous addScrollListener is also removed as it only applies to the rows which no longer use infinite scroll.
-
+// --- DETAILS & MODAL LOGIC (UNCHANGED) ---
 
 async function showDetails(item, isFullViewOpen = false) {
   currentItem = item;
@@ -527,9 +585,8 @@ async function showDetails(item, isFullViewOpen = false) {
   document.getElementById('modal-title').textContent = item.title || item.name || 'Unknown';
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
   document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-  // Rating out of 5 stars (10/2)
   document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
-  document.getElementById('server').value = 'player.videasy.net'; // Default server
+  document.getElementById('server').value = 'player.videasy.net'; 
 
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
@@ -541,7 +598,6 @@ async function showDetails(item, isFullViewOpen = false) {
     const seasonSelect = document.getElementById('season');
     seasonSelect.innerHTML = '';
     
-    // Filter out season 0 (Specials) and populate the dropdown
     seasons.filter(s => s.season_number > 0).forEach(season => {
       const option = document.createElement('option');
       option.value = season.season_number;
@@ -549,7 +605,6 @@ async function showDetails(item, isFullViewOpen = false) {
       seasonSelect.appendChild(option);
     });
     
-    // Set the initial season to the first available season, or 1
     currentSeason = seasons.find(s => s.season_number > 0)?.season_number || 1;
     seasonSelect.value = currentSeason;
     
@@ -562,7 +617,6 @@ async function showDetails(item, isFullViewOpen = false) {
   changeServer();
   document.getElementById('modal').style.display = 'flex';
   
-  // NEW: Hide the full view modal temporarily if it was open
   if (isFullViewOpen) {
       document.getElementById('full-view-modal').style.display = 'none';
   }
@@ -575,7 +629,7 @@ async function loadEpisodes() {
   const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
   const episodeList = document.getElementById('episode-list');
   episodeList.innerHTML = '';
-  currentEpisode = 1; // Reset episode when season changes
+  currentEpisode = 1; 
 
   episodes.forEach(episode => {
     const div = document.createElement('div');
@@ -587,14 +641,12 @@ async function loadEpisodes() {
     div.onclick = () => {
       currentEpisode = episode.episode_number;
       changeServer();
-      // Optional: highlight selected episode
       document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
       div.classList.add('active');
     };
     episodeList.appendChild(div);
   });
   
-  // Auto-select and load the first episode
   if (episodes.length > 0) {
       episodeList.querySelector('.episode-item')?.click();
   }
@@ -603,7 +655,6 @@ async function loadEpisodes() {
 function changeServer() {
   if (!currentItem) return;
   const server = document.getElementById('server').value;
-  // Determine type from media_type property
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   let embedURL = '';
 
@@ -630,7 +681,6 @@ function closeModal() {
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
   
-  // NEW: If the full view modal was open before, show it again.
   const fullViewModal = document.getElementById('full-view-modal');
   if (fullViewModal) {
       fullViewModal.style.display = 'flex';
@@ -648,7 +698,6 @@ function closeSearchModal() {
   document.getElementById('search-input').value = '';
 }
 
-// Debounced version of searchTMDB
 const debouncedSearchTMDB = debounce(async () => {
   const query = document.getElementById('search-input').value;
   const container = document.getElementById('search-results');
@@ -663,7 +712,7 @@ const debouncedSearchTMDB = debounce(async () => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    container.innerHTML = ''; // Clear loading
+    container.innerHTML = ''; 
     data.results
       .filter(item => item.media_type !== 'person' && item.poster_path)
       .forEach(item => {
@@ -685,7 +734,9 @@ const debouncedSearchTMDB = debounce(async () => {
     console.error('Error searching:', error);
     showError('Search failed. Try again.', 'search-results');
   }
-}, 300); // 300ms debounce delay
+}, 300);
+
+// --- INITIALIZATION ---
 
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
@@ -695,10 +746,9 @@ async function init() {
       return;
   }
   
-  // NEW: Populate filter dropdowns
   populateFilterOptions(); 
 
-  // NEW: Set up listeners for the new control buttons (assuming these HTML elements exist in the main page)
+  // Set up listeners for the new control buttons
   document.querySelectorAll('.show-more-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
@@ -732,8 +782,7 @@ async function init() {
     showLoading('netflix-tv-list');
     showLoading('korean-drama-list');
 
-    // Fetch and display all rows concurrently (no filters applied yet)
-    // All original fetch functions are now replaced by fetchCategoryContent
+    // Fetch and display all rows concurrently (page 1)
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
       fetchCategoryContent('movies', 1),
       fetchCategoryContent('tvshows', 1),
@@ -744,27 +793,33 @@ async function init() {
       fetchCategoryContent('korean-drama', 1)
     ]);
 
-    // Prepare data for the slideshow (using the initial page 1 results)
+    // Prepare data for the slideshow 
     const allResults = [
         ...moviesData.results, ...tvShowsData.results, ...animeData.results,
         ...tagalogMoviesData.results, ...netflixMoviesData.results, ...netflixTVData.results,
         ...koreanDramaData.results
     ].filter(item => item && item.backdrop_path);
 
-    // Create unique slideshow items from the fetched results
     slideshowItems = allResults.slice(0, 7);
     displaySlides();
 
-    // Display the initial rows (limited to 15 items for the row view)
-    displayList(moviesData.results.slice(0, 15), 'movies-list');
-    displayList(tvShowsData.results.slice(0, 15), 'tvshows-list');
-    displayList(animeData.results.slice(0, 15), 'anime-list');
-    displayList(tagalogMoviesData.results.slice(0, 15), 'tagalog-movies-list');
-    displayList(netflixMoviesData.results.slice(0, 15), 'netflix-movies-list');
-    displayList(netflixTVData.results.slice(0, 15), 'netflix-tv-list');
-    displayList(koreanDramaData.results.slice(0, 15), 'korean-drama-list');
+    // Display the initial rows
+    displayList(moviesData.results, 'movies-list');
+    displayList(tvShowsData.results, 'tvshows-list');
+    displayList(animeData.results, 'anime-list');
+    displayList(tagalogMoviesData.results, 'tagalog-movies-list');
+    displayList(netflixMoviesData.results, 'netflix-movies-list');
+    displayList(netflixTVData.results, 'netflix-tv-list');
+    displayList(koreanDramaData.results, 'korean-drama-list');
     
-    // Original addScrollListener is now redundant for rows, removed.
+    // Setup infinite scroll listeners for the main rows (RESTORED)
+    addScrollListener('movies');
+    addScrollListener('tvshows');
+    addScrollListener('anime');
+    addScrollListener('tagalog-movies');
+    addScrollListener('netflix-movies');
+    addScrollListener('netflix-tv');
+    addScrollListener('korean-drama');
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
