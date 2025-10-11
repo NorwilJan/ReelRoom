@@ -296,7 +296,7 @@ function clearFilters(category) {
 
 function openFullView(category) {
     currentFullView = category;
-    // ✅ This correctly uses the new filters set by applyFilters() or the default empty filters
+    // ✅ Retrieve the currently applied filters for this category
     const filters = categoryState[category].filters; 
     
     // Create and display a new modal/container for full view
@@ -314,10 +314,10 @@ function openFullView(category) {
         <div class="results" id="${category}-full-list"></div>
     `;
 
-    // Reset pagination and clear previous content *before* loading new
+    // Reset pagination to 0 so the first call increments it to page 1
     categoryState[category].page = 0; 
     
-    // 💡 Pass the filters explicitly to loadMoreFullView for the first load
+    // 🔑 First Load: Pass the current filters to start the grid correctly
     loadMoreFullView(category, filters);
     
     const listContainer = document.getElementById(`${category}-full-list`);
@@ -329,7 +329,7 @@ function openFullView(category) {
             !categoryState[category].isLoading &&
             listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
         ) {
-            // 💡 Pass the current category's filters for subsequent loads
+            // 🔑 Subsequent Loads: Pass the current filters from the state
             loadMoreFullView(category, categoryState[category].filters);
         }
     };
@@ -378,7 +378,7 @@ async function loadMoreFullView(category, filters) {
   let currentPage = state.page;
 
   try {
-    // 🔑 Use the 'filters' argument, which contains the newly applied filter set.
+    // 🔑 KEY FIX: Use the 'filters' argument, which contains the newly applied filter set.
     const data = await fetchCategoryContent(category, currentPage, filters);
 
     const items = data.results || [];
@@ -470,13 +470,13 @@ function applyFilters() {
     
     const newFilters = { year: year, genre: genre };
 
-    // 2. Update the filter state and the visual button indicator for the row
+    // 2. Update the filter state
     categoryState[category].filters = newFilters;
     
-    // Update the row display and filter button with new filters
+    // 3. Update the row display and filter button with new filters
     loadRowContent(category, newFilters);
     
-    // 3. IMMEDIATELY open the full view as requested.
+    // 4. IMMEDIATELY open the full view as requested.
     openFullView(category);
 }
 
@@ -721,7 +721,7 @@ async function init() {
     });
   });
   
-  // Set up listener for search input
+  // Set up listener for search input and filter buttons
   document.getElementById('search-input')?.addEventListener('input', debouncedSearchTMDB);
   document.getElementById('apply-filters-btn')?.addEventListener('click', applyFilters);
   document.getElementById('filter-modal-close')?.addEventListener('click', () => document.getElementById('filter-modal').style.display = 'none');
