@@ -17,8 +17,8 @@ const CONFIG = {
     SLIDESHOW_INTERVAL: 5000,
     MAX_YEARS: 20,
     SLIDESHOW_ITEM_COUNT: 7,
-    // NEW: Define the category to be replaced by the user's genre pick
-    TRENDING_CATEGORY_ID: 'movies' // Assuming 'movies' is the "trending movie row" you want to replace
+    // Define the category to be replaced by the user's genre pick
+    TRENDING_CATEGORY_ID: 'movies' 
 };
 
 // Centralized category configuration
@@ -40,14 +40,14 @@ let categoryState = CATEGORIES.reduce((state, cat) => ({
         isLoading: false, 
         filters: {}, 
         scrollPosition: 0, 
-        isFullView: false, // NEW: Track if it's in full view mode
-        isInfiniteScroll: false // NEW: Track if it's in infinite scroll mode
+        isFullView: false, 
+        isInfiniteScroll: false 
     }
 }), {});
 
 let currentFullView = null;
 let currentCategoryToFilter = null;
-// NEW: State for the category that replaces the trending row
+// State for the category that replaces the trending row
 let trendingReplacement = null;
 
 // Simplified Genre IDs for the filter dropdown
@@ -102,17 +102,11 @@ async function testApiKey() {
 
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
-        // Determine the type and configuration based on the category ID or the temporary trending replacement
+        // Determine the type and configuration based on the category ID
         let catConfig = CATEGORIES.find(c => c.id === category);
         let catType = catConfig ? catConfig.type : 'movie';
         let extraParams = catConfig ? catConfig.params : '';
 
-        // If this is the trending replacement, use the temporary config
-        if (category === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement && trendingReplacement.filters) {
-            // This is a temporary category based on a genre pick, so we'll use a dynamic label/params
-            catConfig = { id: category, type: 'movie', label: trendingReplacement.label, params: '' };
-        }
-        
         if (!catConfig) throw new Error('Unknown category.');
 
 
@@ -128,12 +122,19 @@ async function fetchCategoryContent(category, page, filters = {}) {
                 baseGenres = genreMatch[1];
                 extraParams = extraParams.replace(genreMatch[0], ''); // Remove base genres from extraParams
             }
+            // Use user's selected genre
             const combinedGenres = baseGenres ? `${baseGenres},${filters.genre}` : filters.genre;
             genreParams = `&with_genres=${combinedGenres}`;
         }
+        
+        // FIX: Ensure the correct media type is used if this is the trending replacement
+        if (category === CONFIG.TRENDING_CATEGORY_ID) {
+             catType = 'movie'; // Always movie for the trending row replacement
+        }
+
 
         const fetchURL = `${BASE_URL}/discover/${catType}?api_key=${API_KEY}${extraParams}${baseParams}${filterParams}${genreParams}`;
-        console.log(`Fetching ${category} with URL: ${fetchURL}`); // Debug log
+        console.log(`Fetching ${category} (Page ${page}) with URL: ${fetchURL}`); // Debug log
 
         const res = await fetch(fetchURL);
         if (!res.ok) {
@@ -196,6 +197,7 @@ function setupLazyLoading() {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const category = entry.target.getAttribute('data-category');
+                // FIX: Ensure we use the current filters when lazy loading the row
                 loadRowContent(category, categoryState[category].filters);
                 observer.unobserve(entry.target);
             }
@@ -205,7 +207,7 @@ function setupLazyLoading() {
     rows.forEach(row => observer.observe(row));
 }
 
-// --- SLIDESHOW LOGIC ---
+// --- SLIDESHOW LOGIC (UNCHANGED) ---
 
 function displaySlides() {
     const slidesContainer = document.getElementById('slides');
@@ -279,16 +281,15 @@ function changeSlide(n) {
 
 // --- MAIN PAGE LIST DISPLAY ---
 
-function displayItems(items, containerId, append = false) { // MODIFIED: Added 'append'
+function displayItems(items, containerId, append = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
     
-    // NEW: Only clear if not appending
     if (!append) container.innerHTML = '';
     
     removeLoadingAndError(containerId);
 
-    if (items.length === 0 && !append) { // MODIFIED: Check for !append to not overwrite existing content when appending
+    if (items.length === 0 && !append) { 
         container.innerHTML = `
             <p style="color: #ccc; text-align: center; width: 100%;">
                 No content matches your filters.
@@ -309,9 +310,9 @@ function displayItems(items, containerId, append = false) { // MODIFIED: Added '
         img.setAttribute('data-id', item.id);
         img.loading = 'lazy';
         img.tabIndex = 0;
-        img.onclick = () => showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); // MODIFIED: Pass state to showDetails
+        img.onclick = () => showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); 
         img.onkeydown = (e) => {
-            if (e.key === 'Enter' || e.key === ' ') showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); // MODIFIED: Pass state to showDetails
+            if (e.key === 'Enter' || e.key === ' ') showDetails(item, categoryState[containerId.split('-list')[0]].isFullView); 
         };
         container.appendChild(img);
     });
@@ -321,7 +322,7 @@ function displayItems(items, containerId, append = false) { // MODIFIED: Added '
 
 function updateRowUI(category, filters) {
     const row = document.getElementById(`${category}-row`);
-    if (!row) return; // For temporary rows like the trending replacement
+    if (!row) return; 
 
     const rowTitle = row.querySelector('.category-title');
     const filterBtn = row.querySelector('.filter-btn');
@@ -345,7 +346,7 @@ function updateRowUI(category, filters) {
         filterBtn.style.background = 'red';
         filterBtn.style.color = 'white';
         clearBtn.style.display = 'inline-block';
-        showMoreLink.textContent = 'Show All (Filtered)'; // MODIFIED: Indicate filtered state
+        showMoreLink.textContent = 'Show All (Filtered)'; 
     } else {
         filterBtn.innerHTML = '<i class="fas fa-filter"></i> Filter';
         filterBtn.style.background = '#444';
@@ -355,7 +356,6 @@ function updateRowUI(category, filters) {
     }
 }
 
-// MODIFIED: loadRowContent is now primarily for the initial load of the row.
 async function loadRowContent(category, filters = {}) {
     const state = categoryState[category];
     if (state.isLoading) return;
@@ -368,7 +368,7 @@ async function loadRowContent(category, filters = {}) {
     state.page = 1; 
     state.filters = filters;
     state.isFullView = false;
-    state.isInfiniteScroll = false; // Reset to false
+    state.isInfiniteScroll = false; 
 
     const data = await fetchCategoryContent(category, state.page, filters);
 
@@ -376,35 +376,31 @@ async function loadRowContent(category, filters = {}) {
     displayItems(data.results.slice(0, CONFIG.ITEMS_PER_ROW), containerId);
     updateRowUI(category, filters);
 
-    // NEW: If there are more items than the row limit, and the user hasn't pressed 'Show More', 
-    // we want to initiate infinite scroll for the row itself.
+    // NEW: Infinite scroll setup for the row itself
     if (data.total_pages > 1) {
-        // Attach infinite scroll logic to the row container
         const rowListContainer = document.getElementById(containerId);
-        // Only attach if not already attached and we have more than one page of content
-        if (!rowListContainer.getAttribute('data-scroll-attached')) {
+        
+        // Remove previous observers by checking and clearing the attribute
+        rowListContainer.removeAttribute('data-scroll-attached');
+        
+        // Only proceed if there are actual results to observe
+        if (data.results.length > 0) {
             rowListContainer.setAttribute('data-scroll-attached', 'true');
-            // The row itself should handle the scroll, which is not typical for a single-row design.
-            // We'll use an IntersectionObserver on the *last item* of the initial load.
+
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting && !state.isFullView) {
-                        // User has scrolled to the last item and is still in the row view
                         if (!state.isLoading && data.total_pages > state.page) {
-                            state.isInfiniteScroll = true; // Activate infinite scroll for this row
+                            state.isInfiniteScroll = true; 
                             loadMoreRowContent(category, filters);
                         }
-                        observer.unobserve(entry.target); // Stop observing the old last item
+                        observer.unobserve(entry.target); 
                     }
                 });
             }, { rootMargin: '100px' });
             
-            // Observe the last item loaded
             const lastItem = rowListContainer.lastElementChild;
             if (lastItem) observer.observe(lastItem);
-            
-            // To ensure the observer is set up, the infinite scroll will be triggered in loadMoreRowContent
-            // The show-more button is still there as a fallback/alternative.
         }
     }
 
@@ -413,12 +409,12 @@ async function loadRowContent(category, filters = {}) {
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
 }
 
-// NEW: Function to load more content specifically for the main row (infinite scroll on the row)
-async function loadMoreRowContent(category, filters) {
+function loadMoreRowContent(category, filters) {
     const state = categoryState[category];
     const containerId = `${category}-list`;
 
-    if (state.isLoading || !state.isInfiniteScroll) return; // Only load if in infinite scroll mode
+    // FIX: Add a check for isFullView, as it should stop loading the row if full view is active
+    if (state.isLoading || !state.isInfiniteScroll || state.isFullView) return; 
 
     state.isLoading = true;
     showLoading(containerId);
@@ -426,18 +422,20 @@ async function loadMoreRowContent(category, filters) {
     state.page++; 
     let currentPage = state.page;
 
-    try {
-        const data = await fetchCategoryContent(category, currentPage, filters);
+    // FIX: Pass the current category filters
+    fetchCategoryContent(category, currentPage, filters).then(data => {
         const items = data.results || [];
 
         if (items.length === 0) {
             state.page--;
             console.log(`${category} row reached end of content.`);
-            state.isInfiniteScroll = false; // Disable infinite scroll if no more results
+            state.isInfiniteScroll = false; 
+            document.getElementById(containerId)?.querySelector('.loading')?.remove();
+            state.isLoading = false;
             return;
         }
 
-        displayItems(items, containerId, true); // Append items
+        displayItems(items, containerId, true); 
 
         // Setup observer for the *new* last item
         const rowListContainer = document.getElementById(containerId);
@@ -455,38 +453,39 @@ async function loadMoreRowContent(category, filters) {
             }, { rootMargin: '100px' });
             observer.observe(newLastItem);
         } else {
-             state.isInfiniteScroll = false; // Disable if somehow no new items
+             state.isInfiniteScroll = false; 
         }
 
-    } catch (error) {
+        state.isLoading = false;
+        document.getElementById(containerId)?.querySelector('.loading')?.remove();
+
+    }).catch(error => {
         console.error(`Error loading more row content for ${category}:`, error);
         showError(`Failed to load more row content for ${category}: ${error.message}`, containerId);
         state.page--;
-    } finally {
         state.isLoading = false;
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
-    }
+    });
 }
 
 function clearFilters(category) {
-    // NEW: Clear trending replacement if this is the trending category
     if (category === CONFIG.TRENDING_CATEGORY_ID) {
         trendingReplacement = null;
     }
     categoryState[category].filters = {};
     categoryState[category].scrollPosition = 0;
-    // MODIFIED: Re-load the row content, which will reset the view and filters
     loadRowContent(category);
 }
 
 function openFullView(category) {
     currentFullView = category;
     const state = categoryState[category];
-    const filters = state.filters;
+    
+    // FIX: Get filters directly from state
+    const filters = state.filters; 
 
-    // MODIFIED: Set the state to indicate full view
     state.isFullView = true;
-    state.isInfiniteScroll = false; // Disable row infinite scroll
+    state.isInfiniteScroll = false; 
 
     const fullViewContainer = document.createElement('div');
     fullViewContainer.id = 'full-view-modal';
@@ -506,8 +505,9 @@ function openFullView(category) {
         <div class="results" id="${category}-full-list"></div>
     `;
 
-    // MODIFIED: Reset page to 0 and load first page in full view
+    // Reset page to 0 and load first page in full view
     state.page = 0;
+    // FIX: Pass the correct filters to loadMoreFullView
     loadMoreFullView(category, filters);
 
     const listContainer = document.getElementById(`${category}-full-list`);
@@ -533,9 +533,6 @@ function closeFullView() {
     currentFullView = null;
     if (categoryState[category]) {
         categoryState[category].isFullView = false;
-        // Re-initiate row infinite scroll logic if it was loading more before
-        // This is handled by loadRowContent on clearFilters, but we reset the flag here
-        // If the user hasn't scrolled far enough, the row will just display the initial items
     }
 }
 
@@ -553,6 +550,7 @@ async function loadMoreFullView(category, filters) {
     let currentPage = state.page;
 
     try {
+        // FIX: Ensure filters are passed to fetchCategoryContent
         const data = await fetchCategoryContent(category, currentPage, filters);
         const items = data.results || [];
 
@@ -575,7 +573,6 @@ async function loadMoreFullView(category, filters) {
             return;
         }
 
-        // MODIFIED: Append is true for full view infinite scroll
         displayItems(items, containerId, true);
 
     } catch (error) {
@@ -586,13 +583,12 @@ async function loadMoreFullView(category, filters) {
         state.isLoading = false;
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
         if (currentPage === 1 && state.scrollPosition > 0) {
-            // Restore scroll position only on the first page load in full view
             container.scrollTop = state.scrollPosition;
         }
     }
 }
 
-// --- FILTER MODAL LOGIC ---
+// --- FILTER MODAL LOGIC (Mostly Unchanged) ---
 
 function populateFilterOptions() {
     const yearSelect = document.getElementById('filter-year');
@@ -620,7 +616,7 @@ function populateFilterOptions() {
         };
     });
     
-    // NEW: Populate genre picker for the trending movie row replacement
+    // Populate genre picker for the trending movie row replacement
     const trendingGenreSelect = document.getElementById('trending-genre-picker');
     if (trendingGenreSelect) {
         trendingGenreSelect.innerHTML = '<option value="">Pick a Genre...</option>';
@@ -628,7 +624,6 @@ function populateFilterOptions() {
             const option = new Option(genre.name, genre.id);
             trendingGenreSelect.appendChild(option);
         });
-        // Check if a replacement is already active
         if (trendingReplacement && trendingReplacement.filters.genre) {
             trendingGenreSelect.value = trendingReplacement.filters.genre;
         }
@@ -652,31 +647,27 @@ function applyFilters() {
     const genre = document.getElementById('filter-genre').value;
     const category = currentCategoryToFilter;
 
-    console.log(`Applying filters for ${category}: year=${year}, genre=${genre}`); // Debug log
-
     document.getElementById('filter-modal').style.display = 'none';
 
     const newFilters = { year: year, genre: genre };
     categoryState[category].filters = newFilters;
     categoryState[category].scrollPosition = 0;
     
-    // MODIFIED: Immediately open full view after applying filters, as requested
+    // Immediately open full view after applying filters
     openFullView(category);
 }
 
-// NEW: Function to handle the trending genre pick
 function applyTrendingGenre() {
     const genreId = document.getElementById('trending-genre-picker').value;
     const category = CONFIG.TRENDING_CATEGORY_ID;
     
     if (!genreId) {
-        // If the user selects "Pick a Genre...", revert to default 'movies'
         clearFilters(category);
         return;
     }
     
     const genreName = GENRES.find(g => g.id == genreId)?.name;
-    const newFilters = { genre: genreId, year: '' }; // Only filter by genre, clear year
+    const newFilters = { genre: genreId, year: '' }; 
     
     // Set the global state for the replacement
     trendingReplacement = {
@@ -854,10 +845,8 @@ function closeModal() {
 
     const fullViewModal = document.getElementById('full-view-modal');
     if (fullViewModal) {
-        // MODIFIED: Do not display full view modal if it was open. It was closed by showDetails
-        // Instead, we just let the user re-open it if they want.
-        // If you absolutely want it to pop back up, uncomment the lines below:
-        // fullViewModal.style.display = 'flex';
+         // You can uncomment this if you want the full view to pop back up after closing details
+         // fullViewModal.style.display = 'flex';
     }
 }
 
@@ -922,22 +911,18 @@ const debouncedSearchTMDB = debounce(async () => {
 
 // --- INITIALIZATION ---
 
-// NEW: Function to create the trending genre picker
 function createTrendingGenrePicker() {
     const pickerContainer = document.getElementById(`${CONFIG.TRENDING_CATEGORY_ID}-row`)?.querySelector('.category-header');
     if (!pickerContainer) return;
     
-    // Create the select element for genre picking
     const select = document.createElement('select');
     select.id = 'trending-genre-picker';
     select.className = 'filter-select';
     select.style.marginLeft = '10px';
     select.onchange = applyTrendingGenre;
     
-    // Find the category title element
     const title = pickerContainer.querySelector('.category-title');
     
-    // Insert the select element after the title
     if (title) {
         title.insertAdjacentElement('afterend', select);
     } else {
@@ -953,7 +938,6 @@ async function init() {
         return;
     }
     
-    // NEW: Create and populate the trending genre picker before populating other filters
     createTrendingGenrePicker();
     populateFilterOptions();
 
@@ -961,7 +945,7 @@ async function init() {
         link.tabIndex = 0;
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            // MODIFIED: Load Full View
+            // FIX: Pass the category for Show More/Full View
             openFullView(link.getAttribute('data-category'));
         });
         link.addEventListener('keydown', (e) => {
@@ -1007,13 +991,8 @@ async function init() {
         displaySlides();
 
         CATEGORIES.forEach((cat, index) => {
-            // Check if this is the trending category and a replacement genre is set
-            let filters = {};
-            if (cat.id === CONFIG.TRENDING_CATEGORY_ID && trendingReplacement) {
-                filters = trendingReplacement.filters;
-            }
-            // MODIFIED: Use loadRowContent to ensure filters and UI are updated and infinite scroll is set up
-            loadRowContent(cat.id, filters); 
+            // FIX: This initial call ensures filters are applied if they were somehow retained
+            loadRowContent(cat.id, categoryState[cat.id].filters); 
         });
 
         setupLazyLoading();
