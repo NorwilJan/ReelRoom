@@ -6,27 +6,34 @@ const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
 let currentSeason = 1;
 let currentEpisode = 1;
-let currentPages = {
-  movies: 1,
-  tvShows: 1,
-  anime: 1,
-  tagalogMovies: 1, // Correct key format for page counter
-  netflixMovies: 1,
-  netflixTV: 1,
-  koreanDrama: 1
-};
-let isLoading = {
-  movies: false,
-  tvshows: false,
-  anime: false,
-  'tagalog-movies': false, // Correct key format for loading flag
-  'netflix-movies': false,
-  'netflix-tv': false,
-  'korean-drama': false
-};
 let slideshowItems = [];
 let currentSlide = 0;
 let slideshowInterval;
+
+// Replaced simple currentPages/isLoading with a single state object from the 2nd code
+let categoryState = {
+    movies: { page: 1, isLoading: false, filters: {} },
+    tvshows: { page: 1, isLoading: false, filters: {} },
+    anime: { page: 1, isLoading: false, filters: {} },
+    'tagalog-movies': { page: 1, isLoading: false, filters: {} },
+    'netflix-movies': { page: 1, isLoading: false, filters: {} },
+    'netflix-tv': { page: 1, isLoading: false, filters: {} },
+    'korean-drama': { page: 1, isLoading: false, filters: {} }
+};
+
+let currentFullView = null; // Tracks the category currently in the full view
+let currentCategoryToFilter = null; // Tracks the category targeted by the filter modal
+let scrollPosition = 0; 
+
+// Simplified Genre IDs for the filter dropdown - NEW
+const GENRES = [
+  { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' }, 
+  { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' }, 
+  { id: 18, name: 'Drama' }, { id: 10751, name: 'Family' }, 
+  { id: 27, name: 'Horror' }, { id: 878, name: 'Science Fiction' }, 
+  { id: 53, name: 'Thriller' }, { id: 10749, name: 'Romance' },
+  { id: 16, name: 'Animation' }, { id: 9648, name: 'Mystery' }
+];
 
 /**
  * Utility function to debounce another function call.
@@ -67,124 +74,54 @@ async function testApiKey() {
     }
 }
 
-async function fetchTrending(type, page = 1) {
-  try {
-    const res = await fetch(`${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&page=${page}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    const data = await res.json();
-    if (data.results) {
-        data.results.forEach(item => item.media_type = item.media_type || type);
+// --- CORE FETCH FUNCTION (Handles all categories and filters) - REPLACES ALL ORIGINAL FETCH FUNCTIONS ---
+
+async function fetchCategoryContent(category, page, filters = {}) {
+    try {
+        const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
+        // Correctly apply year and genre filters
+        const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
+        let fetchURL = '';
+        let mediaType = category.includes('movie') ? 'movie' : 'tv';
+
+        if (category === 'movies') {
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
+        } else if (category === 'tvshows') {
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
+        } else if (category === 'anime') {
+            // Anime base filters: genre 16 and Japanese language, augmented by user filters
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja${baseParams}${filterParams}`;
+        } else if (category === 'tagalog-movies') {
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${filterParams}`;
+        } else if (category === 'netflix-movies') {
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
+        } else if (category === 'netflix-tv') {
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
+        } else if (category === 'korean-drama') {
+            // KDrama base filters: Korean language and Drama genre 18, augmented by user filters
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18${baseParams}${filterParams}`;
+        } else {
+            // Fallback for general trending if the category isn't discover-based (optional, but good practice)
+            // The original code used /trending which is not filterable by Discover parameters.
+            // For simplicity and to support filters, all categories are now Discover-based.
+            throw new Error('Unknown category.');
+        }
+
+        const res = await fetch(fetchURL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        // Ensure media_type is set for Discover results
+        if (data.results) {
+            data.results.forEach(item => item.media_type = item.media_type || mediaType);
+        }
+        return data;
+    } catch (error) {
+        console.error(`Error fetching ${category}:`, error);
+        return { results: [], total_pages: 1 };
     }
-    return data;
-  } catch (error) {
-    console.error(`Error fetching trending ${type}:`, error);
-    showError(`Failed to load ${type}. Check API key or connection.`, `${type}-list`);
-    return { results: [], total_pages: 1 };
-  }
 }
 
-async function fetchTrendingAnime(page = 1) {
-  try {
-    const movieRes = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
-    );
-    if (!movieRes.ok) throw new Error(`Movies HTTP ${movieRes.status}`);
-    const movieData = await movieRes.json();
-    const movies = (movieData.results || []).map(item => ({...item, media_type: 'movie'}));
-
-    const tvRes = await fetch(
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_genres=16&with_original_language=ja`
-    );
-    if (!tvRes.ok) throw new Error(`TV HTTP ${tvRes.status}`);
-    const tvData = await tvRes.json();
-    const tvShows = (tvData.results || []).map(item => ({...item, media_type: 'tv'}));
-
-    const combined = [...movies, ...tvShows]
-      .filter(item => item.poster_path)
-      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-      .slice(0, 20); 
-
-    return { results: combined, total_pages: Math.max(movieData.total_pages || 1, tvData.total_pages || 1) };
-  } catch (error) {
-    console.error('Error fetching trending anime:', error);
-    showError('Failed to load anime. Check API key or connection.', 'anime-list');
-    return { results: [], total_pages: 1 };
-  }
-}
-
-async function fetchTagalogMovies(page = 1) {
-  try {
-    const res = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=tl&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}&with_original_language=tl`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        data.results.forEach(item => item.media_type = 'movie');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Tagalog movies:', error);
-    showError('Failed to load Tagalog movies.', 'tagalog-movies-list');
-    return { results: [], total_pages: 1 };
-  }
-}
-
-async function fetchNetflixMovies(page = 1) {
-  try {
-    const res = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        data.results.forEach(item => item.media_type = 'movie');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Netflix movies:', error);
-    showError('Failed to load Netflix movies.', 'netflix-movies-list');
-    return { results: [], total_pages: 1 };
-  }
-}
-
-async function fetchNetflixTV(page = 1) {
-  try {
-    const res = await fetch(
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        data.results.forEach(item => item.media_type = 'tv');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Netflix TV:', error);
-    showError('Failed to load Netflix TV shows.', 'netflix-tv-list');
-    return { results: [], total_pages: 1 };
-  }
-}
-
-async function fetchKoreanDrama(page = 1) {
-  try {
-    const res = await fetch(
-      // Targeting TV, Korean language (ko), Drama genre (18)
-      `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18&sort_by=popularity.desc&include_adult=false&include_video=false&page=${page}`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.results) {
-        // Assume TV type for this category
-        data.results.forEach(item => item.media_type = 'tv');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching Korean Drama:', error);
-    showError('Failed to load Korean Drama.', 'korean-drama-list');
-    return { results: [], total_pages: 1 };
-  }
-}
 
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
@@ -302,6 +239,7 @@ function changeSlide(n) {
   showSlide();
 }
 
+// Display List is kept but will now clear content for filter logic.
 function displayList(items, containerId) {
   const container = document.getElementById(containerId);
   if (!container) {
@@ -309,15 +247,20 @@ function displayList(items, containerId) {
     return;
   }
   
+  // Clear the container completely before displaying new filtered results
+  container.innerHTML = ''; 
   removeLoadingAndError(containerId);
 
-  if (items.length === 0 && container.children.length === 0) {
-    container.innerHTML = '<p style="color: #ccc; text-align: center;">No content available.</p>';
+  if (items.length === 0) {
+    container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content matches your filters.</p>';
     return;
   }
 
+
   items.forEach(item => {
-    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
+    // Note: The previous check for existing items is removed since we clear the container for filtering logic.
+    // This displayList is now only used for the row view.
+    // if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
@@ -328,81 +271,256 @@ function displayList(items, containerId) {
   });
 }
 
-function addScrollListener(category) {
-  const containerId = category + '-list';
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  
-  container.onscroll = function () {
-    if (
-      !isLoading[category] &&
-      container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
-    ) {
-      loadMore(category);
+
+// --- FULL VIEW / INFINITE SCROLL LOGIC (NEW/REPLACED) ---
+
+function updateFilterButtons(category, filters) {
+    const row = document.getElementById(`${category}-row`);
+    // Assuming you have elements with these classes/ids in your HTML row
+    const filterBtn = row.querySelector('.filter-btn');
+    const clearBtn = row.querySelector('.clear-filter-btn');
+    
+    if (!filterBtn || !clearBtn) return; // Exit if filter/clear buttons don't exist in the HTML
+
+    const isFiltered = filters.year || filters.genre;
+
+    if (isFiltered) {
+        const genreName = filters.genre ? (GENRES.find(g => g.id == filters.genre)?.name || 'Genre') : '';
+        const yearText = filters.year || '';
+        
+        filterBtn.textContent = `Filtered ${genreName} ${yearText}`.trim();
+        filterBtn.style.background = 'red';
+        filterBtn.style.color = 'white';
+        clearBtn.style.display = 'inline-block';
+    } else {
+        filterBtn.innerHTML = '<i class="fas fa-filter"></i> Filter';
+        filterBtn.style.background = '#444';
+        filterBtn.style.color = '#fff';
+        clearBtn.style.display = 'none';
     }
-  };
 }
 
-async function loadMore(category) {
-  // Translate category string to the correct key name for currentPages (e.g., 'tvshows' -> 'tvShows')
-  let pageKey = category.replace(/-/g, 'Movies').replace('tvshows', 'tvShows');
+async function loadRowContent(category, filters = {}) {
+    const state = categoryState[category];
+    if (state.isLoading) return;
+
+    state.isLoading = true;
+    const containerId = `${category}-list`;
+    showLoading(containerId);
+
+    // Fetch only the first page for the main row preview
+    const data = await fetchCategoryContent(category, 1, filters);
+    
+    // Update the state with the applied filters
+    state.filters = filters;
+
+    displayList(data.results.slice(0, 15), containerId); // Limit to 15 for the row view
+    updateFilterButtons(category, filters);
+    
+    state.isLoading = false;
+    document.getElementById(containerId)?.querySelector('.loading')?.remove();
+}
+
+function clearFilters(category) {
+    // Reset filters and load the original content
+    categoryState[category].filters = {};
+    loadRowContent(category);
+}
+
+
+function openFullView(category) {
+    currentFullView = category;
+    const filters = categoryState[category].filters; // Use currently applied row filters
+    
+    // Create and display a new modal/container for full view
+    const fullViewContainer = document.createElement('div');
+    fullViewContainer.id = 'full-view-modal';
+    fullViewContainer.className = 'search-modal'; // Reusing search-modal class for styling
+    fullViewContainer.style.display = 'flex';
+    document.body.appendChild(fullViewContainer);
+
+    const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    
+    // Need to ensure the HTML structure matches for styling/scrolling
+    fullViewContainer.innerHTML = `
+        <span class="close" onclick="closeFullView()" style="color: red;">&times;</span>
+        <h2 style="text-transform: uppercase;">${title}</h2>
+        <div class="results" id="${category}-full-list"></div>
+    `;
+
+    // Reset pagination to 0 so the first call increments it to page 1
+    categoryState[category].page = 0; 
+    loadMoreFullView(category, filters, true); // Initial load
+    
+    const listContainer = document.getElementById(`${category}-full-list`);
+    // Add infinite scroll listener
+    listContainer.onscroll = function () {
+        scrollPosition = listContainer.scrollTop; 
+        
+        if (
+            !categoryState[category].isLoading &&
+            listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
+        ) {
+            loadMoreFullView(category, filters);
+        }
+    };
+}
+
+function closeFullView() {
+    const modal = document.getElementById('full-view-modal');
+    if (modal) modal.remove();
+    currentFullView = null;
+    scrollPosition = 0; // Reset scroll position when closing the full view
+}
+
+// Helper to display images in the grid (similar to search results)
+function displayFullList(items, containerId, isFirstLoad = false) {
+  const container = document.getElementById(containerId);
+  if (isFirstLoad) {
+      container.innerHTML = ''; // Clear on first load for a new filter/view
+  }
   
-  // Specific key mappings for hyphenated names
-  if (category === 'tagalog-movies') pageKey = 'tagalogMovies'; // 🛠️ FIX APPLIED HERE
-  if (category === 'netflix-movies') pageKey = 'netflixMovies';
-  if (category === 'netflix-tv') pageKey = 'netflixTV';
-  if (category === 'korean-drama') pageKey = 'koreanDrama';
+  items.forEach(item => {
+    // Only add if not already present
+    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
-  if (isLoading[category]) return;
+    const img = document.createElement('img');
+    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+    img.alt = item.title || item.name || 'Unknown';
+    img.setAttribute('data-id', item.id);
+    
+    // Pass true to showDetails to indicate full view is open
+    img.onclick = () => showDetails(item, true); 
+    
+    container.appendChild(img);
+  });
+}
 
-  isLoading[category] = true;
-  const containerId = category + '-list';
+async function loadMoreFullView(category, filters, isFirstLoad = false) {
+  const state = categoryState[category];
+  const containerId = `${category}-full-list`;
+  const container = document.getElementById(containerId); 
+
+  if (state.isLoading) return;
+
+  state.isLoading = true;
   
   showLoading(containerId);
   
-  currentPages[pageKey]++;
+  state.page++; 
+  let currentPage = state.page;
 
   try {
-    let data;
-    if (category === 'movies') {
-      data = await fetchTrending('movie', currentPages[pageKey]);
-    } else if (category === 'tvshows') {
-      data = await fetchTrending('tv', currentPages[pageKey]);
-    } else if (category === 'anime') {
-      data = await fetchTrendingAnime(currentPages[pageKey]);
-    } else if (category === 'tagalog-movies') {
-      data = await fetchTagalogMovies(currentPages[pageKey]);
-    } else if (category === 'netflix-movies') {
-      data = await fetchNetflixMovies(currentPages[pageKey]);
-    } else if (category === 'netflix-tv') {
-      data = await fetchNetflixTV(currentPages[pageKey]);
-    } else if (category === 'korean-drama') {
-      data = await fetchKoreanDrama(currentPages[pageKey]);
-    }
+    const data = await fetchCategoryContent(category, currentPage, filters);
 
     const items = data.results || [];
     
-    // Stop loading if the API returns no results for the next page
     if (items.length === 0) {
-        currentPages[pageKey]--; 
-        console.log(`${category} reached end of available content.`);
+        if (currentPage > 1) { 
+            state.page--; 
+        }
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
-        isLoading[category] = false;
+        state.isLoading = false;
+        
+        if (container.children.length === 0) {
+            container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content matches your active filter in the full view.</p>';
+        }
+        
         return;
     }
     
-    displayList(items, containerId);
+    displayFullList(items, containerId, isFirstLoad);
 
   } catch (error) {
     console.error(`Error loading more for ${category}:`, error);
     showError(`Failed to load more ${category}.`, containerId);
+    state.page--; 
   } finally {
-    isLoading[category] = false;
+    state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
+    
+    if (isFirstLoad && scrollPosition > 0) {
+        container.scrollTop = scrollPosition;
+    }
   }
 }
 
-async function showDetails(item) {
+// --- FILTER MODAL LOGIC (NEW) ---
+
+function populateFilterOptions() {
+    // These need to be present in your HTML: #filter-year, #filter-genre, #filter-modal-title, #filter-modal
+    const yearSelect = document.getElementById('filter-year');
+    const genreSelect = document.getElementById('filter-genre');
+    
+    if (!yearSelect || !genreSelect) return; // Safety check
+
+    yearSelect.innerHTML = '<option value="">Any Year</option>';
+    genreSelect.innerHTML = '<option value="">Any Genre</option>';
+    
+    const currentYear = new Date().getFullYear();
+    for (let i = 0; i < 20; i++) {
+        const year = currentYear - i;
+        const option = new Option(year, year);
+        yearSelect.appendChild(option);
+    }
+    
+    GENRES.forEach(genre => {
+        const option = new Option(genre.name, genre.id);
+        genreSelect.appendChild(option);
+    });
+}
+
+function openFilterModal(category) {
+    currentCategoryToFilter = category;
+    
+    const modalTitle = document.getElementById('filter-modal-title');
+    const filterModal = document.getElementById('filter-modal');
+    
+    if (!modalTitle || !filterModal) {
+        console.error("Filter modal elements not found in HTML.");
+        return;
+    }
+
+    const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    modalTitle.textContent = `Filter ${title}`;
+    
+    // Load current filters into the dropdowns
+    const currentFilters = categoryState[category].filters;
+    document.getElementById('filter-year').value = currentFilters.year || '';
+    document.getElementById('filter-genre').value = currentFilters.genre || '';
+    
+    filterModal.style.display = 'flex';
+}
+
+/**
+ * 📢 FINAL REVISED FUNCTION: Updates filters and IMMEDIATELY auto-opens the full view.
+ */
+function applyFilters() {
+    const year = document.getElementById('filter-year').value;
+    const genre = document.getElementById('filter-genre').value;
+    const category = currentCategoryToFilter;
+
+    if (!category) return;
+    
+    // 1. Close the filter modal
+    document.getElementById('filter-modal').style.display = 'none';
+    
+    const newFilters = { year: year, genre: genre };
+
+    // 2. Update the filter state and the visual button indicator
+    categoryState[category].filters = newFilters;
+    updateFilterButtons(category, newFilters);
+    
+    // 3. IMMEDIATELY open the full view
+    openFullView(category);
+}
+
+
+// Original loadMore is removed as it's replaced by openFullView and loadMoreFullView logic
+// The previous addScrollListener is also removed as it only applies to the rows which no longer use infinite scroll.
+
+
+async function showDetails(item, isFullViewOpen = false) {
   currentItem = item;
   currentSeason = 1;
   currentEpisode = 1;
@@ -443,6 +561,11 @@ async function showDetails(item) {
 
   changeServer();
   document.getElementById('modal').style.display = 'flex';
+  
+  // NEW: Hide the full view modal temporarily if it was open
+  if (isFullViewOpen) {
+      document.getElementById('full-view-modal').style.display = 'none';
+  }
 }
 
 async function loadEpisodes() {
@@ -506,6 +629,12 @@ function closeModal() {
   document.getElementById('modal-video').src = '';
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
+  
+  // NEW: If the full view modal was open before, show it again.
+  const fullViewModal = document.getElementById('full-view-modal');
+  if (fullViewModal) {
+      fullViewModal.style.display = 'flex';
+  }
 }
 
 function openSearchModal() {
@@ -565,6 +694,32 @@ async function init() {
   if (!apiKeyValid) {
       return;
   }
+  
+  // NEW: Populate filter dropdowns
+  populateFilterOptions(); 
+
+  // NEW: Set up listeners for the new control buttons (assuming these HTML elements exist in the main page)
+  document.querySelectorAll('.show-more-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      openFullView(link.getAttribute('data-category'));
+    });
+  });
+
+  document.querySelectorAll('.filter-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault(); 
+      openFilterModal(button.getAttribute('data-category'));
+    });
+  });
+  
+  document.querySelectorAll('.clear-filter-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearFilters(button.getAttribute('data-category'));
+    });
+  });
+
 
   try {
     // Show loading for all sections initially
@@ -577,53 +732,39 @@ async function init() {
     showLoading('netflix-tv-list');
     showLoading('korean-drama-list');
 
+    // Fetch and display all rows concurrently (no filters applied yet)
+    // All original fetch functions are now replaced by fetchCategoryContent
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
-      fetchTrending('movie', currentPages.movies),
-      fetchTrending('tv', currentPages.tvShows),
-      fetchTrendingAnime(currentPages.anime),
-      fetchTagalogMovies(currentPages.tagalogMovies),
-      fetchNetflixMovies(currentPages.netflixMovies),
-      fetchNetflixTV(currentPages.netflixTV),
-      fetchKoreanDrama(currentPages.koreanDrama)
+      fetchCategoryContent('movies', 1),
+      fetchCategoryContent('tvshows', 1),
+      fetchCategoryContent('anime', 1),
+      fetchCategoryContent('tagalog-movies', 1),
+      fetchCategoryContent('netflix-movies', 1),
+      fetchCategoryContent('netflix-tv', 1),
+      fetchCategoryContent('korean-drama', 1)
     ]);
 
-    const movies = moviesData.results || [];
-    const tvShows = tvShowsData.results || [];
-    const anime = animeData.results || [];
-    const tagalogMovies = tagalogMoviesData.results || [];
-    const netflixMovies = netflixMoviesData.results || [];
-    const netflixTV = netflixTVData.results || [];
-    const koreanDrama = koreanDramaData.results || [];
+    // Prepare data for the slideshow (using the initial page 1 results)
+    const allResults = [
+        ...moviesData.results, ...tvShowsData.results, ...animeData.results,
+        ...tagalogMoviesData.results, ...netflixMoviesData.results, ...netflixTVData.results,
+        ...koreanDramaData.results
+    ].filter(item => item && item.backdrop_path);
 
-    // Combine for slideshow
-    slideshowItems = [
-      ...movies.slice(0, 2),
-      ...tvShows.slice(0, 2),
-      anime[0] || {},
-      tagalogMovies[0] || {},
-      netflixMovies[0] || {}, 
-      netflixTV[0] || {},
-      koreanDrama[0] || {} 
-    ].filter(item => item.backdrop_path && (item.title || item.name));
-
+    // Create unique slideshow items from the fetched results
+    slideshowItems = allResults.slice(0, 7);
     displaySlides();
 
-    displayList(movies, 'movies-list');
-    displayList(tvShows, 'tvshows-list');
-    displayList(anime, 'anime-list');
-    displayList(tagalogMovies, 'tagalog-movies-list');
-    displayList(netflixMovies, 'netflix-movies-list');
-    displayList(netflixTV, 'netflix-tv-list');
-    displayList(koreanDrama, 'korean-drama-list');
+    // Display the initial rows (limited to 15 items for the row view)
+    displayList(moviesData.results.slice(0, 15), 'movies-list');
+    displayList(tvShowsData.results.slice(0, 15), 'tvshows-list');
+    displayList(animeData.results.slice(0, 15), 'anime-list');
+    displayList(tagalogMoviesData.results.slice(0, 15), 'tagalog-movies-list');
+    displayList(netflixMoviesData.results.slice(0, 15), 'netflix-movies-list');
+    displayList(netflixTVData.results.slice(0, 15), 'netflix-tv-list');
+    displayList(koreanDramaData.results.slice(0, 15), 'korean-drama-list');
     
-    // Setup infinite scroll listeners
-    addScrollListener('movies');
-    addScrollListener('tvshows');
-    addScrollListener('anime');
-    addScrollListener('tagalog-movies');
-    addScrollListener('netflix-movies');
-    addScrollListener('netflix-tv');
-    addScrollListener('korean-drama');
+    // Original addScrollListener is now redundant for rows, removed.
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
