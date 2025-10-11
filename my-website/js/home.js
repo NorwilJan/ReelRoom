@@ -1,7 +1,7 @@
 // js/home.js
 const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
-// FIX APPLIED: Corrected image domain from themoviedb.org to tmdb.org
+// FIX APPLIED: Corrected image domain for thumbnail loading
 const IMG_URL = 'https://image.tmdb.org/t/p/original'; 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
@@ -341,7 +341,7 @@ function closeFullView() {
     scrollPosition = 0;
 }
 
-// Helper to display images in the grid (similar to search results)
+// Helper to display images in the grid (for infinite scroll)
 function displayFullList(items, containerId) {
   const container = document.getElementById(containerId);
   items.forEach(item => {
@@ -352,7 +352,7 @@ function displayFullList(items, containerId) {
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
     
-    // Pass 'true' to indicate the full view is open and should be hidden, not closed
+    // Pass 'true' to indicate the full view is open 
     img.onclick = () => showDetails(item, true); 
     
     container.appendChild(img);
@@ -374,7 +374,8 @@ async function loadMoreFullView(category, filters) {
   let currentPage = state.page;
 
   try {
-    const data = await fetchCategoryContent(category, currentPage, filters);
+    // Crucial step: use the filters stored in the state
+    const data = await fetchCategoryContent(category, currentPage, state.filters);
 
     const items = data.results || [];
     
@@ -403,8 +404,8 @@ async function loadMoreFullView(category, filters) {
     state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
     
-    // Restore scroll position after content loads 
-    if (scrollPosition > 0 && currentPage === 1) { // Only restore on first load after a jump
+    // Restore scroll position after content loads (important for returning from details modal)
+    if (scrollPosition > 0 && currentPage === 1) { 
         container.scrollTop = scrollPosition;
         scrollPosition = 0; // Clear it after restoration
     }
@@ -447,7 +448,7 @@ function openFilterModal(category) {
 }
 
 /**
- * REVISED FUNCTION: Updates Home Row AND immediately auto-opens the full view.
+ * CORE FUNCTION: Handles the "Apply Filters and Show More" logic.
  */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
@@ -459,11 +460,11 @@ function applyFilters() {
     
     const newFilters = { year: year, genre: genre };
 
-    // 2. Update the filter state and the row content (immediate feedback)
+    // 2. Update the filter state and the home row content (immediate feedback)
     categoryState[category].filters = newFilters;
     loadRowContent(category, newFilters);
     
-    // 3. IMMEDIATELY open the full view as requested (instant transition to infinite scroll).
+    // 3. IMMEDIATELY open the full view (instant transition to infinite scroll).
     openFullView(category);
 }
 
@@ -601,7 +602,7 @@ function closeModal() {
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
   
-  // RETAIN SCROLL/VIEW: If the full view modal was open before, show it again.
+  // PERSISTENCE: If the full view modal was open before, show it again and restore scroll.
   const fullViewModal = document.getElementById('full-view-modal');
   if (fullViewModal) {
       fullViewModal.style.display = 'flex';
