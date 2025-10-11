@@ -78,30 +78,27 @@ async function testApiKey() {
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
         const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
-        const yearParam = filters.year ? `&primary_release_year=${filters.year}` : '';
-        const userGenreParam = filters.genre ? `&with_genres=${filters.genre}` : '';
-        
+        // Correctly apply year and genre filters
+        const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
         let fetchURL = '';
         let mediaType = category.includes('movie') ? 'movie' : 'tv';
 
         if (category === 'movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${yearParam}${userGenreParam}`;
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
         } else if (category === 'tvshows') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${yearParam}${userGenreParam}`;
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
         } else if (category === 'anime') {
-            // FIX: Append user-selected genre to the base anime genre (16) using comma separation
-            const animeGenres = filters.genre ? `16,${filters.genre}` : '16';
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=${animeGenres}&with_original_language=ja${baseParams}${yearParam}`;
+            // Anime base filters: genre 16 and Japanese language, augmented by user filters
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja${baseParams}${filterParams}`;
         } else if (category === 'tagalog-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${yearParam}${userGenreParam}`;
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${filterParams}`;
         } else if (category === 'netflix-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${yearParam}${userGenreParam}`;
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
         } else if (category === 'netflix-tv') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${yearParam}${userGenreParam}`;
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
         } else if (category === 'korean-drama') {
-            // FIX: Append user-selected genre to the base KDrama genre (18) using comma separation
-            const kdramaGenres = filters.genre ? `18,${filters.genre}` : '18';
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=${kdramaGenres}&with_original_language=ko${baseParams}${yearParam}`;
+            // KDrama base filters: Korean language and Drama genre 18, augmented by user filters
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18${baseParams}${filterParams}`;
         } else {
             throw new Error('Unknown category.');
         }
@@ -299,8 +296,7 @@ function clearFilters(category) {
 
 function openFullView(category) {
     currentFullView = category;
-    // ✅ Retrieve the currently applied filters for this category
-    const filters = categoryState[category].filters; 
+    const filters = categoryState[category].filters; // Use currently applied row filters
     
     // Create and display a new modal/container for full view
     const fullViewContainer = document.createElement('div');
@@ -319,8 +315,6 @@ function openFullView(category) {
 
     // Reset pagination to 0 so the first call increments it to page 1
     categoryState[category].page = 0; 
-    
-    // 🔑 First Load: Pass the current filters to start the grid correctly
     loadMoreFullView(category, filters);
     
     const listContainer = document.getElementById(`${category}-full-list`);
@@ -332,8 +326,7 @@ function openFullView(category) {
             !categoryState[category].isLoading &&
             listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
         ) {
-            // 🔑 Subsequent Loads: Pass the current filters from the state
-            loadMoreFullView(category, categoryState[category].filters);
+            loadMoreFullView(category, filters);
         }
     };
 }
@@ -349,7 +342,6 @@ function closeFullView() {
 function displayFullList(items, containerId) {
   const container = document.getElementById(containerId);
   items.forEach(item => {
-    // Prevent duplicates
     if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
@@ -373,15 +365,12 @@ async function loadMoreFullView(category, filters) {
 
   state.isLoading = true;
   
-  // Remove any previous error message before showing loading
-  removeLoadingAndError(containerId);
   showLoading(containerId);
   
   state.page++; 
   let currentPage = state.page;
 
   try {
-    // 🔑 KEY FIX: Use the 'filters' argument, which contains the newly applied filter set.
     const data = await fetchCategoryContent(category, currentPage, filters);
 
     const items = data.results || [];
@@ -473,13 +462,11 @@ function applyFilters() {
     
     const newFilters = { year: year, genre: genre };
 
-    // 2. Update the filter state
+    // 2. Update the filter state and the visual button indicator
     categoryState[category].filters = newFilters;
+    updateFilterButtons(category, newFilters);
     
-    // 3. Update the row display and filter button with new filters
-    loadRowContent(category, newFilters);
-    
-    // 4. IMMEDIATELY open the full view as requested.
+    // 3. IMMEDIATELY open the full view as requested.
     openFullView(category);
 }
 
@@ -522,7 +509,7 @@ async function showDetails(item, isFullViewOpen = false) {
 
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
-  const isTVShow = item.media_type === 'tv' || (item.name && !item.title && item.media_type !== 'movie'); // Ensure it's treated as TV if it has a 'name' and isn't explicitly a 'movie'
+  const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
 
   if (isTVShow) {
     seasonSelector.style.display = 'block';
@@ -530,19 +517,15 @@ async function showDetails(item, isFullViewOpen = false) {
     const seasonSelect = document.getElementById('season');
     seasonSelect.innerHTML = '';
     
-    const validSeasons = seasons.filter(s => s.season_number > 0);
-    validSeasons.forEach(season => {
+    seasons.filter(s => s.season_number > 0).forEach(season => {
       const option = document.createElement('option');
       option.value = season.season_number;
       option.textContent = `Season ${season.season_number}`;
       seasonSelect.appendChild(option);
     });
     
-    currentSeason = validSeasons[0]?.season_number || 1;
+    currentSeason = seasons.find(s => s.season_number > 0)?.season_number || 1;
     seasonSelect.value = currentSeason;
-    
-    // Set up event listener for season change
-    seasonSelect.onchange = loadEpisodes;
     
     await loadEpisodes();
   } else {
@@ -563,14 +546,9 @@ async function loadEpisodes() {
   if (!currentItem) return;
   const seasonNumber = document.getElementById('season').value;
   currentSeason = seasonNumber;
+  const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
   const episodeList = document.getElementById('episode-list');
   episodeList.innerHTML = '';
-  
-  // Show loading indicator in the episode list
-  episodeList.innerHTML = '<p class="loading" style="color: #ccc; width: 100%; text-align: center;">Loading episodes...</p>';
-  
-  const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
-  episodeList.innerHTML = ''; // Clear loading indicator
   currentEpisode = 1; 
 
   episodes.forEach(episode => {
@@ -590,18 +568,14 @@ async function loadEpisodes() {
   });
   
   if (episodes.length > 0) {
-      // Automatically click the first episode to load it
       episodeList.querySelector('.episode-item')?.click();
-  } else {
-       episodeList.innerHTML = '<p style="color: #ccc; width: 100%; text-align: center;">No episodes found for this season.</p>';
   }
 }
 
 function changeServer() {
   if (!currentItem) return;
   const server = document.getElementById('server').value;
-  // Use currentItem.media_type, fallback to heuristic if needed
-  const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv'); 
+  const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   let embedURL = '';
 
   if (server === 'vidsrc.cc') {
@@ -626,10 +600,6 @@ function closeModal() {
   document.getElementById('modal-video').src = '';
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
-  
-  // Remove season change listener to prevent memory leak/unexpected behavior
-  const seasonSelect = document.getElementById('season');
-  if (seasonSelect) seasonSelect.onchange = null;
   
   // 📢 NEW: If the full view modal was open before, show it again.
   const fullViewModal = document.getElementById('full-view-modal');
@@ -723,11 +693,6 @@ async function init() {
       clearFilters(button.getAttribute('data-category'));
     });
   });
-  
-  // Set up listener for search input and filter buttons
-  document.getElementById('search-input')?.addEventListener('input', debouncedSearchTMDB);
-  document.getElementById('apply-filters-btn')?.addEventListener('click', applyFilters);
-  document.getElementById('filter-modal-close')?.addEventListener('click', () => document.getElementById('filter-modal').style.display = 'none');
 
 
   try {
@@ -771,11 +736,6 @@ async function init() {
     displayList(netflixMoviesData.results.slice(0, 15), 'netflix-movies-list');
     displayList(netflixTVData.results.slice(0, 15), 'netflix-tv-list');
     displayList(koreanDramaData.results.slice(0, 15), 'korean-drama-list');
-    
-    // Ensure filter buttons reflect the initial (empty) state
-    Object.keys(categoryState).forEach(category => {
-        updateFilterButtons(category, categoryState[category].filters);
-    });
     
   } catch (error) {
     console.error('Fatal initialization error:', error);
