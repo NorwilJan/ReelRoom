@@ -1,7 +1,7 @@
 // js/home.js
 const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
-const IMG_URL = 'https://image.tmdb.org/t/p/original';
+const IMG_URL = 'https://image.themoviedb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
 let currentSeason = 1;
@@ -237,8 +237,7 @@ function changeSlide(n) {
 }
 
 /**
- * Restored: displayList now appends items for infinite scroll, but clears for filter changes.
- * The only way to clear content is via loadRowContent (which is called when filters change).
+ * displayList appends items for infinite scroll, but clears for filter changes.
  */
 function displayList(items, containerId) {
   const container = document.getElementById(containerId);
@@ -267,7 +266,7 @@ function displayList(items, containerId) {
   });
 }
 
-// --- MAIN ROW INFINITE SCROLL LOGIC (RESTORED & ADAPTED) ---
+// --- MAIN ROW INFINITE SCROLL LOGIC ---
 
 function addScrollListener(category) {
   const containerId = category + '-list';
@@ -311,7 +310,7 @@ async function loadMore(category) {
         state.page--; 
         console.log(`${category} reached end of available content.`);
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
-        isLoading[category] = false;
+        state.isLoading = false;
         return;
     }
     
@@ -333,7 +332,7 @@ async function loadMore(category) {
 function updateFilterButtons(category, filters) {
     const row = document.getElementById(`${category}-row`);
     const filterBtn = row.querySelector('.filter-btn');
-    const clearBtn = row.querySelector('.clear-filter-btn');
+    const clearBtn = row.querySelector('.clear-filter-btn'); // Assumes this button exists in your HTML
     
     if (!filterBtn || !clearBtn) return; 
 
@@ -346,11 +345,13 @@ function updateFilterButtons(category, filters) {
         filterBtn.textContent = `Filtered ${genreName} ${yearText}`.trim();
         filterBtn.style.background = 'red';
         filterBtn.style.color = 'white';
+        // Show the Clear Filters button
         clearBtn.style.display = 'inline-block';
     } else {
         filterBtn.innerHTML = '<i class="fas fa-filter"></i> Filter';
         filterBtn.style.background = '#444';
         filterBtn.style.color = '#fff';
+        // Hide the Clear Filters button
         clearBtn.style.display = 'none';
     }
 }
@@ -382,10 +383,24 @@ async function loadRowContent(category, filters = {}) {
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
 }
 
+/**
+ * 🆕 Clears filters and reloads the row content.
+ */
 function clearFilters(category) {
     // Reset filters and load the original content
     categoryState[category].filters = {};
     loadRowContent(category);
+}
+
+
+/**
+ * 🆕 Function to scroll the full view modal back to the top.
+ */
+function scrollToTopFullView(category) {
+    const listContainer = document.getElementById(`${category}-full-list`);
+    if (listContainer) {
+        listContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
 
 
@@ -405,6 +420,7 @@ function openFullView(category) {
         <span class="close" onclick="closeFullView()" style="color: red;">&times;</span>
         <h2 style="text-transform: uppercase;">${title}</h2>
         <div class="results" id="${category}-full-list"></div>
+        <button id="scroll-to-top-btn" class="scroll-to-top-btn" onclick="scrollToTopFullView('${category}')" style="display: none;"><i class="fas fa-arrow-up"></i></button>
     `;
 
     // Reset pagination to 0 so the first call increments it to page 1 for the full view
@@ -412,10 +428,22 @@ function openFullView(category) {
     loadMoreFullView(category, filters, true); // Initial load
     
     const listContainer = document.getElementById(`${category}-full-list`);
-    // Add infinite scroll listener for the full view
+    const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
+
+    // Add infinite scroll listener AND scroll-to-top button visibility logic
     listContainer.onscroll = function () {
         scrollPosition = listContainer.scrollTop; 
         
+        // Toggle visibility of the scroll-to-top button
+        if (scrollToTopBtn) {
+             if (listContainer.scrollTop > 300) {
+                 scrollToTopBtn.style.display = 'block';
+             } else {
+                 scrollToTopBtn.style.display = 'none';
+             }
+        }
+        
+        // Infinite scroll logic
         if (
             !categoryState[category].isLoading &&
             listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
@@ -549,7 +577,7 @@ function openFilterModal(category) {
 }
 
 /**
- * Updates filters and IMMEDIATELY auto-opens the full view.
+ * Updates filters and reloads the row content.
  */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
@@ -569,10 +597,6 @@ function applyFilters() {
     
     // 3. Re-load the main row content with new filters (this clears the row and loads page 1)
     loadRowContent(category, newFilters);
-    
-    // 4. Optionally, you can still open the full view automatically, but I removed the auto-open 
-    // here to allow the user to see the filtered row first. If you must auto-open:
-    // openFullView(category);
 }
 
 
@@ -763,6 +787,7 @@ async function init() {
     });
   });
   
+  // 🆕 Clear Filters Button Listener
   document.querySelectorAll('.clear-filter-btn').forEach(button => {
     button.addEventListener('click', (e) => {
       e.preventDefault();
@@ -812,7 +837,7 @@ async function init() {
     displayList(netflixTVData.results, 'netflix-tv-list');
     displayList(koreanDramaData.results, 'korean-drama-list');
     
-    // Setup infinite scroll listeners for the main rows (RESTORED)
+    // Setup infinite scroll listeners for the main rows
     addScrollListener('movies');
     addScrollListener('tvshows');
     addScrollListener('anime');
@@ -820,6 +845,11 @@ async function init() {
     addScrollListener('netflix-movies');
     addScrollListener('netflix-tv');
     addScrollListener('korean-drama');
+    
+    // Initialize filter buttons to ensure "Clear Filters" is hidden
+    Object.keys(categoryState).forEach(category => {
+        updateFilterButtons(category, categoryState[category].filters);
+    });
 
   } catch (error) {
     console.error('Fatal initialization error:', error);
