@@ -370,7 +370,7 @@ async function loadMoreFullView(category, filters) {
 
     const items = data.results || [];
     
-    // FIX: Only treat an empty result as the end of content if we are past the first page.
+    // Check for end of content
     if (items.length === 0) {
         if (currentPage > 1) { 
             state.page--; // Decrement if we tried to scroll past the last page
@@ -439,22 +439,26 @@ function openFilterModal(category) {
     document.getElementById('filter-modal').style.display = 'flex';
 }
 
+/**
+ * 📢 REVISED FUNCTION: Updates the row content, but does NOT auto-open the full view. 
+ * The user must now click "Show More" after filtering, which is much clearer.
+ */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
     const genre = document.getElementById('filter-genre').value;
-    const category = currentCategoryToFilter; // Use a dedicated variable
+    const category = currentCategoryToFilter;
 
     // 1. Close the filter modal
     document.getElementById('filter-modal').style.display = 'none';
     
     const newFilters = { year: year, genre: genre };
 
-    // 2. IMPORTANT: Update the filter state and the visual button indicator
-    categoryState[category].filters = newFilters;
-    updateFilterButtons(category, newFilters);
+    // 2. Update the filter state and reload the main content row.
+    // This provides immediate visual feedback to the user on the home screen.
+    loadRowContent(category, newFilters);
     
-    // 3. IMMEDIATELY open the full view for infinite scrolling of the filtered content
-    openFullView(category);
+    // 3. NO auto-open of openFullView(category) here!
+    // The user will now see the filtered results in the row and click "Show More" manually.
 }
 
 // --- DETAILS MODAL LOGIC ---
