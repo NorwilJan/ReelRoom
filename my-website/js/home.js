@@ -1,7 +1,8 @@
 // js/home.js
 const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
-const IMG_URL = 'https://image.themoviedb.org/t/p/original';
+// FIX APPLIED: Corrected image domain from themoviedb.org to tmdb.org
+const IMG_URL = 'https://image.tmdb.org/t/p/original'; 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
 let currentSeason = 1;
@@ -149,7 +150,7 @@ function showLoading(containerId) {
   container.appendChild(loading);
 }
 
-// --- SLIDESHOW LOGIC (omitted for brevity, assume unchanged) ---
+// --- SLIDESHOW LOGIC ---
 
 function displaySlides() {
     const slidesContainer = document.getElementById('slides');
@@ -290,7 +291,7 @@ function openFullView(category) {
     currentFullView = category;
     const filters = categoryState[category].filters;
     
-    // Check if modal already exists (e.g., if filter was applied while it was open)
+    // Check if modal already exists
     let fullViewContainer = document.getElementById('full-view-modal');
     if (!fullViewContainer) {
         fullViewContainer = document.createElement('div');
@@ -304,6 +305,7 @@ function openFullView(category) {
             <div class="results" id="${category}-full-list"></div>
         `;
 
+        // Set up the infinite scroll listener
         const listContainer = document.getElementById(`${category}-full-list`);
         listContainer.onscroll = function () {
             // Save the scroll position
@@ -321,7 +323,7 @@ function openFullView(category) {
     const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     document.getElementById('full-view-title').textContent = title;
     
-    // Clear and re-load content for the new filter
+    // Clear and re-load content for the new filter/view
     const listContainer = document.getElementById(`${category}-full-list`);
     listContainer.innerHTML = '';
     
@@ -402,7 +404,7 @@ async function loadMoreFullView(category, filters) {
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
     
     // Restore scroll position after content loads 
-    if (scrollPosition > 0) {
+    if (scrollPosition > 0 && currentPage === 1) { // Only restore on first load after a jump
         container.scrollTop = scrollPosition;
         scrollPosition = 0; // Clear it after restoration
     }
@@ -445,7 +447,7 @@ function openFilterModal(category) {
 }
 
 /**
- * 📢 REVISED FUNCTION: Updates Home Row AND immediately auto-opens the full view.
+ * REVISED FUNCTION: Updates Home Row AND immediately auto-opens the full view.
  */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
@@ -465,7 +467,7 @@ function applyFilters() {
     openFullView(category);
 }
 
-// --- DETAILS MODAL LOGIC (omitted for brevity, assume unchanged except for closeModal) ---
+// --- DETAILS MODAL LOGIC ---
 
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
@@ -530,8 +532,12 @@ async function showDetails(item, isFullViewOpen = false) {
   changeServer();
   document.getElementById('modal').style.display = 'flex';
   
-  // 📢 Ensure the full view modal is hidden when the details modal opens
+  // Hide the full view modal temporarily if it was open
   if (isFullViewOpen) {
+      const listContainer = document.getElementById(`${currentFullView}-full-list`);
+      if (listContainer) {
+          scrollPosition = listContainer.scrollTop; // Save scroll position before hiding
+      }
       document.getElementById('full-view-modal').style.display = 'none';
   }
 }
@@ -595,21 +601,21 @@ function closeModal() {
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
   
-  // 📢 RETAIN SCROLL/VIEW: If the full view modal was open before, show it again.
+  // RETAIN SCROLL/VIEW: If the full view modal was open before, show it again.
   const fullViewModal = document.getElementById('full-view-modal');
   if (fullViewModal) {
       fullViewModal.style.display = 'flex';
       
-      // Save the current scroll position of the full view list before focusing out
+      // Restore the scroll position of the full view list
       const listContainer = document.getElementById(`${currentFullView}-full-list`);
       if (listContainer) {
-          scrollPosition = listContainer.scrollTop; 
+          listContainer.scrollTop = scrollPosition; 
       }
   }
 }
 
 
-// --- SEARCH MODAL LOGIC (omitted for brevity, assume unchanged) ---
+// --- SEARCH MODAL LOGIC ---
 
 function openSearchModal() {
   document.getElementById('search-modal').style.display = 'flex';
