@@ -1,7 +1,7 @@
 // js/home.js
 const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
-const IMG_URL = 'https://image.tmdb.org/t/p/original';
+const IMG_URL = 'https://image.themoviedb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 let currentItem;
 let currentSeason = 1;
@@ -23,7 +23,7 @@ let categoryState = {
 
 let currentFullView = null; // Tracks the category currently in the full view
 let currentCategoryToFilter = null; // Tracks the category targeted by the filter modal
-let scrollPosition = 0; // NEW: To save the scroll position of the full view grid
+let scrollPosition = 0; // To save the scroll position of the full view grid
 
 // Simplified Genre IDs for the filter dropdown
 const GENRES = [
@@ -78,7 +78,6 @@ async function testApiKey() {
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
         const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
-        // Correctly apply year and genre filters
         const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
         let fetchURL = '';
         let mediaType = category.includes('movie') ? 'movie' : 'tv';
@@ -88,7 +87,6 @@ async function fetchCategoryContent(category, page, filters = {}) {
         } else if (category === 'tvshows') {
             fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
         } else if (category === 'anime') {
-            // Anime base filters: genre 16 and Japanese language, augmented by user filters
             fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja${baseParams}${filterParams}`;
         } else if (category === 'tagalog-movies') {
             fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${filterParams}`;
@@ -97,7 +95,6 @@ async function fetchCategoryContent(category, page, filters = {}) {
         } else if (category === 'netflix-tv') {
             fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
         } else if (category === 'korean-drama') {
-            // KDrama base filters: Korean language and Drama genre 18, augmented by user filters
             fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18${baseParams}${filterParams}`;
         } else {
             throw new Error('Unknown category.');
@@ -107,7 +104,6 @@ async function fetchCategoryContent(category, page, filters = {}) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         
-        // Ensure media_type is set for Discover results
         if (data.results) {
             data.results.forEach(item => item.media_type = item.media_type || mediaType);
         }
@@ -153,66 +149,67 @@ function showLoading(containerId) {
   container.appendChild(loading);
 }
 
-// --- SLIDESHOW LOGIC ---
+// --- SLIDESHOW LOGIC (omitted for brevity, assume unchanged) ---
 
 function displaySlides() {
-  const slidesContainer = document.getElementById('slides');
-  const dotsContainer = document.getElementById('dots');
-  
-  slidesContainer.innerHTML = '';
-  dotsContainer.innerHTML = '';
-  removeLoadingAndError('slides');
+    const slidesContainer = document.getElementById('slides');
+    const dotsContainer = document.getElementById('dots');
+    
+    slidesContainer.innerHTML = '';
+    dotsContainer.innerHTML = '';
+    removeLoadingAndError('slides');
 
-  if (slideshowItems.length === 0) {
-    slidesContainer.innerHTML = '<h1 class="loading">No featured content available</h1>';
-    return;
-  }
+    if (slideshowItems.length === 0) {
+        slidesContainer.innerHTML = '<h1 class="loading">No featured content available</h1>';
+        return;
+    }
 
-  slideshowItems.forEach((item, index) => {
-    if (!item.backdrop_path) return;
-    const slide = document.createElement('div');
-    slide.className = 'slide';
-    slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
-    slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
-    slide.onclick = () => showDetails(item);
-    slidesContainer.appendChild(slide);
+    slideshowItems.forEach((item, index) => {
+        if (!item.backdrop_path) return;
+        const slide = document.createElement('div');
+        slide.className = 'slide';
+        slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
+        slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
+        slide.onclick = () => showDetails(item);
+        slidesContainer.appendChild(slide);
 
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    if (index === currentSlide) dot.className += ' active';
-    dot.onclick = () => {
-      currentSlide = index;
-      showSlide();
-    };
-    dotsContainer.appendChild(dot);
-  });
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        if (index === currentSlide) dot.className += ' active';
+        dot.onclick = () => {
+        currentSlide = index;
+        showSlide();
+        };
+        dotsContainer.appendChild(dot);
+    });
 
-  showSlide();
+    showSlide();
 }
 
 function showSlide() {
-  const slides = document.querySelectorAll('.slide');
-  const dots = document.querySelectorAll('.dot');
-  if (slides.length === 0) return;
-  slides.forEach((slide, index) => {
-    slide.style.transform = `translateX(-${currentSlide * 100}%)`;
-  });
-  dots.forEach((dot, index) => {
-    dot.className = index === currentSlide ? 'dot active' : 'dot';
-  });
-  clearInterval(slideshowInterval);
-  slideshowInterval = setInterval(() => {
-    currentSlide = (currentSlide + 1) % slides.length;
-    showSlide();
-  }, 5000);
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    if (slides.length === 0) return;
+    slides.forEach((slide, index) => {
+        slide.style.transform = `translateX(-${currentSlide * 100}%)`;
+    });
+    dots.forEach((dot, index) => {
+        dot.className = index === currentSlide ? 'dot active' : 'dot';
+    });
+    clearInterval(slideshowInterval);
+    slideshowInterval = setInterval(() => {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide();
+    }, 5000);
 }
 
 function changeSlide(n) {
-  const slides = document.querySelectorAll('.slide');
-  if (slides.length === 0) return;
-  currentSlide = (currentSlide + n + slides.length) % slides.length;
-  showSlide();
+    const slides = document.querySelectorAll('.slide');
+    if (slides.length === 0) return;
+    currentSlide = (currentSlide + n + slides.length) % slides.length;
+    showSlide();
 }
+
 
 // --- MAIN PAGE LIST DISPLAY ---
 
@@ -249,11 +246,9 @@ function updateFilterButtons(category, filters) {
     const isFiltered = filters.year || filters.genre;
 
     if (isFiltered) {
-        // Use an indicator for active filter
         const genreName = filters.genre ? (GENRES.find(g => g.id == filters.genre)?.name || 'Genre') : '';
         const yearText = filters.year || '';
         
-        // Ensure to always show the filter icon with the text
         filterBtn.textContent = `Filtered ${genreName} ${yearText}`.trim();
         filterBtn.style.background = 'red';
         filterBtn.style.color = 'white';
@@ -274,13 +269,11 @@ async function loadRowContent(category, filters = {}) {
     const containerId = `${category}-list`;
     showLoading(containerId);
 
-    // Fetch only the first page for the main row preview
     const data = await fetchCategoryContent(category, 1, filters);
     
-    // Update the state with the applied filters
     state.filters = filters;
 
-    displayList(data.results.slice(0, 15), containerId); // Limit to 15 for the row view
+    displayList(data.results.slice(0, 15), containerId);
     updateFilterButtons(category, filters);
     
     state.isLoading = false;
@@ -288,7 +281,6 @@ async function loadRowContent(category, filters = {}) {
 }
 
 function clearFilters(category) {
-    // Reset filters and load the original content
     categoryState[category].filters = {};
     loadRowContent(category);
 }
@@ -296,46 +288,55 @@ function clearFilters(category) {
 
 function openFullView(category) {
     currentFullView = category;
-    const filters = categoryState[category].filters; // Use currently applied row filters
+    const filters = categoryState[category].filters;
     
-    // Create and display a new modal/container for full view
-    const fullViewContainer = document.createElement('div');
-    fullViewContainer.id = 'full-view-modal';
-    fullViewContainer.className = 'search-modal';
-    fullViewContainer.style.display = 'flex';
-    document.body.appendChild(fullViewContainer);
+    // Check if modal already exists (e.g., if filter was applied while it was open)
+    let fullViewContainer = document.getElementById('full-view-modal');
+    if (!fullViewContainer) {
+        fullViewContainer = document.createElement('div');
+        fullViewContainer.id = 'full-view-modal';
+        fullViewContainer.className = 'search-modal';
+        document.body.appendChild(fullViewContainer);
+        
+        fullViewContainer.innerHTML = `
+            <span class="close" onclick="closeFullView()" style="color: red;">&times;</span>
+            <h2 id="full-view-title" style="text-transform: uppercase;"></h2>
+            <div class="results" id="${category}-full-list"></div>
+        `;
+
+        const listContainer = document.getElementById(`${category}-full-list`);
+        listContainer.onscroll = function () {
+            // Save the scroll position
+            scrollPosition = listContainer.scrollTop; 
+            
+            if (
+                !categoryState[category].isLoading &&
+                listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
+            ) {
+                loadMoreFullView(category, filters);
+            }
+        };
+    }
 
     const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    document.getElementById('full-view-title').textContent = title;
     
-    fullViewContainer.innerHTML = `
-        <span class="close" onclick="closeFullView()" style="color: red;">&times;</span>
-        <h2 style="text-transform: uppercase;">${title}</h2>
-        <div class="results" id="${category}-full-list"></div>
-    `;
-
+    // Clear and re-load content for the new filter
+    const listContainer = document.getElementById(`${category}-full-list`);
+    listContainer.innerHTML = '';
+    
     // Reset pagination to 0 so the first call increments it to page 1
     categoryState[category].page = 0; 
-    loadMoreFullView(category, filters);
     
-    const listContainer = document.getElementById(`${category}-full-list`);
-    listContainer.onscroll = function () {
-        // Save the scroll position whenever the user scrolls
-        scrollPosition = listContainer.scrollTop; 
-        
-        if (
-            !categoryState[category].isLoading &&
-            listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
-        ) {
-            loadMoreFullView(category, filters);
-        }
-    };
+    loadMoreFullView(category, filters);
+    fullViewContainer.style.display = 'flex';
 }
 
 function closeFullView() {
     const modal = document.getElementById('full-view-modal');
     if (modal) modal.remove();
     currentFullView = null;
-    scrollPosition = 0; // Reset scroll position when closing the full view
+    scrollPosition = 0;
 }
 
 // Helper to display images in the grid (similar to search results)
@@ -349,7 +350,7 @@ function displayFullList(items, containerId) {
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
     
-    // 📢 CHANGE: Only close the movie details modal, NOT the full view modal
+    // Pass 'true' to indicate the full view is open and should be hidden, not closed
     img.onclick = () => showDetails(item, true); 
     
     container.appendChild(img);
@@ -375,17 +376,14 @@ async function loadMoreFullView(category, filters) {
 
     const items = data.results || [];
     
-    // Check for end of content
     if (items.length === 0) {
         if (currentPage > 1) { 
-            state.page--; // Decrement if we tried to scroll past the last page
+            state.page--;
         }
-        console.log(`${category} reached end of available content or found no content matching filter.`);
         
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
         state.isLoading = false;
         
-        // Show a "no results" message only if no items were ever loaded into the container.
         if (container.children.length === 0) {
             container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content matches your active filter in the full view.</p>';
         }
@@ -398,14 +396,15 @@ async function loadMoreFullView(category, filters) {
   } catch (error) {
     console.error(`Error loading more for ${category}:`, error);
     showError(`Failed to load more ${category}.`, containerId);
-    state.page--; // Decrement page on fetch error
+    state.page--;
   } finally {
     state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
     
-    // Restore scroll position after content loads (only needed for the first load)
-    if (currentPage === 1 && scrollPosition > 0) {
+    // Restore scroll position after content loads 
+    if (scrollPosition > 0) {
         container.scrollTop = scrollPosition;
+        scrollPosition = 0; // Clear it after restoration
     }
   }
 }
@@ -416,11 +415,9 @@ function populateFilterOptions() {
     const yearSelect = document.getElementById('filter-year');
     const genreSelect = document.getElementById('filter-genre');
     
-    // Clear previous options
     yearSelect.innerHTML = '<option value="">Any Year</option>';
     genreSelect.innerHTML = '<option value="">Any Genre</option>';
     
-    // Populate Years (last 20 years)
     const currentYear = new Date().getFullYear();
     for (let i = 0; i < 20; i++) {
         const year = currentYear - i;
@@ -428,7 +425,6 @@ function populateFilterOptions() {
         yearSelect.appendChild(option);
     }
     
-    // Populate Genres
     GENRES.forEach(genre => {
         const option = new Option(genre.name, genre.id);
         genreSelect.appendChild(option);
@@ -441,7 +437,6 @@ function openFilterModal(category) {
     const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     document.getElementById('filter-modal-title').textContent = `Filter ${title}`;
     
-    // Load current filters into the dropdowns
     const currentFilters = categoryState[category].filters;
     document.getElementById('filter-year').value = currentFilters.year || '';
     document.getElementById('filter-genre').value = currentFilters.genre || '';
@@ -450,7 +445,7 @@ function openFilterModal(category) {
 }
 
 /**
- * 📢 FINAL REVISED FUNCTION: Updates filters and IMMEDIATELY auto-opens the full view.
+ * 📢 REVISED FUNCTION: Updates Home Row AND immediately auto-opens the full view.
  */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
@@ -462,15 +457,15 @@ function applyFilters() {
     
     const newFilters = { year: year, genre: genre };
 
-    // 2. Update the filter state and the visual button indicator
+    // 2. Update the filter state and the row content (immediate feedback)
     categoryState[category].filters = newFilters;
-    updateFilterButtons(category, newFilters);
+    loadRowContent(category, newFilters);
     
-    // 3. IMMEDIATELY open the full view as requested.
+    // 3. IMMEDIATELY open the full view as requested (instant transition to infinite scroll).
     openFullView(category);
 }
 
-// --- DETAILS MODAL LOGIC ---
+// --- DETAILS MODAL LOGIC (omitted for brevity, assume unchanged except for closeModal) ---
 
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
@@ -496,7 +491,6 @@ async function fetchEpisodes(tvId, seasonNumber) {
   }
 }
 
-// 📢 CHANGE: Added optional parameter to indicate if the full view is open
 async function showDetails(item, isFullViewOpen = false) {
   currentItem = item;
   currentSeason = 1;
@@ -505,7 +499,7 @@ async function showDetails(item, isFullViewOpen = false) {
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
   document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
   document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
-  document.getElementById('server').value = 'player.videasy.net'; // Default server
+  document.getElementById('server').value = 'player.videasy.net'; 
 
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
@@ -536,7 +530,7 @@ async function showDetails(item, isFullViewOpen = false) {
   changeServer();
   document.getElementById('modal').style.display = 'flex';
   
-  // 📢 NEW: Hide the full view modal temporarily if it was open
+  // 📢 Ensure the full view modal is hidden when the details modal opens
   if (isFullViewOpen) {
       document.getElementById('full-view-modal').style.display = 'none';
   }
@@ -601,15 +595,21 @@ function closeModal() {
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
   
-  // 📢 NEW: If the full view modal was open before, show it again.
+  // 📢 RETAIN SCROLL/VIEW: If the full view modal was open before, show it again.
   const fullViewModal = document.getElementById('full-view-modal');
   if (fullViewModal) {
       fullViewModal.style.display = 'flex';
+      
+      // Save the current scroll position of the full view list before focusing out
+      const listContainer = document.getElementById(`${currentFullView}-full-list`);
+      if (listContainer) {
+          scrollPosition = listContainer.scrollTop; 
+      }
   }
 }
 
 
-// --- SEARCH MODAL LOGIC ---
+// --- SEARCH MODAL LOGIC (omitted for brevity, assume unchanged) ---
 
 function openSearchModal() {
   document.getElementById('search-modal').style.display = 'flex';
@@ -682,21 +682,20 @@ async function init() {
 
   document.querySelectorAll('.filter-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      e.preventDefault(); // Prevent default link behavior if applicable
+      e.preventDefault();
       openFilterModal(button.getAttribute('data-category'));
     });
   });
   
   document.querySelectorAll('.clear-filter-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      e.preventDefault(); // Prevent default link behavior if applicable
+      e.preventDefault();
       clearFilters(button.getAttribute('data-category'));
     });
   });
 
 
   try {
-    // Show loading for all sections initially
     showLoading('slides');
     showLoading('movies-list');
     showLoading('tvshows-list');
@@ -706,7 +705,6 @@ async function init() {
     showLoading('netflix-tv-list');
     showLoading('korean-drama-list');
 
-    // Fetch and display all rows concurrently (no filters applied yet)
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
       fetchCategoryContent('movies', 1),
       fetchCategoryContent('tvshows', 1),
@@ -717,18 +715,15 @@ async function init() {
       fetchCategoryContent('korean-drama', 1)
     ]);
 
-    // Prepare data for the slideshow (using the initial page 1 results)
     const allResults = [
         ...moviesData.results, ...tvShowsData.results, ...animeData.results,
         ...tagalogMoviesData.results, ...netflixMoviesData.results, ...netflixTVData.results,
         ...koreanDramaData.results
     ].filter(item => item && item.backdrop_path);
 
-    // Create unique slideshow items from the fetched results
     slideshowItems = allResults.slice(0, 7);
     displaySlides();
 
-    // Display the initial rows (limited to 15 items)
     displayList(moviesData.results.slice(0, 15), 'movies-list');
     displayList(tvShowsData.results.slice(0, 15), 'tvshows-list');
     displayList(animeData.results.slice(0, 15), 'anime-list');
