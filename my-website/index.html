@@ -17,6 +17,7 @@
     <h1 class="logo-text">REELROOM</h1>
     <div class="nav-links">
       <a href="index.html">Home</a>
+      <a href="#favorites-row">My List</a> 
       <button class="search-icon-btn" onclick="openSearchModal()">
         <i class="fas fa-search"></i>
       </button>
@@ -32,11 +33,22 @@
     </div>
   </div>
 
+  <div class="row" id="favorites-row">
+    <div class="row-header">
+        <h2>My List / Favorites</h2>
+        <div>
+            <a href="#" class="show-more-link" data-category="favorites">Show All &raquo;</a>
+        </div>
+    </div>
+    <div class="list" id="favorites-list"></div>
+  </div>
+
   <div class="row" id="movies-row">
     <div class="row-header">
         <h2>Trending Movies</h2>
         <div>
             <button class="filter-btn" data-category="movies"><i class="fas fa-filter"></i> Filter</button>
+            <button class="filter-btn clear-filter-btn" data-category="movies" style="display:none;"><i class="fas fa-times"></i> Clear</button> 
             <a href="#" class="show-more-link" data-category="movies">Show More &raquo;</a>
         </div>
     </div>
@@ -48,17 +60,28 @@
         <h2>Trending TV Shows</h2>
         <div>
             <button class="filter-btn" data-category="tvshows"><i class="fas fa-filter"></i> Filter</button>
+            <button class="filter-btn clear-filter-btn" data-category="tvshows" style="display:none;"><i class="fas fa-times"></i> Clear</button> 
             <a href="#" class="show-more-link" data-category="tvshows">Show More &raquo;</a>
         </div>
     </div>
     <div class="list" id="tvshows-list"></div>
   </div>
 
+  <div class="row" id="recent-row">
+    <div class="row-header">
+        <h2>Continue Watching / Recently Viewed</h2>
+        <div>
+            </div>
+    </div>
+    <div class="list" id="recent-list"></div>
+  </div>
+  
   <div class="row" id="anime-row">
     <div class="row-header">
         <h2>Trending Anime</h2>
         <div>
             <button class="filter-btn" data-category="anime"><i class="fas fa-filter"></i> Filter</button>
+            <button class="filter-btn clear-filter-btn" data-category="anime" style="display:none;"><i class="fas fa-times"></i> Clear</button> 
             <a href="#" class="show-more-link" data-category="anime">Show More &raquo;</a>
         </div>
     </div>
@@ -70,6 +93,7 @@
         <h2>Trending Tagalog Movies</h2>
         <div>
             <button class="filter-btn" data-category="tagalog-movies"><i class="fas fa-filter"></i> Filter</button>
+            <button class="filter-btn clear-filter-btn" data-category="tagalog-movies" style="display:none;"><i class="fas fa-times"></i> Clear</button> 
             <a href="#" class="show-more-link" data-category="tagalog-movies">Show More &raquo;</a>
         </div>
     </div>
@@ -81,6 +105,7 @@
         <h2>Trending Netflix Movies</h2>
         <div>
             <button class="filter-btn" data-category="netflix-movies"><i class="fas fa-filter"></i> Filter</button>
+            <button class="filter-btn clear-filter-btn" data-category="netflix-movies" style="display:none;"><i class="fas fa-times"></i> Clear</button> 
             <a href="#" class="show-more-link" data-category="netflix-movies">Show More &raquo;</a>
         </div>
     </div>
@@ -92,6 +117,7 @@
         <h2>Trending Netflix TV Shows</h2>
         <div>
             <button class="filter-btn" data-category="netflix-tv"><i class="fas fa-filter"></i> Filter</button>
+            <button class="filter-btn clear-filter-btn" data-category="netflix-tv" style="display:none;"><i class="fas fa-times"></i> Clear</button> 
             <a href="#" class="show-more-link" data-category="netflix-tv">Show More &raquo;</a>
         </div>
     </div>
@@ -103,6 +129,7 @@
         <h2>Trending Korean Drama</h2>
         <div>
             <button class="filter-btn" data-category="korean-drama"><i class="fas fa-filter"></i> Filter</button>
+            <button class="filter-btn clear-filter-btn" data-category="korean-drama" style="display:none;"><i class="fas fa-times"></i> Clear</button> 
             <a href="#" class="show-more-link" data-category="korean-drama">Show More &raquo;</a>
         </div>
     </div>
@@ -120,6 +147,10 @@
           <div class="stars" id="modal-rating"></div>
           <p id="modal-description"></p>
         </div>
+      </div>
+      
+      <div style="margin-bottom: 15px; text-align: left;">
+          <button id="favorite-btn" onclick="toggleFavorite(currentItem)">🤍 Add to List</button>
       </div>
       <div class="server-selector">
         <label for="server">Change Server:</label>
