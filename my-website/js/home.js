@@ -12,6 +12,8 @@ let slideshowInterval;
 
 // Replaced simple currentPages/isLoading with a single state object from the 2nd code
 let categoryState = {
+    favorites: { page: 1, isLoading: false, filters: {} }, // NEW: Favorites state
+    recent: { page: 1, isLoading: false, filters: {} },    // NEW: Recent state (no API fetch, but kept for consistency)
     movies: { page: 1, isLoading: false, filters: {} },
     tvshows: { page: 1, isLoading: false, filters: {} },
     anime: { page: 1, isLoading: false, filters: {} },
@@ -74,6 +76,76 @@ async function testApiKey() {
     }
 }
 
+// --- LOCAL STORAGE & FAVORITES LOGIC (NEW) ---
+
+const FAVORITE_KEY = 'reelroom_favorites';
+const RECENT_KEY = 'reelroom_recent';
+const MAX_RECENT = 20;
+
+function getFavorites() {
+    return JSON.parse(localStorage.getItem(FAVORITE_KEY) || '[]');
+}
+
+function saveFavorites(favorites) {
+    localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
+    // After saving, refresh the favorites row
+    loadFavoritesRow(); 
+}
+
+function isFavorite(itemId, mediaType) {
+    const favorites = getFavorites();
+    return favorites.some(item => item.id === itemId && item.media_type === mediaType);
+}
+
+function toggleFavorite(item) {
+    const favorites = getFavorites();
+    const index = favorites.findIndex(fav => fav.id === item.id && fav.media_type === item.media_type);
+    
+    if (index > -1) {
+        favorites.splice(index, 1); // Remove
+        updateFavoriteButton(false);
+    } else {
+        // Add minimal data to save space (ID, type, poster path)
+        favorites.unshift({ 
+            id: item.id, 
+            media_type: item.media_type || (item.title ? 'movie' : 'tv'),
+            title: item.title || item.name,
+            poster_path: item.poster_path
+        });
+        updateFavoriteButton(true);
+    }
+    saveFavorites(favorites);
+}
+
+function updateFavoriteButton(isFav) {
+    const btn = document.getElementById('favorite-btn');
+    if (!btn) return;
+    btn.textContent = isFav ? '❤️ Added to List' : '🤍 Add to List';
+    btn.classList.toggle('active', isFav);
+}
+
+function addRecentlyViewed(item) {
+    let recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    const mediaType = item.media_type || (item.title ? 'movie' : 'tv');
+    
+    // Remove if already present (to move it to the front)
+    recent = recent.filter(r => r.id !== item.id || r.media_type !== mediaType);
+
+    // Prepend the new item (minimal data)
+    recent.unshift({ 
+        id: item.id, 
+        media_type: mediaType,
+        title: item.title || item.name,
+        poster_path: item.poster_path
+    });
+
+    // Limit the list size
+    recent = recent.slice(0, MAX_RECENT);
+    
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+    loadRecentRow(); // Refresh the recent row
+}
+
 // --- CORE FETCH FUNCTION (Handles all categories and filters) ---
 
 async function fetchCategoryContent(category, page, filters = {}) {
@@ -119,6 +191,62 @@ async function fetchCategoryContent(category, page, filters = {}) {
     }
 }
 
+// --- NEW: FETCH FAVORITES DETAILS (REQUIRED FOR FAVORITES ROW) ---
+
+async function fetchItemDetails(itemId, mediaType) {
+    try {
+        const res = await fetch(`${BASE_URL}/${mediaType}/${itemId}?api_key=${API_KEY}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        data.media_type = mediaType; // Ensure media_type is set
+        return data;
+    } catch (error) {
+        console.error(`Error fetching details for ${mediaType} ${itemId}:`, error);
+        return null;
+    }
+}
+
+async function loadFavoritesRow() {
+    const containerId = 'favorites-list';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    showLoading(containerId);
+    container.innerHTML = '';
+    
+    const favorites = getFavorites();
+    if (favorites.length === 0) {
+        container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">Your list is empty. Add a movie or show to your favorites!</p>';
+        removeLoadingAndError(containerId);
+        return;
+    }
+
+    // Fetch details for each favorite item (can be slow, but is required)
+    const detailPromises = favorites.map(fav => fetchItemDetails(fav.id, fav.media_type));
+    const detailedItems = (await Promise.all(detailPromises)).filter(item => item !== null);
+    
+    displayList(detailedItems, containerId, true); // Use true to clear before displaying
+    removeLoadingAndError(containerId);
+}
+
+function loadRecentRow() {
+    const containerId = 'recent-list';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    const recentItems = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    
+    if (recentItems.length === 0) {
+        container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">Start watching something to see it here!</p>';
+        return;
+    }
+
+    // Display the minimal data saved in localStorage (no extra API call)
+    displayList(recentItems, containerId, true);
+}
+
+// --- END NEW LOCAL STORAGE LOGIC ---
 
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
@@ -196,6 +324,8 @@ function displaySlides() {
     slide.className = 'slide';
     slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
     slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
+    // Pass the media_type explicitly if missing
+    item.media_type = item.media_type || (item.title ? 'movie' : 'tv');
     slide.onclick = () => showDetails(item);
     slidesContainer.appendChild(slide);
 
@@ -237,10 +367,9 @@ function changeSlide(n) {
 }
 
 /**
- * Restored: displayList now appends items for infinite scroll, but clears for filter changes.
- * The only way to clear content is via loadRowContent (which is called when filters change).
+ * Updated: displayList now accepts a clear parameter for non-infinite scroll lists (Favorites/Recent).
  */
-function displayList(items, containerId) {
+function displayList(items, containerId, clear = false) {
   const container = document.getElementById(containerId);
   if (!container) {
     console.error(`Container ${containerId} not found`);
@@ -248,6 +377,11 @@ function displayList(items, containerId) {
   }
   
   removeLoadingAndError(containerId);
+  
+  // Only clear the container if explicitly told to (for non-infinite lists) or if it's a fresh query (handled by loadRowContent)
+  if (clear || (categoryState[containerId.split('-')[0]].page === 1 && container.children.length === 0)) {
+     container.innerHTML = '';
+  }
 
   if (items.length === 0 && container.children.length === 0) {
     container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content available.</p>';
@@ -255,13 +389,17 @@ function displayList(items, containerId) {
   }
 
   items.forEach(item => {
+    // Ensure media_type is set for recently viewed and favorites from storage
+    item.media_type = item.media_type || (item.title ? 'movie' : 'tv');
+
     // Check if the item already exists before appending (crucial for infinite scroll)
-    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
+    if (container.querySelector(`img[data-id="${item.id}"][data-type="${item.media_type}"]`)) return;
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
     img.setAttribute('data-id', item.id);
+    img.setAttribute('data-type', item.media_type); // NEW: Add data-type for unique identification
     img.onclick = () => showDetails(item);
     container.appendChild(img);
   });
@@ -272,7 +410,8 @@ function displayList(items, containerId) {
 function addScrollListener(category) {
   const containerId = category + '-list';
   const container = document.getElementById(containerId);
-  if (!container) return;
+  // Favorites and Recent rows are NOT infinite scroll
+  if (!container || category === 'favorites' || category === 'recent') return; 
   
   // Remove existing listener to prevent duplicates
   container.onscroll = null; 
@@ -311,7 +450,7 @@ async function loadMore(category) {
         state.page--; 
         console.log(`${category} reached end of available content.`);
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
-        isLoading[category] = false;
+        state.isLoading = false;
         return;
     }
     
@@ -332,7 +471,10 @@ async function loadMore(category) {
 
 function updateFilterButtons(category, filters) {
     const row = document.getElementById(`${category}-row`);
-    const filterBtn = row.querySelector('.filter-btn');
+    // Skip favorites and recent, they don't have filters
+    if (!row || category === 'favorites' || category === 'recent') return; 
+    
+    const filterBtn = row.querySelector('.filter-btn:not(.clear-filter-btn)');
     const clearBtn = row.querySelector('.clear-filter-btn');
     
     if (!filterBtn || !clearBtn) return; 
@@ -356,6 +498,13 @@ function updateFilterButtons(category, filters) {
 }
 
 async function loadRowContent(category, filters = {}) {
+    // Skip favorites and recent, they have their own load functions
+    if (category === 'favorites' || category === 'recent') {
+        if (category === 'favorites') loadFavoritesRow();
+        if (category === 'recent') loadRecentRow();
+        return;
+    }
+    
     const state = categoryState[category];
     if (state.isLoading) return;
 
@@ -371,10 +520,10 @@ async function loadRowContent(category, filters = {}) {
     // Update the state with the applied filters
     state.filters = filters;
 
-    // Call displayList which will clear the container first since it's the start of a new query
+    // Clear the container for a new query
     const container = document.getElementById(containerId);
     if(container) container.innerHTML = '';
-    displayList(data.results, containerId); // Display all results from page 1
+    displayList(data.results, containerId, true); // Display all results from page 1 (clear=true)
     
     updateFilterButtons(category, filters);
     
@@ -385,7 +534,7 @@ async function loadRowContent(category, filters = {}) {
 function clearFilters(category) {
     // Reset filters and load the original content
     categoryState[category].filters = {};
-    loadRowContent(category);
+    loadRowContent(category, {});
 }
 
 
@@ -406,12 +555,42 @@ function openFullView(category) {
         <h2 style="text-transform: uppercase;">${title}</h2>
         <div class="results" id="${category}-full-list"></div>
     `;
+    
+    const listContainer = document.getElementById(`${category}-full-list`);
+    
+    // Favorites and Recent don't use infinite scroll
+    if (category === 'favorites') {
+        // Load all favorites at once
+        const favorites = getFavorites();
+        if (favorites.length === 0) {
+            listContainer.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">Your list is empty. Add a movie or show to your favorites!</p>';
+            return;
+        }
+        showLoading(`${category}-full-list`);
+        Promise.all(favorites.map(fav => fetchItemDetails(fav.id, fav.media_type)))
+               .then(detailedItems => {
+                   displayFullList(detailedItems.filter(item => item !== null), `${category}-full-list`, true);
+               })
+               .finally(() => removeLoadingAndError(`${category}-full-list`));
+        return;
+    }
+    
+    if (category === 'recent') {
+        const recentItems = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+        if (recentItems.length === 0) {
+            listContainer.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">Start watching something to see it here!</p>';
+            return;
+        }
+        // No API calls needed, display local data
+        displayFullList(recentItems, `${category}-full-list`, true);
+        return;
+    }
 
-    // Reset pagination to 0 so the first call increments it to page 1 for the full view
+
+    // Standard infinite scroll logic for other categories
     categoryState[category].page = 0; 
     loadMoreFullView(category, filters, true); // Initial load
     
-    const listContainer = document.getElementById(`${category}-full-list`);
     // Add infinite scroll listener for the full view
     listContainer.onscroll = function () {
         scrollPosition = listContainer.scrollTop; 
@@ -440,13 +619,16 @@ function displayFullList(items, containerId, isFirstLoad = false) {
   }
   
   items.forEach(item => {
+    item.media_type = item.media_type || (item.title ? 'movie' : 'tv');
+    
     // Only add if not already present
-    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
+    if (container.querySelector(`img[data-id="${item.id}"][data-type="${item.media_type}"]`)) return;
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
+    img.setAttribute('data-type', item.media_type); // NEW
     
     img.onclick = () => showDetails(item, true); 
     
@@ -455,6 +637,9 @@ function displayFullList(items, containerId, isFirstLoad = false) {
 }
 
 async function loadMoreFullView(category, filters, isFirstLoad = false) {
+  // Logic for favorites and recent handled in openFullView
+  if (category === 'favorites' || category === 'recent') return; 
+  
   const state = categoryState[category];
   const containerId = `${category}-full-list`;
   const container = document.getElementById(containerId); 
@@ -503,7 +688,7 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
   }
 }
 
-// --- FILTER MODAL LOGIC ---
+// --- FILTER MODAL LOGIC (UNCHANGED) ---
 
 function populateFilterOptions() {
     const yearSelect = document.getElementById('filter-year');
@@ -576,17 +761,28 @@ function applyFilters() {
 }
 
 
-// --- DETAILS & MODAL LOGIC (UNCHANGED) ---
+// --- DETAILS & MODAL LOGIC (UPDATED) ---
 
 async function showDetails(item, isFullViewOpen = false) {
   currentItem = item;
   currentSeason = 1;
   currentEpisode = 1;
+  
+  // Ensure media_type is correct for the item
+  item.media_type = item.media_type || (item.title ? 'movie' : 'tv'); 
+  
+  // NEW: Update favorite button state
+  updateFavoriteButton(isFavorite(item.id, item.media_type));
+
   document.getElementById('modal-title').textContent = item.title || item.name || 'Unknown';
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
   document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
   document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
   document.getElementById('server').value = 'player.videasy.net'; 
+  
+  // NEW: Set up Favorite Toggle
+  document.getElementById('favorite-btn').onclick = () => toggleFavorite(item);
+
 
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
@@ -620,6 +816,9 @@ async function showDetails(item, isFullViewOpen = false) {
   if (isFullViewOpen) {
       document.getElementById('full-view-modal').style.display = 'none';
   }
+  
+  // NEW: Add to recently viewed when details are shown
+  addRecentlyViewed(item);
 }
 
 async function loadEpisodes() {
@@ -643,6 +842,7 @@ async function loadEpisodes() {
       changeServer();
       document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
       div.classList.add('active');
+      // No need to call addRecentlyViewed here, done in showDetails
     };
     episodeList.appendChild(div);
   });
@@ -716,6 +916,7 @@ const debouncedSearchTMDB = debounce(async () => {
     data.results
       .filter(item => item.media_type !== 'person' && item.poster_path)
       .forEach(item => {
+        item.media_type = item.media_type || (item.title ? 'movie' : 'tv'); // Ensure media_type is set
         const img = document.createElement('img');
         img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
         img.alt = item.title || item.name || 'Unknown';
@@ -736,7 +937,7 @@ const debouncedSearchTMDB = debounce(async () => {
   }
 }, 300);
 
-// --- INITIALIZATION ---
+// --- INITIALIZATION (UPDATED) ---
 
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
@@ -756,7 +957,7 @@ async function init() {
     });
   });
 
-  document.querySelectorAll('.filter-btn').forEach(button => {
+  document.querySelectorAll('.filter-btn:not(.clear-filter-btn)').forEach(button => {
     button.addEventListener('click', (e) => {
       e.preventDefault(); 
       openFilterModal(button.getAttribute('data-category'));
@@ -781,6 +982,10 @@ async function init() {
     showLoading('netflix-movies-list');
     showLoading('netflix-tv-list');
     showLoading('korean-drama-list');
+    
+    // NEW: Load personalized rows first
+    loadFavoritesRow();
+    loadRecentRow();
 
     // Fetch and display all rows concurrently (page 1)
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
