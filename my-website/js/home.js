@@ -12,8 +12,8 @@ let slideshowInterval;
 
 // Replaced simple currentPages/isLoading with a single state object from the 2nd code
 let categoryState = {
-    favorites: { page: 1, isLoading: false, filters: {} }, // NEW: Favorites state
-    recent: { page: 1, isLoading: false, filters: {} },    // NEW: Recent state (no API fetch, but kept for consistency)
+    favorites: { page: 1, isLoading: false, filters: {} }, 
+    recent: { page: 1, isLoading: false, filters: {} },   
     movies: { page: 1, isLoading: false, filters: {} },
     tvshows: { page: 1, isLoading: false, filters: {} },
     anime: { page: 1, isLoading: false, filters: {} },
@@ -23,11 +23,11 @@ let categoryState = {
     'korean-drama': { page: 1, isLoading: false, filters: {} }
 };
 
-let currentFullView = null; // Tracks the category currently in the full view
-let currentCategoryToFilter = null; // Tracks the category targeted by the filter modal
+let currentFullView = null; 
+let currentCategoryToFilter = null; 
 let scrollPosition = 0; 
 
-// Simplified Genre IDs for the filter dropdown - NEW
+// Simplified Genre IDs for the filter dropdown - UNCHANGED
 const GENRES = [
   { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' }, 
   { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' }, 
@@ -39,7 +39,6 @@ const GENRES = [
 
 /**
  * Utility function to debounce another function call.
- * Ensures a function is not called until a certain time has passed after the last call.
  */
 function debounce(func, delay) {
   let timeout;
@@ -76,7 +75,7 @@ async function testApiKey() {
     }
 }
 
-// --- LOCAL STORAGE & FAVORITES LOGIC (NEW) ---
+// --- LOCAL STORAGE & FAVORITES LOGIC (UNCHANGED) ---
 
 const FAVORITE_KEY = 'reelroom_favorites';
 const RECENT_KEY = 'reelroom_recent';
@@ -146,52 +145,7 @@ function addRecentlyViewed(item) {
     loadRecentRow(); // Refresh the recent row
 }
 
-// --- CORE FETCH FUNCTION (Handles all categories and filters) ---
-
-async function fetchCategoryContent(category, page, filters = {}) {
-    try {
-        const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
-        // Correctly apply year and genre filters
-        const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
-        let fetchURL = '';
-        let mediaType = category.includes('movie') ? 'movie' : 'tv';
-
-        if (category === 'movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
-        } else if (category === 'tvshows') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
-        } else if (category === 'anime') {
-            // Anime base filters: genre 16 and Japanese language, augmented by user filters
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja${baseParams}${filterParams}`;
-        } else if (category === 'tagalog-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${filterParams}`;
-        } else if (category === 'netflix-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
-        } else if (category === 'netflix-tv') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
-        } else if (category === 'korean-drama') {
-            // KDrama base filters: Korean language and Drama genre 18, augmented by user filters
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18${baseParams}${filterParams}`;
-        } else {
-            throw new Error('Unknown category.');
-        }
-
-        const res = await fetch(fetchURL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        
-        // Ensure media_type is set for Discover results
-        if (data.results) {
-            data.results.forEach(item => item.media_type = item.media_type || mediaType);
-        }
-        return data;
-    } catch (error) {
-        console.error(`Error fetching ${category}:`, error);
-        return { results: [], total_pages: 1 };
-    }
-}
-
-// --- NEW: FETCH FAVORITES DETAILS (REQUIRED FOR FAVORITES ROW) ---
+// --- CORE FETCH FUNCTION (FIXED CATEGORY QUERIES) ---
 
 async function fetchItemDetails(itemId, mediaType) {
     try {
@@ -225,7 +179,7 @@ async function loadFavoritesRow() {
     const detailPromises = favorites.map(fav => fetchItemDetails(fav.id, fav.media_type));
     const detailedItems = (await Promise.all(detailPromises)).filter(item => item !== null);
     
-    displayList(detailedItems, containerId, true); // Use true to clear before displaying
+    displayList(detailedItems, containerId, true); 
     removeLoadingAndError(containerId);
 }
 
@@ -246,7 +200,55 @@ function loadRecentRow() {
     displayList(recentItems, containerId, true);
 }
 
-// --- END NEW LOCAL STORAGE LOGIC ---
+
+async function fetchCategoryContent(category, page, filters = {}) {
+    try {
+        // Default sort is popularity.desc, unless overridden below
+        let baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
+        const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
+        let fetchURL = '';
+        let mediaType = category.includes('movie') ? 'movie' : 'tv';
+
+        if (category === 'movies') {
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
+        } else if (category === 'tvshows') {
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
+        } else if (category === 'anime') {
+            // FIX: Removed strict original language filter. Genre 16 (Animation) is the key.
+            baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=vote_count.desc`; 
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16${baseParams}${filterParams}`;
+        } else if (category === 'tagalog-movies') {
+            // FIX: Changed sort to primary_release_date.desc to prioritize new/recent Tagalog movies
+            baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=primary_release_date.desc`; 
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${filterParams}`;
+        } else if (category === 'netflix-movies') {
+            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
+        } else if (category === 'netflix-tv') {
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
+        } else if (category === 'korean-drama') {
+            // FIX: Removed genre filter (18) and changed sort to primary_release_date.desc
+            baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=primary_release_date.desc`; 
+            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko${baseParams}${filterParams}`;
+        } else {
+            throw new Error('Unknown category.');
+        }
+
+        const res = await fetch(fetchURL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        // Ensure media_type is set for Discover results
+        if (data.results) {
+            data.results.forEach(item => item.media_type = item.media_type || mediaType);
+        }
+        return data;
+    } catch (error) {
+        console.error(`Error fetching ${category}:`, error);
+        return { results: [], total_pages: 1 };
+    }
+}
+
+// --- REST OF THE CODE (UNCHANGED) ---
 
 async function fetchSeasonsAndEpisodes(tvId) {
   try {
@@ -405,7 +407,7 @@ function displayList(items, containerId, clear = false) {
   });
 }
 
-// --- MAIN ROW INFINITE SCROLL LOGIC (RESTORED & ADAPTED) ---
+// --- MAIN ROW INFINITE SCROLL LOGIC ---
 
 function addScrollListener(category) {
   const containerId = category + '-list';
@@ -467,7 +469,7 @@ async function loadMore(category) {
   }
 }
 
-// --- FILTER & SHOW MORE LOGIC (ADAPTED) ---
+// --- FILTER & SHOW MORE LOGIC ---
 
 function updateFilterButtons(category, filters) {
     const row = document.getElementById(`${category}-row`);
@@ -688,7 +690,7 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
   }
 }
 
-// --- FILTER MODAL LOGIC (UNCHANGED) ---
+// --- FILTER MODAL LOGIC ---
 
 function populateFilterOptions() {
     const yearSelect = document.getElementById('filter-year');
@@ -761,7 +763,7 @@ function applyFilters() {
 }
 
 
-// --- DETAILS & MODAL LOGIC (UPDATED) ---
+// --- DETAILS & MODAL LOGIC ---
 
 async function showDetails(item, isFullViewOpen = false) {
   currentItem = item;
@@ -937,7 +939,7 @@ const debouncedSearchTMDB = debounce(async () => {
   }
 }, 300);
 
-// --- INITIALIZATION (UPDATED) ---
+// --- INITIALIZATION ---
 
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
@@ -1017,7 +1019,7 @@ async function init() {
     displayList(netflixTVData.results, 'netflix-tv-list');
     displayList(koreanDramaData.results, 'korean-drama-list');
     
-    // Setup infinite scroll listeners for the main rows (RESTORED)
+    // Setup infinite scroll listeners for the main rows
     addScrollListener('movies');
     addScrollListener('tvshows');
     addScrollListener('anime');
