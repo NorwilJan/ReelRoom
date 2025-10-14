@@ -282,19 +282,19 @@ function displayShopeeLinks() {
             // YOUR SHOPEE LINK
             url: 'https://collshp.com/reelroom', 
             // Placeholder image - Replace with a hosted image URL for your product/store banner
-            img: 'https://via.placeholder.com/150x225?text=Visit+Shopee+Store', 
+            img: 'https://s.shopee.ph/10uHjEIy0b', 
             alt: 'ReelRoom Official Shopee Store'
         },
         { 
             // Example for a specific popular product (replace URL and image)
             url: 'https://collshp.com/reelroom', 
-            img: 'https://via.placeholder.com/150x225?text=Featured+Item+1', 
+            img: 'https://s.shopee.ph/6fYePRf1Rg', 
             alt: 'Best Seller Deal'
         },
         { 
             // Example for another promotional slot
             url: 'https://collshp.com/reelroom', 
-            img: 'https://via.placeholder.com/150x225?text=Limited+Time+Offer', 
+            img: 'https://s.shopee.ph/1LX84hdL9B', 
             alt: 'Promo Alert'
         }
         // Add more objects here for more links/ads
