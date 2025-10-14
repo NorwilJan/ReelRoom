@@ -294,7 +294,7 @@ function displayShopeeLinks() {
         { 
             // Example for another promotional slot
             url: 'https://collshp.com/reelroom', 
-            img: 'https://via.placeholder.com/150x225?text=Limited+Time+Offer', 
+            img: 'https://down-ph.img.susercontent.com/file/3c7cc4df24ee620a24bd45f2a35efd88@resize_w1080_nl.webp', 
             alt: 'Promo Alert'
         }
         // Add more objects here for more links/ads
