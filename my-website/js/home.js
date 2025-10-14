@@ -288,7 +288,7 @@ function displayShopeeLinks() {
         { 
             // Example for a specific popular product (replace URL and image)
             url: 'https://collshp.com/reelroom', 
-            img: 'https://via.placeholder.com/150x225?text=Featured+Item+1', 
+            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-7rasd-m8vm437l4fg308@resize_w1080_nl.webp', 
             alt: 'Best Seller Deal'
         },
         { 
