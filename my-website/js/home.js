@@ -282,7 +282,7 @@ function displayShopeeLinks() {
             // YOUR SHOPEE LINK
             url: 'https://collshp.com/reelroom', 
             // Placeholder image - Replace with a hosted image URL for your product/store banner
-            img: 'https://down-ph.img.susercontent.com/file/3c7cc4df24ee620a24bd45f2a35efd88@resize_w1080_nl.webp', 
+            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-7ras9-m8on3bi10kula8@resize_w1080_nl.webp', 
             alt: 'ReelRoom Official Shopee Store'
         },
         { 
