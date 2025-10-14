@@ -282,27 +282,22 @@ function displayShopeeLinks() {
             // YOUR SHOPEE LINK
             url: 'https://collshp.com/reelroom', 
             // Placeholder image - Replace with a hosted image URL for your product/store banner
-            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-7ras9-m8on3bi10kula8@resize_w1080_nl.webp', 
+            img: 'https://via.placeholder.com/150x225?text=Visit+Shopee+Store', 
             alt: 'ReelRoom Official Shopee Store'
         },
         { 
             // Example for a specific popular product (replace URL and image)
             url: 'https://collshp.com/reelroom', 
-            img: 'Https://down-ph.img.susercontent.com/file/3c7cc4df24ee620a24bd45f2a35efd88@resize_w1080_nl.webp', 
+            img: 'https://via.placeholder.com/150x225?text=Featured+Item+1', 
             alt: 'Best Seller Deal'
         },
         { 
             // Example for another promotional slot
             url: 'https://collshp.com/reelroom', 
-            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-81zti-mfmfle0q3l7154@resize_w1080_nl.webp', 
+            img: 'https://via.placeholder.com/150x225?text=Limited+Time+Offer', 
             alt: 'Promo Alert'
         }
-            // Example for another promotional slot
-            url: 'https://collshp.com/reelroom', 
-            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-81zti-mfmfle0q3l7154@resize_w1080_nl.webp', 
-            alt: 'Promo Alert'
-        }
-        { 
+        // Add more objects here for more links/ads
     ];
 
     const container = document.getElementById('shopee-link-list');
