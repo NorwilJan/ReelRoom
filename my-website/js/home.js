@@ -297,10 +297,11 @@ function displayShopeeLinks() {
             img: 'https://down-ph.img.susercontent.com/file/ph-11134207-81zti-mfmfle0q3l7154@resize_w1080_nl.webp', 
             alt: 'Promo Alert'
         }
-        // url: 'https://collshp.com/reelroom', 
-            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-7ras8-m7qi9e5pi6w931@resize_w1080_nl.webp', 
-            alt: 'Best Seller Deal'
-        },
+            // Example for another promotional slot
+            url: 'https://collshp.com/reelroom', 
+            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-81zti-mfmfle0q3l7154@resize_w1080_nl.webp', 
+            alt: 'Promo Alert'
+        }
         { 
     ];
 
