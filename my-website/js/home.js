@@ -288,13 +288,13 @@ function displayShopeeLinks() {
         { 
             // Example for a specific popular product (replace URL and image)
             url: 'https://collshp.com/reelroom', 
-            img: 'https://s.shopee.ph/6fYePRf1Rg', 
+            img: 'Https://down-ph.img.susercontent.com/file/3c7cc4df24ee620a24bd45f2a35efd88@resize_w1080_nl.webp', 
             alt: 'Best Seller Deal'
         },
         { 
             // Example for another promotional slot
             url: 'https://collshp.com/reelroom', 
-            img: 'https://s.shopee.ph/1LX84hdL9B', 
+            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-81zti-mfmfle0q3l7154@resize_w1080_nl.webp', 
             alt: 'Promo Alert'
         }
         // Add more objects here for more links/ads
