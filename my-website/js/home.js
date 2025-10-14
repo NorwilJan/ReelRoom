@@ -273,6 +273,55 @@ function displayList(items, containerId) {
   });
 }
 
+/**
+ * NEW: Function to display custom Shopee/Ad links in a dedicated row.
+ */
+function displayShopeeLinks() {
+    const shopeeLinks = [
+        { 
+            // YOUR SHOPEE LINK
+            url: 'https://collshp.com/reelroom', 
+            // Placeholder image - Replace with a hosted image URL for your product/store banner
+            img: 'https://via.placeholder.com/150x225?text=Visit+Shopee+Store', 
+            alt: 'ReelRoom Official Shopee Store'
+        },
+        { 
+            // Example for a specific popular product (replace URL and image)
+            url: 'https://collshp.com/reelroom', 
+            img: 'https://via.placeholder.com/150x225?text=Featured+Item+1', 
+            alt: 'Best Seller Deal'
+        },
+        { 
+            // Example for another promotional slot
+            url: 'https://collshp.com/reelroom', 
+            img: 'https://via.placeholder.com/150x225?text=Limited+Time+Offer', 
+            alt: 'Promo Alert'
+        }
+        // Add more objects here for more links/ads
+    ];
+
+    const container = document.getElementById('shopee-link-list');
+    if (!container) return;
+    
+    container.innerHTML = ''; // Clear previous content
+
+    shopeeLinks.forEach(item => {
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.target = '_blank'; // Open in new tab
+        
+        const img = document.createElement('img');
+        img.src = item.img;
+        img.alt = item.alt;
+        img.style.width = '150px'; // Maintain existing poster width
+        img.style.height = '225px'; // Maintain existing poster height
+        
+        link.appendChild(img);
+        container.appendChild(link);
+    });
+}
+
+
 // --- NEW: Local Storage Management Functions ---
 
 /**
@@ -906,6 +955,9 @@ async function init() {
   if (!apiKeyValid) {
       return;
   }
+
+  // NEW: Display your custom Shopee/Ad links 
+  displayShopeeLinks();
   
   // NEW: Load and display the user lists before fetching TMDB content
   displayFavorites();
