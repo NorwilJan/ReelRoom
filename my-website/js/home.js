@@ -13,8 +13,9 @@ let slideshowInterval;
 // New: Constants for Local Storage keys
 const FAVORITES_KEY = 'reelroom_favorites';
 const RECENTLY_VIEWED_KEY = 'reelroom_recent';
-const RATINGS_KEY = 'reelroom_ratings';         // NEW
-const WATCH_PROGRESS_KEY = 'reelroom_progress'; // NEW
+const RATINGS_KEY = 'reelroom_ratings';         
+const WATCH_PROGRESS_KEY = 'reelroom_progress'; 
+const USER_SETTINGS_KEY = 'reelroom_user_settings'; // NEW
 const MAX_RECENT = 15; // Limit to 15 recent items
 const MAX_FAVORITES = 30; // Limit to 30 favorites
 
@@ -345,7 +346,7 @@ function displayShopeeLinks() {
 }
 
 
-// --- NEW: Local Storage Management Functions ---
+// --- CORE LOCAL STORAGE MANAGEMENT FUNCTIONS ---
 
 /**
  * Loads the array from local storage, or returns an empty array.
@@ -373,6 +374,51 @@ function saveStorageList(key, list) {
     console.error(`Error saving storage list for key: ${key}`, e);
   }
 }
+
+// --- USER SETTINGS FUNCTIONS (NEW) ---
+
+/**
+ * Loads the user settings object from local storage.
+ */
+function loadUserSettings() {
+    try {
+        const json = localStorage.getItem(USER_SETTINGS_KEY);
+        // Default settings if none exist
+        return json ? JSON.parse(json) : { defaultServer: 'player.videasy.net' };
+    } catch (e) {
+        console.error("Error loading user settings:", e);
+        return { defaultServer: 'player.videasy.net' };
+    }
+}
+
+/**
+ * Saves the user settings object to local storage.
+ * @param {object} settings The settings object to save.
+ */
+function saveUserSettings(settings) {
+    try {
+        localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+        console.error("Error saving user settings:", e);
+    }
+}
+
+/**
+ * Function called by the new button to save the selected server as default.
+ */
+function saveDefaultServer() {
+    const selectedServer = document.getElementById('server').value;
+    const settings = loadUserSettings();
+    
+    settings.defaultServer = selectedServer;
+    saveUserSettings(settings);
+    
+    // Provide user feedback
+    alert(`Default server saved as: ${selectedServer.split('.')[0]}.`); 
+}
+
+
+// --- LIST MANAGEMENT FUNCTIONS ---
 
 /**
  * Adds an item to the Recently Viewed list.
@@ -487,7 +533,7 @@ function displayRecentlyViewed() {
     });
 }
 
-// --- NEW: User Rating Functions ---
+// --- USER RATING FUNCTIONS ---
 
 /**
  * Loads the user rating for the current item.
@@ -544,7 +590,7 @@ function updateUserRatingDisplay(rating) {
 }
 
 
-// --- NEW: Watch Progress Functions ---
+// --- WATCH PROGRESS FUNCTIONS ---
 
 /**
  * Saves the current server/season/episode progress.
@@ -932,7 +978,7 @@ function applyFilters() {
 }
 
 
-// --- DETAILS & MODAL LOGIC (MODIFIED for Favorites/Recent/Rating/Progress) ---
+// --- DETAILS & MODAL LOGIC (MODIFIED for Auto-Highlight and Default Server) ---
 
 async function showDetails(item, isFullViewOpen = false) {
   // NEW: Add item to recently viewed list
@@ -947,8 +993,12 @@ async function showDetails(item, isFullViewOpen = false) {
   // NEW: Load watch progress (if it exists)
   const progress = loadWatchProgress(item.id);
 
-  // Restore server from progress or use default
-  document.getElementById('server').value = progress?.server || 'player.videasy.net'; 
+  // NEW: Load user settings for default server
+  const settings = loadUserSettings();
+  const defaultServer = settings.defaultServer || 'player.videasy.net';
+  
+  // Restore server from progress or use default from settings
+  document.getElementById('server').value = progress?.server || defaultServer; 
 
 
   // Use a separate span for the title so the heart icon can sit next to it
@@ -1004,7 +1054,7 @@ async function showDetails(item, isFullViewOpen = false) {
     seasonSelector.style.display = 'none';
     episodeList.innerHTML = '';
     
-    // For movies, just call changeServer immediately
+    // NEW: For movies, just call changeServer immediately to load the player
     changeServer();
   }
   
@@ -1027,11 +1077,31 @@ async function loadEpisodes() {
   episodeList.innerHTML = '';
   
   const progress = loadWatchProgress(currentItem.id);
-  const defaultServer = document.getElementById('server').value;
+  
+  // We need to determine the episode to auto-select/highlight
+  // 1. Check progress for this specific season
+  let targetEpisode = (progress && progress.season == currentSeason) ? progress.episode : 1;
+  
+  // 2. If progress exists, assume the user finished that episode and target the NEXT one.
+  //    If the user was on E5, we highlight E6. If they were on the last episode, we stick to that one.
+  if (progress && progress.season == currentSeason && targetEpisode < episodes.length) {
+      targetEpisode += 1;
+  }
+  // Ensure targetEpisode is within the valid range for the current season
+  if (targetEpisode > episodes.length) {
+      targetEpisode = episodes.length; // Stick to the last one if they finished it
+  }
+  if (targetEpisode < 1) {
+      targetEpisode = 1; // Never go below E1
+  }
+
 
   episodes.forEach(episode => {
     const div = document.createElement('div');
     div.className = 'episode-item';
+    // Use data attribute for easy selection later
+    div.setAttribute('data-episode-number', episode.episode_number); 
+    
     const img = episode.still_path
       ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" />`
       : '';
@@ -1050,19 +1120,19 @@ async function loadEpisodes() {
   });
   
   if (episodes.length > 0) {
-      let targetEpisode = (progress && progress.season == currentSeason) ? progress.episode : 1;
-      
-      // Ensure targetEpisode is within the valid range for the current season
-      if (targetEpisode > episodes.length) {
-          targetEpisode = 1;
-      }
-
-      const targetElement = episodeList.querySelector(`.episode-item:nth-child(${targetEpisode})`);
+      // Find the element corresponding to the calculated targetEpisode
+      const targetElement = episodeList.querySelector(`.episode-item[data-episode-number="${targetEpisode}"]`);
       
       if (targetElement) {
+          // 1. Click the element to load the iframe and highlight it
           targetElement.click(); 
+          
+          // 2. Scroll the episode list container to bring the selected episode into view
+          //    This uses a slight offset to center the episode better
+          episodeList.scrollTop = targetElement.offsetTop - (episodeList.clientHeight / 2);
+
       } else {
-          // Fallback to the very first episode if the calculated one isn't found
+          // Fallback to the very first episode if the calculated one isn't found (shouldn't happen)
           episodeList.querySelector('.episode-item')?.click();
       }
   }
@@ -1074,7 +1144,7 @@ function changeServer() {
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   let embedURL = '';
   
-  // NEW: Save progress on server change
+  // NEW: Save progress on server change (This handles the case where the user changes the server)
   saveWatchProgress(currentItem.id, server, currentSeason, currentEpisode); 
 
   if (server === 'vidsrc.cc') {
