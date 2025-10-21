@@ -86,7 +86,13 @@ async function testApiKey() {
 
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
-        const baseParams = `&page=${page}&include_adult=false&include_video=false&sort_by=popularity.desc`;
+        // Base parameters now include a default sort for safety, but can be overridden
+        let baseParams = `&page=${page}&include_adult=false&include_video=false`; 
+        
+        // NEW: Check for sort_by parameter, default to popularity.desc
+        const sortBy = filters.sort_by || 'popularity.desc';
+        baseParams += `&sort_by=${sortBy}`;
+        
         // Correctly apply year and genre filters
         const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
         let fetchURL = '';
@@ -649,12 +655,13 @@ function updateFilterButtons(category, filters) {
         const genreName = filters.genre ? (GENRES.find(g => g.id == filters.genre)?.name || 'Genre') : '';
         const yearText = filters.year || '';
         
-        filterBtn.textContent = `Filtered ${genreName} ${yearText}`.trim();
+        // Show the filter text only on larger screens via CSS (we only keep the icon here)
+        filterBtn.innerHTML = `<i class="fas fa-filter"></i> ${genreName} ${yearText}`.trim(); 
         filterBtn.style.background = 'red';
         filterBtn.style.color = 'white';
         clearBtn.style.display = 'inline-block';
     } else {
-        filterBtn.innerHTML = '<i class="fas fa-filter"></i> Filter';
+        filterBtn.innerHTML = '<i class="fas fa-filter"></i>'; // Icon only
         filterBtn.style.background = '#444';
         filterBtn.style.color = '#fff';
         clearBtn.style.display = 'none';
@@ -698,7 +705,11 @@ function clearFilters(category) {
 
 function openFullView(category) {
     currentFullView = category;
-    const filters = categoryState[category].filters; // Use currently applied row filters
+    
+    // Use a copy of the currently applied row filters for the initial load
+    let filters = { ...categoryState[category].filters }; 
+    // Ensure the default sort is set if none is active
+    filters.sort_by = filters.sort_by || 'popularity.desc'; 
     
     // NEW: Disable scrolling on the main page when the full view is open
     document.body.style.overflow = 'hidden'; 
@@ -714,8 +725,22 @@ function openFullView(category) {
     fullViewContainer.innerHTML = `
         <span class="close" onclick="closeFullView()" style="color: red;">&times;</span>
         <h2 style="text-transform: uppercase;">${title}</h2>
+        
+        <div class="full-view-controls">
+            <label for="full-view-sort">Sort By:</label>
+            <select id="full-view-sort" onchange="applyFullViewSort()">
+                <option value="popularity.desc">Popularity (Descending)</option>
+                <option value="release_date.desc">Release Date (Newest)</option>
+                <option value="vote_average.desc">Rating (Highest)</option>
+                <option value="title.asc">Title (A-Z)</option>
+            </select>
+        </div>
         <div class="results" id="${category}-full-list"></div>
     `;
+    
+    // Set the initial value of the sort dropdown
+    document.getElementById('full-view-sort').value = filters.sort_by;
+
 
     // Reset pagination to 0 so the first call increments it to page 1 for the full view
     categoryState[category].page = 0; 
@@ -730,6 +755,7 @@ function openFullView(category) {
             !categoryState[category].isLoading &&
             listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
         ) {
+            // Pass the current filters (including sort) to loadMore
             loadMoreFullView(category, filters);
         }
     };
@@ -765,6 +791,24 @@ function displayFullList(items, containerId, isFirstLoad = false) {
     
     container.appendChild(img);
   });
+}
+
+// NEW: Function to handle sort change in the full view
+function applyFullViewSort() {
+    if (!currentFullView) return;
+    
+    const sortValue = document.getElementById('full-view-sort').value;
+    const category = currentFullView;
+    const state = categoryState[category];
+
+    // 1. Update the state's sort filter
+    state.filters.sort_by = sortValue;
+    
+    // 2. Reset the page count
+    state.page = 0; 
+    
+    // 3. Reload the list from scratch
+    loadMoreFullView(category, state.filters, true); // true for first load to clear content
 }
 
 async function loadMoreFullView(category, filters, isFirstLoad = false) {
