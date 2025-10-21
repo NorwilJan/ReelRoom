@@ -13,6 +13,8 @@ let slideshowInterval;
 // New: Constants for Local Storage keys
 const FAVORITES_KEY = 'reelroom_favorites';
 const RECENTLY_VIEWED_KEY = 'reelroom_recent';
+const RATINGS_KEY = 'reelroom_ratings';         // NEW
+const WATCH_PROGRESS_KEY = 'reelroom_progress'; // NEW
 const MAX_RECENT = 15; // Limit to 15 recent items
 const MAX_FAVORITES = 30; // Limit to 30 favorites
 
@@ -155,6 +157,9 @@ function removeLoadingAndError(containerId) {
     if (container) {
         container.querySelector('.loading')?.remove();
         container.querySelector('.error-message')?.remove();
+        // NEW: Remove skeleton class and placeholders when done
+        container.classList.remove('loading-list');
+        container.querySelectorAll('.skeleton').forEach(el => el.remove());
     }
 }
 
@@ -177,10 +182,19 @@ function showLoading(containerId) {
   
   container.querySelector('.error-message')?.remove();
   
+  // NEW: Apply skeleton class to the list itself
+  if (container.classList.contains('list')) {
+      container.classList.add('loading-list');
+  }
+  
   const loading = document.createElement('p');
   loading.className = 'loading';
   loading.textContent = 'Loading...';
-  container.appendChild(loading);
+  
+  // Only add 'Loading...' text if it's the slides container
+  if(container.id === 'slides') {
+      container.appendChild(loading);
+  }
 }
 
 function displaySlides() {
@@ -303,6 +317,9 @@ function displayShopeeLinks() {
     const container = document.getElementById('shopee-link-list');
     if (!container) return;
     
+    // Clear the skeleton placeholders before appending actual links
+    removeLoadingAndError('shopee-link-list');
+    
     container.innerHTML = ''; // Clear previous content
 
     shopeeLinks.forEach(item => {
@@ -415,6 +432,9 @@ function displayFavorites() {
     const favorites = loadStorageList(FAVORITES_KEY);
     const container = document.getElementById('favorites-list');
     const countSpan = document.getElementById('favorites-count');
+    
+    // Always clear the container and remove loading status before rendering
+    removeLoadingAndError('favorites-list'); 
     container.innerHTML = '';
     
     countSpan.textContent = `(${favorites.length})`;
@@ -441,6 +461,9 @@ function displayFavorites() {
 function displayRecentlyViewed() {
     const recent = loadStorageList(RECENTLY_VIEWED_KEY);
     const container = document.getElementById('recently-viewed-list');
+    
+    // Always clear the container and remove loading status before rendering
+    removeLoadingAndError('recently-viewed-list');
     container.innerHTML = '';
     
     if (recent.length === 0) {
@@ -457,6 +480,97 @@ function displayRecentlyViewed() {
         container.appendChild(img);
     });
 }
+
+// --- NEW: User Rating Functions ---
+
+/**
+ * Loads the user rating for the current item.
+ */
+function loadUserRating(itemId) {
+    const ratings = loadStorageList(RATINGS_KEY);
+    return ratings.find(r => r.id === itemId)?.rating || 0;
+}
+
+/**
+ * Saves the user rating for an item.
+ */
+function setUserRating(rating) {
+    if (!currentItem) return;
+    const itemId = currentItem.id;
+
+    let ratings = loadStorageList(RATINGS_KEY);
+    const existingIndex = ratings.findIndex(r => r.id === itemId);
+
+    // If the user clicks the currently selected rating star, clear the rating (set to 0)
+    const currentRating = parseInt(document.getElementById('modal-rating-user').getAttribute('data-rating'));
+    const finalRating = (rating === currentRating) ? 0 : rating;
+
+
+    if (finalRating === 0) { 
+        if (existingIndex !== -1) {
+            ratings.splice(existingIndex, 1);
+        }
+    } else if (existingIndex !== -1) {
+        ratings[existingIndex].rating = finalRating;
+    } else {
+        ratings.push({ id: itemId, rating: finalRating });
+    }
+
+    saveStorageList(RATINGS_KEY, ratings);
+    updateUserRatingDisplay(finalRating);
+}
+
+/**
+ * Updates the star icons based on the saved rating.
+ */
+function updateUserRatingDisplay(rating) {
+    const stars = document.querySelectorAll('#modal-rating-user .user-star');
+    document.getElementById('modal-rating-user').setAttribute('data-rating', rating);
+    
+    stars.forEach(star => {
+        const value = parseInt(star.getAttribute('data-value'));
+        if (value <= rating) {
+            star.className = 'fas fa-star user-star'; // Solid star
+        } else {
+            star.className = 'far fa-star user-star'; // Outline star
+        }
+    });
+}
+
+
+// --- NEW: Watch Progress Functions ---
+
+/**
+ * Saves the current server/season/episode progress.
+ */
+function saveWatchProgress(itemId, server, season, episode) {
+    let progressList = loadStorageList(WATCH_PROGRESS_KEY);
+    const existingIndex = progressList.findIndex(p => p.id === itemId);
+    
+    const progressData = {
+        id: itemId,
+        server: server,
+        season: season,
+        episode: episode
+    };
+
+    if (existingIndex !== -1) {
+        progressList[existingIndex] = progressData;
+    } else {
+        progressList.push(progressData);
+    }
+
+    saveStorageList(WATCH_PROGRESS_KEY, progressList);
+}
+
+/**
+ * Loads the saved progress for the current item.
+ */
+function loadWatchProgress(itemId) {
+    const progressList = loadStorageList(WATCH_PROGRESS_KEY);
+    return progressList.find(p => p.id === itemId);
+}
+
 
 // --- MAIN ROW INFINITE SCROLL LOGIC (RESTORED & ADAPTED) ---
 
@@ -516,6 +630,7 @@ async function loadMore(category) {
   } finally {
     state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
+    document.getElementById(containerId)?.classList.remove('loading-list'); // Ensure removal after load
   }
 }
 
@@ -571,6 +686,7 @@ async function loadRowContent(category, filters = {}) {
     
     state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
+    document.getElementById(containerId)?.classList.remove('loading-list'); // Ensure removal after load
 }
 
 function clearFilters(category) {
@@ -583,6 +699,9 @@ function clearFilters(category) {
 function openFullView(category) {
     currentFullView = category;
     const filters = categoryState[category].filters; // Use currently applied row filters
+    
+    // NEW: Disable scrolling on the main page when the full view is open
+    document.body.style.overflow = 'hidden'; 
     
     const fullViewContainer = document.createElement('div');
     fullViewContainer.id = 'full-view-modal';
@@ -621,6 +740,9 @@ function closeFullView() {
     if (modal) modal.remove();
     currentFullView = null;
     scrollPosition = 0; 
+    
+    // NEW: Restore scrolling on the main page
+    document.body.style.overflow = ''; 
 }
 
 // Helper to display images in the grid (similar to search results)
@@ -760,25 +882,39 @@ function applyFilters() {
     
     // 3. Re-load the main row content with new filters (this clears the row and loads page 1)
     loadRowContent(category, newFilters);
+    
+    // 4. Immediately open the full view to show all filtered results.
+    openFullView(category);
 }
 
 
-// --- DETAILS & MODAL LOGIC (MODIFIED for Favorites/Recent) ---
+// --- DETAILS & MODAL LOGIC (MODIFIED for Favorites/Recent/Rating/Progress) ---
 
 async function showDetails(item, isFullViewOpen = false) {
   // NEW: Add item to recently viewed list
   addToRecentlyViewed(item);
 
   currentItem = item;
-  currentSeason = 1;
-  currentEpisode = 1;
   
+  // NEW: Load user rating and update display
+  const userRating = loadUserRating(item.id);
+  updateUserRatingDisplay(userRating);
+  
+  // NEW: Load watch progress (if it exists)
+  const progress = loadWatchProgress(item.id);
+
+  // Restore server from progress or use default
+  document.getElementById('server').value = progress?.server || 'player.videasy.net'; 
+
+
   // Use a separate span for the title so the heart icon can sit next to it
   document.getElementById('modal-item-title').textContent = item.title || item.name || 'Unknown';
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
   document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-  document.getElementById('modal-rating').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
-  document.getElementById('server').value = 'player.videasy.net'; 
+  
+  // TMDB Rating update (using the new ID)
+  document.getElementById('modal-rating-tmdb').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
+  
 
   // NEW: Set up the Favorite Toggle
   const favoritesList = loadStorageList(FAVORITES_KEY);
@@ -815,16 +951,22 @@ async function showDetails(item, isFullViewOpen = false) {
       seasonSelect.appendChild(option);
     });
     
-    currentSeason = seasons.find(s => s.season_number > 0)?.season_number || 1;
+    // Restore season from progress or use default
+    currentSeason = progress?.season || seasons.find(s => s.season_number > 0)?.season_number || 1;
     seasonSelect.value = currentSeason;
     
-    await loadEpisodes();
+    await loadEpisodes(); // loadEpisodes will now use and save the episode progress
   } else {
     seasonSelector.style.display = 'none';
     episodeList.innerHTML = '';
+    
+    // For movies, just call changeServer immediately
+    changeServer();
   }
+  
+  // NEW: Disable body scroll when modal is open
+  document.body.style.overflow = 'hidden';
 
-  changeServer();
   document.getElementById('modal').style.display = 'flex';
   
   if (isFullViewOpen) {
@@ -839,7 +981,9 @@ async function loadEpisodes() {
   const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
   const episodeList = document.getElementById('episode-list');
   episodeList.innerHTML = '';
-  currentEpisode = 1; 
+  
+  const progress = loadWatchProgress(currentItem.id);
+  const defaultServer = document.getElementById('server').value;
 
   episodes.forEach(episode => {
     const div = document.createElement('div');
@@ -848,17 +992,35 @@ async function loadEpisodes() {
       ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" />`
       : '';
     div.innerHTML = `${img}<span>E${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
+    
     div.onclick = () => {
       currentEpisode = episode.episode_number;
       changeServer();
       document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
       div.classList.add('active');
+      
+      // NEW: Save progress on episode click
+      saveWatchProgress(currentItem.id, document.getElementById('server').value, currentSeason, currentEpisode);
     };
     episodeList.appendChild(div);
   });
   
   if (episodes.length > 0) {
-      episodeList.querySelector('.episode-item')?.click();
+      let targetEpisode = (progress && progress.season == currentSeason) ? progress.episode : 1;
+      
+      // Ensure targetEpisode is within the valid range for the current season
+      if (targetEpisode > episodes.length) {
+          targetEpisode = 1;
+      }
+
+      const targetElement = episodeList.querySelector(`.episode-item:nth-child(${targetEpisode})`);
+      
+      if (targetElement) {
+          targetElement.click(); 
+      } else {
+          // Fallback to the very first episode if the calculated one isn't found
+          episodeList.querySelector('.episode-item')?.click();
+      }
   }
 }
 
@@ -867,6 +1029,9 @@ function changeServer() {
   const server = document.getElementById('server').value;
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   let embedURL = '';
+  
+  // NEW: Save progress on server change
+  saveWatchProgress(currentItem.id, server, currentSeason, currentEpisode); 
 
   if (server === 'vidsrc.cc') {
     embedURL = type === 'tv'
@@ -891,6 +1056,9 @@ function closeModal() {
   document.getElementById('episode-list').innerHTML = '';
   document.getElementById('season-selector').style.display = 'none';
   
+  // NEW: Restore body scroll when modal is closed
+  document.body.style.overflow = '';
+  
   const fullViewModal = document.getElementById('full-view-modal');
   if (fullViewModal) {
       fullViewModal.style.display = 'flex';
@@ -898,11 +1066,15 @@ function closeModal() {
 }
 
 function openSearchModal() {
+  // NEW: Disable body scroll when modal is open
+  document.body.style.overflow = 'hidden'; 
   document.getElementById('search-modal').style.display = 'flex';
   document.getElementById('search-input').focus();
 }
 
 function closeSearchModal() {
+  // NEW: Restore body scroll when modal is closed
+  document.body.style.overflow = ''; 
   document.getElementById('search-modal').style.display = 'none';
   document.getElementById('search-results').innerHTML = '';
   document.getElementById('search-input').value = '';
@@ -955,8 +1127,22 @@ async function init() {
   if (!apiKeyValid) {
       return;
   }
+  
+  // Show loading for all sections initially (including skeletons)
+  showLoading('shopee-link-list');
+  showLoading('favorites-list'); // Add skeleton loading for static lists
+  showLoading('recently-viewed-list');
+  showLoading('slides');
+  showLoading('movies-list');
+  showLoading('tvshows-list');
+  showLoading('anime-list');
+  showLoading('tagalog-movies-list');
+  showLoading('netflix-movies-list');
+  showLoading('netflix-tv-list');
+  showLoading('korean-drama-list');
 
   // NEW: Display your custom Shopee/Ad links 
+  // This is called before TMDB fetch since it's local data
   displayShopeeLinks();
   
   // NEW: Load and display the user lists before fetching TMDB content
@@ -989,16 +1175,6 @@ async function init() {
 
 
   try {
-    // Show loading for all sections initially
-    showLoading('slides');
-    showLoading('movies-list');
-    showLoading('tvshows-list');
-    showLoading('anime-list');
-    showLoading('tagalog-movies-list');
-    showLoading('netflix-movies-list');
-    showLoading('netflix-tv-list');
-    showLoading('korean-drama-list');
-
     // Fetch and display all rows concurrently (page 1)
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
       fetchCategoryContent('movies', 1),
@@ -1020,7 +1196,7 @@ async function init() {
     slideshowItems = allResults.slice(0, 7);
     displaySlides();
 
-    // Display the initial rows
+    // Display the initial rows (removes skeletons/loading text via displayList)
     displayList(moviesData.results, 'movies-list');
     displayList(tvShowsData.results, 'tvshows-list');
     displayList(animeData.results, 'anime-list');
