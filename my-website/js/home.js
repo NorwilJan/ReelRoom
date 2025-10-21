@@ -15,7 +15,7 @@ const FAVORITES_KEY = 'reelroom_favorites';
 const RECENTLY_VIEWED_KEY = 'reelroom_recent';
 const RATINGS_KEY = 'reelroom_ratings';         
 const WATCH_PROGRESS_KEY = 'reelroom_progress'; 
-const USER_SETTINGS_KEY = 'reelroom_user_settings'; // NEW
+const USER_SETTINGS_KEY = 'reelroom_user_settings'; 
 const MAX_RECENT = 15; // Limit to 15 recent items
 const MAX_FAVORITES = 30; // Limit to 30 favorites
 
@@ -46,7 +46,6 @@ const GENRES = [
 
 /**
  * Utility function to debounce another function call.
- * Ensures a function is not called until a certain time has passed after the last call.
  */
 function debounce(func, delay) {
   let timeout;
@@ -563,6 +562,109 @@ function displayRecentlyViewed() {
     });
 }
 
+// --- NEW: CONTINUE WATCHING FUNCTIONS ---
+
+/**
+ * Helper function to fetch minimal details (title, poster, media_type) for an item ID.
+ * This is crucial because the WATCH_PROGRESS_KEY only stores ID, server, season, episode.
+ */
+async function fetchItemDetailsForList(progressItem) {
+    // Determine media type based on existence of season/episode info in progress
+    const mediaType = progressItem.media_type || (progressItem.season ? 'tv' : 'movie');
+    try {
+        const res = await fetch(`${BASE_URL}/${mediaType}/${progressItem.id}?api_key=${API_KEY}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        return {
+            id: data.id,
+            title: data.title || data.name,
+            poster_path: data.poster_path,
+            media_type: mediaType,
+            overview: data.overview // Include overview for showDetails
+        };
+    } catch (error) {
+        console.error(`Error fetching item ${progressItem.id} for Continue Watching:`, error);
+        // Return placeholder object on failure
+        return {
+            id: progressItem.id,
+            title: 'Unknown Content',
+            poster_path: null,
+            media_type: mediaType,
+            overview: 'Details failed to load.'
+        };
+    }
+}
+
+/**
+ * Renders the Continue Watching list based on the last item saved in progress.
+ */
+function displayContinueWatching() {
+    const progressList = loadStorageList(WATCH_PROGRESS_KEY);
+    const container = document.getElementById('continue-watching-list');
+    const row = document.getElementById('continue-watching-row');
+    
+    if (!container || !row) return;
+
+    // Clear the container
+    removeLoadingAndError('continue-watching-list');
+    container.innerHTML = '';
+    
+    if (progressList.length === 0) {
+        row.style.display = 'none'; // Hide the entire row if empty
+        return;
+    }
+
+    row.style.display = 'block'; // Show the row
+
+    // Use only the first 3 items with progress (most recent)
+    const recentProgress = progressList.slice(0, 3); 
+    
+    // Show a loading skeleton while we fetch details for the list items
+    container.classList.add('loading-list');
+
+    recentProgress.forEach(progressItem => {
+        // Asynchronously fetch the display details (title, poster)
+        fetchItemDetailsForList(progressItem).then(item => {
+            // Check if the item has already been appended (prevents duplicates during async fetch)
+            if (container.querySelector(`a[data-id="${item.id}"]`)) return;
+
+            const link = document.createElement('a');
+            link.href = '#';
+            link.setAttribute('data-id', item.id);
+            link.onclick = (e) => {
+                e.preventDefault();
+                showDetails(item); // Pass the fetched details to open the modal
+            };
+            
+            const progressText = item.media_type === 'tv' 
+                ? `S${progressItem.season} E${progressItem.episode}` 
+                : 'Movie';
+
+            link.innerHTML = `
+                <img src="${item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE}" 
+                     alt="${item.title || item.name}" 
+                     data-id="${item.id}" />
+                <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 0.8em;">
+                    ${progressText}
+                </div>
+            `;
+            // Add a style to allow absolute positioning of the progress text
+            link.style.position = 'relative'; 
+
+            container.appendChild(link);
+
+            // Once the item is added, remove the loading class if all expected items are present
+            if (container.children.length === recentProgress.length) {
+                container.classList.remove('loading-list');
+                container.querySelectorAll('.skeleton').forEach(el => el.remove());
+            }
+        });
+    });
+}
+// --- END NEW: CONTINUE WATCHING FUNCTIONS ---
+
+
 // --- USER RATING FUNCTIONS ---
 
 /**
@@ -638,14 +740,18 @@ function saveWatchProgress(itemId, server, season, episode) {
         season: season,
         episode: episode
     };
-
+    
+    // If it exists, remove it first to push to the start (most recent)
     if (existingIndex !== -1) {
-        progressList[existingIndex] = progressData;
-    } else {
-        progressList.push(progressData);
+        progressList.splice(existingIndex, 1);
     }
+    
+    // Add to the front of the list
+    progressList.unshift(progressData);
 
     saveStorageList(WATCH_PROGRESS_KEY, progressList);
+    // Refresh the UI row
+    displayContinueWatching(); 
 }
 
 /**
@@ -1018,14 +1124,15 @@ async function showDetails(item, isFullViewOpen = false) {
   // NEW: Add item to recently viewed list
   addToRecentlyViewed(item);
 
-  currentItem = item;
+  // If item is minimal (from Continue Watching row), use the full item from TMDB if available
+  currentItem = await fetchItemDetailsForList(item) || item; 
   
   // NEW: Load user rating and update display
-  const userRating = loadUserRating(item.id);
+  const userRating = loadUserRating(currentItem.id);
   updateUserRatingDisplay(userRating);
   
   // NEW: Load watch progress (if it exists)
-  const progress = loadWatchProgress(item.id);
+  const progress = loadWatchProgress(currentItem.id);
 
   // NEW: Load user settings for default server
   const settings = loadUserSettings();
@@ -1036,17 +1143,17 @@ async function showDetails(item, isFullViewOpen = false) {
 
 
   // Use a separate span for the title so the heart icon can sit next to it
-  document.getElementById('modal-item-title').textContent = item.title || item.name || 'Unknown';
-  document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+  document.getElementById('modal-item-title').textContent = currentItem.title || currentItem.name || 'Unknown';
+  document.getElementById('modal-description').textContent = currentItem.overview || 'No description available.';
+  document.getElementById('modal-image').src = currentItem.poster_path ? `${IMG_URL}${currentItem.poster_path}` : FALLBACK_IMAGE;
   
   // TMDB Rating update (using the new ID)
-  document.getElementById('modal-rating-tmdb').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
+  document.getElementById('modal-rating-tmdb').innerHTML = '★'.repeat(Math.round((currentItem.vote_average || 0) / 2));
   
 
   // NEW: Set up the Favorite Toggle
   const favoritesList = loadStorageList(FAVORITES_KEY);
-  const isFavorite = favoritesList.some(i => i.id === item.id);
+  const isFavorite = favoritesList.some(i => i.id === currentItem.id);
   const favoriteToggle = document.getElementById('favorite-toggle');
   
   // Check if item is currently in favorites and set the heart icon state
@@ -1054,19 +1161,19 @@ async function showDetails(item, isFullViewOpen = false) {
   
   // Remove old listeners before adding the new one to prevent duplication
   favoriteToggle.onclick = null; 
-  favoriteToggle.onclick = () => toggleFavorite(item);
+  favoriteToggle.onclick = () => toggleFavorite(currentItem);
 
 
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
   // Determine media type based on existence of name/title and API data
-  const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
+  const isTVShow = currentItem.media_type === 'tv' || (currentItem.name && !currentItem.title);
 
 
   if (isTVShow) {
     seasonSelector.style.display = 'block';
     // NOTE: If item is from local storage (Favorites/Recent), it might not have 'id'. Use currentItem.id.
-    const tvId = item.id || currentItem.id;
+    const tvId = currentItem.id;
     
     const seasons = await fetchSeasonsAndEpisodes(tvId);
     const seasonSelect = document.getElementById('season');
@@ -1280,6 +1387,7 @@ async function init() {
   showLoading('shopee-link-list');
   showLoading('favorites-list'); // Add skeleton loading for static lists
   showLoading('recently-viewed-list');
+  showLoading('continue-watching-list'); // NEW: Continue Watching loading
   showLoading('slides');
   showLoading('movies-list');
   showLoading('tvshows-list');
@@ -1294,6 +1402,7 @@ async function init() {
   displayShopeeLinks();
   
   // NEW: Load and display the user lists before fetching TMDB content
+  displayContinueWatching(); 
   displayFavorites();
   displayRecentlyViewed();
   
