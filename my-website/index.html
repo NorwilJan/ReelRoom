@@ -1,60 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Poster Gallery</title>
-    <link rel="stylesheet" href="styles.css"> 
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ReelRoom</title>
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="preload" href="css/home.css" as="style">
+  <link rel="preload" href="js/home.js" as="script">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script defer src="js/home.js"></script>
 </head>
+
 <body>
+  
+  <div id="toast-container"></div>
+  
+  <div class="navbar">
+    <h1 class="logo-text">REELROOM</h1>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <button class="search-icon-btn" onclick="openSearchModal()">
+        <i class="fas fa-search"></i>
+      </button>
+    </div>
+  </div>
 
-    <div class="poster-gallery">
-        <div class="poster-item" 
-             data-title="Inception" 
-             data-video-url="path/to/inception/video.mp4"
-             data-poster-url="images/inception_poster.jpg">
-            <img src="images/inception_poster.jpg" alt="Inception Poster">
-        </div>
+  <div class="banner" id="banner">
+    <div class="slideshow-container">
+      <div class="slides" id="slides"></div>
+      <a class="prev" onclick="changeSlide(-1)">&#10094;</a>
+      <a class="next" onclick="changeSlide(1)">&#10095;</a>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
+  
+  <div class="row link-slideshow-container">
+    <div class="row-header" style="margin-bottom: 5px;">
+        <h2>Featured Deals</h2>
+    </div>
+    <div class="list loading-list" id="shopee-link-list">
+        <a href="#"><div class="skeleton"></div></a>
+        <a href="#"><div class="skeleton"></div></a>
+        <a href="#"><div class="skeleton"></div></a>
+    </div>
+  </div>
+  <div class="list-container-no-header">
+    <div class="row-header">
+        <h2>Your Favorites <span style="font-size: 0.8em; color: #aaa;" id="favorites-count"></span></h2>
+    </div>
+    <div class="list loading-list" id="favorites-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
 
-        <div class="poster-item" 
-             data-title="The Matrix" 
-             data-video-url="path/to/matrix/video.mp4"
-             data-poster-url="images/matrix_poster.jpg">
-            <img src="images/matrix_poster.jpg" alt="The Matrix Poster">
-        </div>
-        
-        <div class="poster-item" 
-             data-title="Pulp Fiction" 
-             data-video-url="path/to/pulpfiction/video.mp4"
-             data-poster-url="images/pulpfiction_poster.jpg">
-            <img src="images/pulpfiction_poster.jpg" alt="Pulp Fiction Poster">
-        </div>
-        
-        <div class="poster-item" 
-             data-title="New Movie Title" 
-             data-video-url="path/to/newmovie/video.mp4"
-             data-poster-url="images/new_movie_poster.jpg">
-            <img src="images/new_movie_poster.jpg" alt="New Movie Poster">
-        </div>
-        
-        </div>
-
-    <div id="movieModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2 id="modalTitle"></h2>
-            
-            <div class="poster-video-wrapper">
-                <img id="modalPoster" class="modal-image" src="" alt="Movie Poster">
-                
-                <video id="modalVideo" class="video-player" controls preload="none">
-                    Your browser does not support the video tag.
-                </video>
-            </div>
-            
+  <div class="row" id="movies-row">
+    <div class="row-header">
+        <h2>Trending Movies</h2>
+        <div>
+            <button class="filter-btn" data-category="movies"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="movies" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <a href="#" class="show-more-link" data-category="movies">Show More &raquo;</a>
         </div>
     </div>
+    <div class="list loading-list" id="movies-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
 
-    <script src="script.js"></script>
+  <div class="row" id="tvshows-row">
+    <div class="row-header">
+        <h2>Trending TV Shows</h2>
+        <div>
+            <button class="filter-btn" data-category="tvshows"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="tvshows" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <a href="#" class="show-more-link" data-category="tvshows">Show More &raquo;</a>
+        </div>
+    </div>
+    <div class="list loading-list" id="tvshows-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
+
+  <div class="row" id="anime-row">
+    <div class="row-header">
+        <h2>Trending Anime</h2>
+        <div>
+            <button class="filter-btn" data-category="anime"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="anime" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <a href="#" class="show-more-link" data-category="anime">Show More &raquo;</a>
+        </div>
+    </div>
+    <div class="list loading-list" id="anime-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
+
+  <div class="row" id="tagalog-movies-row">
+    <div class="row-header">
+        <h2>Trending Tagalog Movies</h2>
+        <div>
+            <button class="filter-btn" data-category="tagalog-movies"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="tagalog-movies" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <a href="#" class="show-more-link" data-category="tagalog-movies">Show More &raquo;</a>
+        </div>
+    </div>
+    <div class="list loading-list" id="tagalog-movies-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
+
+  <div class="row" id="netflix-movies-row">
+    <div class="row-header">
+        <h2>Trending Netflix Movies</h2>
+        <div>
+            <button class="filter-btn" data-category="netflix-movies"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="netflix-movies" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <a href="#" class="show-more-link" data-category="netflix-movies">Show More &raquo;</a>
+        </div>
+    </div>
+    <div class="list loading-list" id="netflix-movies-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
+
+  <div class="row" id="netflix-tv-row">
+    <div class="row-header">
+        <h2>Trending Netflix TV Shows</h2>
+        <div>
+            <button class="filter-btn" data-category="netflix-tv"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="netflix-tv" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <a href="#" class="show-more-link" data-category="netflix-tv">Show More &raquo;</a>
+        </div>
+    </div>
+    <div class="list loading-list" id="netflix-tv-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
+
+  <div class="row" id="korean-drama-row">
+    <div class="row-header">
+        <h2>Trending Korean Drama</h2>
+        <div>
+            <button class="filter-btn" data-category="korean-drama"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="korean-drama" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <a href="#" class="show-more-link" data-category="korean-drama">Show More &raquo;</a>
+        </div>
+    </div>
+    <div class="list loading-list" id="korean-drama-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
+  
+  <div class="list-container-no-header">
+    <h2>Recently Viewed</h2>
+    <div class="list loading-list" id="recently-viewed-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </div>
+  
+  <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+      <div class="modal-body">
+        <img id="modal-image" src="" alt="" />
+        <div class="modal-text">
+          <h2 id="modal-title">
+            <span id="modal-item-title"></span>
+            <i class="fas fa-heart favorite-icon" id="favorite-toggle"></i>
+          </h2>
+          
+          <div class="stars" id="modal-rating-tmdb"></div> 
+          
+          <div style="margin-top: 10px;">
+              <label style="color: red; font-weight: bold;">Your Rating:</label>
+              <div class="stars" id="modal-rating-user" data-rating="0">
+                  <i class="far fa-star user-star" data-value="1" onclick="setUserRating(1)"></i>
+                  <i class="far fa-star user-star" data-value="2" onclick="setUserRating(2)"></i>
+                  <i class="far fa-star user-star" data-value="3" onclick="setUserRating(3)"></i>
+                  <i class="far fa-star user-star" data-value="4" onclick="setUserRating(4)"></i>
+                  <i class="far fa-star user-star" data-value="5" onclick="setUserRating(5)"></i>
+              </div>
+          </div>
+          <p id="modal-description"></p>
+        </div>
+      </div>
+      <div class="server-selector">
+        <label for="server">Change Server:</label>
+        <select id="server" onchange="changeServer()">
+          <option value="vidsrc.cc">Vidsrc.cc</option>
+          <option value="vidsrc.me">Vidsrc.me</option>
+          <option value="player.videasy.net">Player.Videasy.net</option>
+        </select>
+        <button onclick="saveDefaultServer()" style="background: #333; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+            <i class="fas fa-save"></i> Save as Default
+        </button>
+      </div>
+      <div class="season-selector" id="season-selector" style="display: none;">
+        <label for="season">Select Season:</label>
+        <select id="season" onchange="loadEpisodes()"></select>
+      </div>
+      <div class="episode-list" id="episode-list"></div>
+      <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <div class="search-modal" id="search-modal">
+    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." onkeyup="debouncedSearchTMDB()" />
+    <div class="results" id="search-results"></div>
+  </div>
+  
+  <div class="filter-modal" id="filter-modal">
+    <div class="filter-content">
+        <span class="close" onclick="document.getElementById('filter-modal').style.display='none';" style="color: red;">&times;</span>
+        <h2 id="filter-modal-title">Filter Content</h2>
+        <p>Apply filters to start a new search list.</p>
+        
+        <label for="filter-year">Select Year:</label>
+        <select id="filter-year">
+            <option value="">Any Year</option>
+        </select>
+
+        <label for="filter-genre">Select Genre:</label>
+        <select id="filter-genre">
+            <option value="">Any Genre</option>
+        </select>
+        
+        <button onclick="applyFilters()">Apply Filters and Show More</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>&copy; 2025 ReelRoom. All rights reserved.</p>
+      <div class="footer-links">
+        <a href="#">Disclaimer</a>
+        <a href="#">About Us</a>
+        <a href="#">Contact Us</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
