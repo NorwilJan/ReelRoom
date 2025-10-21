@@ -17,6 +17,9 @@
     <h1 class="logo-text">REELROOM</h1>
     <div class="nav-links">
       <a href="index.html">Home</a>
+      <button class="search-icon-btn" onclick="openProfileModal()" style="margin-right: 5px;">
+        <i class="fas fa-user-circle"></i>
+      </button>
       <button class="search-icon-btn" onclick="openSearchModal()">
         <i class="fas fa-search"></i>
       </button>
@@ -40,6 +43,13 @@
         <a href="#"><div class="skeleton"></div></a>
         <a href="#"><div class="skeleton"></div></a>
         <a href="#"><div class="skeleton"></div></a>
+    </div>
+  </div>
+  
+  <div class="list-container-no-header" id="continue-watching-row" style="display: none;">
+    <h2>Continue Watching</h2>
+    <div class="list loading-list" id="continue-watching-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
     </div>
   </div>
   <div class="list-container-no-header">
