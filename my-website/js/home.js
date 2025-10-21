@@ -15,9 +15,10 @@ const FAVORITES_KEY = 'reelroom_favorites';
 const RECENTLY_VIEWED_KEY = 'reelroom_recent';
 const RATINGS_KEY = 'reelroom_ratings';         
 const WATCH_PROGRESS_KEY = 'reelroom_progress'; 
-const USER_SETTINGS_KEY = 'reelroom_user_settings'; // NEW
+const USER_SETTINGS_KEY = 'reelroom_user_settings'; 
 const MAX_RECENT = 15; // Limit to 15 recent items
 const MAX_FAVORITES = 30; // Limit to 30 favorites
+const MAX_CONTINUE_WATCHING = 10; // NEW: Limit for Continue Watching row
 
 // Replaced simple currentPages/isLoading with a single state object from the 2nd code
 let categoryState = {
@@ -34,7 +35,7 @@ let currentFullView = null; // Tracks the category currently in the full view
 let currentCategoryToFilter = null; // Tracks the category targeted by the filter modal
 let scrollPosition = 0; 
 
-// Simplified Genre IDs for the filter dropdown - NEW
+// Simplified Genre IDs for the filter dropdown - UNCHANGED
 const GENRES = [
   { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' }, 
   { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' }, 
@@ -45,8 +46,7 @@ const GENRES = [
 ];
 
 /**
- * Utility function to debounce another function call.
- * Ensures a function is not called until a certain time has passed after the last call.
+ * Utility function to debounce another function call. - UNCHANGED
  */
 function debounce(func, delay) {
   let timeout;
@@ -57,7 +57,7 @@ function debounce(func, delay) {
 }
 
 /**
- * 🔑 Function to test API Key validity on startup.
+ * 🔑 Function to test API Key validity on startup. - UNCHANGED
  */
 async function testApiKey() {
     try {
@@ -83,7 +83,29 @@ async function testApiKey() {
     }
 }
 
-// --- CORE FETCH FUNCTION (Handles all categories and filters) ---
+
+/**
+ * NEW UTILITY: Fetches the full item details from TMDB based on ID and type.
+ * @param {number} id The TMDB ID.
+ * @param {string} type 'movie' or 'tv'.
+ * @returns {object} The full TMDB item object.
+ */
+async function fetchTmdbDetails(id, type) {
+    try {
+        const res = await fetch(`${BASE_URL}/${type}/${id}?api_key=${API_KEY}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        // Ensure media_type is correctly set for showDetails
+        data.media_type = type; 
+        return data;
+    } catch (error) {
+        console.error(`Error fetching details for ${type} ${id}:`, error);
+        return null;
+    }
+}
+
+
+// --- CORE FETCH FUNCTION (Handles all categories and filters) - UNCHANGED ---
 
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
@@ -265,7 +287,6 @@ function changeSlide(n) {
 
 /**
  * Restored: displayList now appends items for infinite scroll, but clears for filter changes.
- * The only way to clear content is via loadRowContent (which is called when filters change).
  */
 function displayList(items, containerId) {
   const container = document.getElementById(containerId);
@@ -295,7 +316,7 @@ function displayList(items, containerId) {
 }
 
 /**
- * NEW: Function to display custom Shopee/Ad links in a dedicated row.
+ * Function to display custom Shopee/Ad links in a dedicated row.
  */
 function displayShopeeLinks() {
     const shopeeLinks = [
@@ -350,7 +371,6 @@ function displayShopeeLinks() {
 
 /**
  * Loads the array from local storage, or returns an empty array.
- * @param {string} key The localStorage key.
  */
 function loadStorageList(key) {
   try {
@@ -364,8 +384,6 @@ function loadStorageList(key) {
 
 /**
  * Saves the array to local storage.
- * @param {string} key The localStorage key.
- * @param {Array} list The array to save.
  */
 function saveStorageList(key, list) {
   try {
@@ -375,7 +393,7 @@ function saveStorageList(key, list) {
   }
 }
 
-// --- USER SETTINGS FUNCTIONS (NEW) ---
+// --- USER SETTINGS FUNCTIONS ---
 
 /**
  * Loads the user settings object from local storage.
@@ -393,7 +411,6 @@ function loadUserSettings() {
 
 /**
  * Saves the user settings object to local storage.
- * @param {object} settings The settings object to save.
  */
 function saveUserSettings(settings) {
     try {
@@ -421,7 +438,7 @@ function saveDefaultServer() {
 // --- LIST MANAGEMENT FUNCTIONS ---
 
 /**
- * Adds an item to the Recently Viewed list.
+ * Adds an item to the Recently Viewed list. - UNCHANGED
  */
 function addToRecentlyViewed(item) {
   // Ensure we save minimal data for efficiency
@@ -448,7 +465,7 @@ function addToRecentlyViewed(item) {
 }
 
 /**
- * Toggles an item in the Favorites list.
+ * Toggles an item in the Favorites list. - UNCHANGED
  */
 function toggleFavorite(item) {
   const itemData = {
@@ -478,7 +495,7 @@ function toggleFavorite(item) {
 }
 
 /**
- * Renders the Favorites list.
+ * Renders the Favorites list. - UNCHANGED
  */
 function displayFavorites() {
     const favorites = loadStorageList(FAVORITES_KEY);
@@ -508,7 +525,7 @@ function displayFavorites() {
 }
 
 /**
- * Renders the Recently Viewed list.
+ * Renders the Recently Viewed list. - UNCHANGED
  */
 function displayRecentlyViewed() {
     const recent = loadStorageList(RECENTLY_VIEWED_KEY);
@@ -533,7 +550,79 @@ function displayRecentlyViewed() {
     });
 }
 
-// --- USER RATING FUNCTIONS ---
+
+/**
+ * NEW: Renders the "Continue Watching" list based on WATCH_PROGRESS_KEY.
+ */
+async function displayContinueWatching() {
+    // Progress is stored with just ID, Season, Episode, Server
+    const progressList = loadStorageList(WATCH_PROGRESS_KEY);
+    const container = document.getElementById('continue-watching-list');
+    const row = document.getElementById('continue-watching-row');
+    
+    removeLoadingAndError('continue-watching-list');
+    container.innerHTML = '';
+    
+    if (progressList.length === 0) {
+        row.style.display = 'none'; // Hide the entire row if nothing to continue
+        return;
+    }
+    
+    row.style.display = 'block'; // Show the row if we have items
+    
+    // Only show the last MAX_CONTINUE_WATCHING items
+    const relevantProgress = progressList.slice(-MAX_CONTINUE_WATCHING).reverse(); 
+    
+    // Create an array of Promises to fetch details concurrently
+    const fetchPromises = relevantProgress.map(p => {
+        // Determine media type (simple assumption: if S/E are present, it's TV, otherwise movie)
+        const type = p.season && p.episode ? 'tv' : 'movie'; 
+        return fetchTmdbDetails(p.id, type);
+    });
+    
+    const detailedItems = await Promise.all(fetchPromises);
+
+    detailedItems.filter(item => item && item.poster_path).forEach(item => {
+        // Find the corresponding progress item to display info
+        const progress = relevantProgress.find(p => p.id === item.id);
+        const isTV = item.media_type === 'tv';
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'continue-watching-item'; // Use a specific class for potential styling
+        
+        const img = document.createElement('img');
+        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+        img.alt = item.title || item.name || 'Unknown';
+        img.setAttribute('data-id', item.id);
+        
+        // Add a text overlay for TV shows
+        let overlayText = '';
+        if (isTV && progress.season && progress.episode) {
+            overlayText = `S${progress.season} E${progress.episode}`;
+        } else if (!isTV) {
+            overlayText = 'Movie';
+        }
+        
+        const textOverlay = document.createElement('div');
+        textOverlay.className = 'continue-watching-overlay';
+        textOverlay.textContent = overlayText;
+
+        // The click event re-calls showDetails(), which automatically loads the correct progress
+        wrapper.onclick = () => showDetails(item);
+
+        wrapper.appendChild(img);
+        wrapper.appendChild(textOverlay);
+        container.appendChild(wrapper);
+    });
+    
+    if (container.children.length === 0) {
+        // This handles the case where progress exists but the posters failed to load
+        row.style.display = 'none';
+    }
+}
+
+
+// --- USER RATING FUNCTIONS - UNCHANGED ---
 
 /**
  * Loads the user rating for the current item.
@@ -590,7 +679,7 @@ function updateUserRatingDisplay(rating) {
 }
 
 
-// --- WATCH PROGRESS FUNCTIONS ---
+// --- WATCH PROGRESS FUNCTIONS - UNCHANGED ---
 
 /**
  * Saves the current server/season/episode progress.
@@ -613,6 +702,8 @@ function saveWatchProgress(itemId, server, season, episode) {
     }
 
     saveStorageList(WATCH_PROGRESS_KEY, progressList);
+    // NEW: Update continue watching when progress is saved
+    displayContinueWatching();
 }
 
 /**
@@ -624,7 +715,7 @@ function loadWatchProgress(itemId) {
 }
 
 
-// --- MAIN ROW INFINITE SCROLL LOGIC (RESTORED & ADAPTED) ---
+// --- MAIN ROW INFINITE SCROLL LOGIC (RESTORED & ADAPTED) - UNCHANGED ---
 
 function addScrollListener(category) {
   const containerId = category + '-list';
@@ -686,7 +777,7 @@ async function loadMore(category) {
   }
 }
 
-// --- FILTER & SHOW MORE LOGIC (ADAPTED) ---
+// --- FILTER & SHOW MORE LOGIC (ADAPTED) - UNCHANGED ---
 
 function updateFilterButtons(category, filters) {
     const row = document.getElementById(`${category}-row`);
@@ -906,7 +997,7 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
   }
 }
 
-// --- FILTER MODAL LOGIC ---
+// --- FILTER MODAL LOGIC - UNCHANGED ---
 
 function populateFilterOptions() {
     const yearSelect = document.getElementById('filter-year');
@@ -978,7 +1069,7 @@ function applyFilters() {
 }
 
 
-// --- DETAILS & MODAL LOGIC (MODIFIED for Auto-Highlight and Default Server) ---
+// --- DETAILS & MODAL LOGIC (MODIFIED for Auto-Highlight and Default Server) - UNCHANGED ---
 
 async function showDetails(item, isFullViewOpen = false) {
   // NEW: Add item to recently viewed list
@@ -1194,6 +1285,14 @@ function closeSearchModal() {
   document.getElementById('search-input').value = '';
 }
 
+/**
+ * NEW: Placeholder function for the new profile icon
+ */
+function openProfileModal() {
+    alert("Profile and Settings: Coming Soon!\n\n(This will be the future home for account management, theme settings, and clearing local data.)");
+}
+
+
 const debouncedSearchTMDB = debounce(async () => {
   const query = document.getElementById('search-input').value;
   const container = document.getElementById('search-results');
@@ -1244,8 +1343,10 @@ async function init() {
   
   // Show loading for all sections initially (including skeletons)
   showLoading('shopee-link-list');
-  showLoading('favorites-list'); // Add skeleton loading for static lists
+  showLoading('favorites-list'); 
   showLoading('recently-viewed-list');
+  showLoading('continue-watching-list'); // NEW: Add skeleton load
+  document.getElementById('continue-watching-row').style.display = 'block'; // Temporarily show load
   showLoading('slides');
   showLoading('movies-list');
   showLoading('tvshows-list');
@@ -1255,17 +1356,20 @@ async function init() {
   showLoading('netflix-tv-list');
   showLoading('korean-drama-list');
 
-  // NEW: Display your custom Shopee/Ad links 
-  // This is called before TMDB fetch since it's local data
+  // NEW: Display the Continue Watching row first (to be prominently placed)
+  // This must be awaited as it fetches TMDB details
+  await displayContinueWatching(); 
+
+  // Display your custom Shopee/Ad links 
   displayShopeeLinks();
   
-  // NEW: Load and display the user lists before fetching TMDB content
+  // Load and display the user lists
   displayFavorites();
   displayRecentlyViewed();
   
   populateFilterOptions(); 
 
-  // Set up listeners for the new control buttons
+  // Set up listeners for the new control buttons - UNCHANGED
   document.querySelectorAll('.show-more-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1289,7 +1393,7 @@ async function init() {
 
 
   try {
-    // Fetch and display all rows concurrently (page 1)
+    // Fetch and display all rows concurrently (page 1) - UNCHANGED
     const [moviesData, tvShowsData, animeData, tagalogMoviesData, netflixMoviesData, netflixTVData, koreanDramaData] = await Promise.all([
       fetchCategoryContent('movies', 1),
       fetchCategoryContent('tvshows', 1),
