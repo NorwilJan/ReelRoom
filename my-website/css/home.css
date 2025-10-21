@@ -546,6 +546,33 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 /* END NEW: Filter Modal Styling */
 
+/* NEW: Styles for the Full View Modal Controls */
+.full-view-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 5%;
+    width: 100%;
+    max-width: 800px; /* Align with results max-width */
+}
+
+.full-view-controls label {
+    font-weight: bold;
+    color: red;
+    white-space: nowrap;
+}
+
+.full-view-controls select {
+    padding: 8px;
+    border-radius: 5px;
+    border: none;
+    background: #333;
+    color: #fff;
+    min-width: 150px;
+    flex-grow: 1;
+}
+
 
 /* MOBILE DISPLAY START */
 @media (max-width: 768px) {
@@ -581,11 +608,45 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
       align-items: flex-start;
   }
   
+  /* NEW: Adjust button size and text for small screens */
   .row-header div {
+      /* Keep existing flex/center */
       display: flex; 
       align-items: center;
       margin-top: 10px;
   }
+  
+  .filter-btn {
+      /* Make the button smaller and hide text, showing only icon */
+      padding: 5px 8px; /* Compact padding */
+      font-size: 0.8em;
+      text-indent: -9999px;
+      line-height: 0;
+      width: 35px; /* Fixed width for icon */
+      overflow: hidden;
+      position: relative;
+  }
+
+  .filter-btn i {
+      /* Bring the icon back into view */
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-indent: 0;
+      font-size: 1.2em;
+  }
+  
+  /* Ensure Clear button is also compact */
+  .clear-filter-btn {
+      width: 35px;
+  }
+  
+  /* Show More link adjustment */
+  .show-more-link {
+      font-size: 0.85em;
+  }
+  /* END NEW MOBILE BUTTON ADJUSTMENTS */
 
   .banner {
     height: 30vh;
@@ -634,6 +695,17 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   .search-modal input {
     margin-top: 0;
   }
+}
+
+@media (max-width: 500px) {
+    .full-view-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    .full-view-controls select {
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
