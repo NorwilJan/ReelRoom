@@ -582,6 +582,40 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
     flex-grow: 1;
 }
 
+/* === NEW: Toast Notification Styling === */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000; /* Ensure it's above all modals */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none; /* Allows clicks to pass through */
+    max-width: 90%;
+}
+
+.toast {
+    background-color: red;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    transform: translateY(-20px);
+    font-weight: bold;
+    pointer-events: all; /* Allows interaction if needed, but usually not for toasts */
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+/* === END NEW: Toast Notification Styling === */
+
 
 /* MOBILE DISPLAY START */
 @media (max-width: 768px) {
@@ -658,9 +692,14 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   /* END NEW MOBILE BUTTON ADJUSTMENTS */
   
   /* Server selector wrap for small screens */
+  .server-selector {
+      flex-direction: column;
+      align-items: flex-start;
+  }
   .server-selector label, .server-selector select, .server-selector button {
       margin-top: 5px; 
       margin-left: 0 !important; /* Override inline style on button */
+      width: 100%;
   }
 
   .banner {
