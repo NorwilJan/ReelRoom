@@ -375,6 +375,33 @@ function saveStorageList(key, list) {
   }
 }
 
+// --- NEW: Toast Notification Function ---
+function showToast(message, duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Show the toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10); // Small delay for CSS transition to work
+
+    // Hide and remove the toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // Wait for the transition to finish before removing
+        toast.addEventListener('transitionend', () => {
+            toast.remove();
+        }, { once: true });
+    }, duration);
+}
+// --- END NEW: Toast Notification Function ---
+
 // --- USER SETTINGS FUNCTIONS (NEW) ---
 
 /**
@@ -413,8 +440,9 @@ function saveDefaultServer() {
     settings.defaultServer = selectedServer;
     saveUserSettings(settings);
     
-    // Provide user feedback
-    alert(`Default server saved as: ${selectedServer.split('.')[0]}.`); 
+    // Provide user feedback via the new toast system
+    const serverName = selectedServer.split('.')[0].replace('player', 'Videasy');
+    showToast(`✅ Default server set to ${serverName}!`); 
 }
 
 
@@ -464,10 +492,12 @@ function toggleFavorite(item) {
   if (isFavorite) {
     // Remove from favorites
     favoritesList = favoritesList.filter(i => i.id !== itemData.id);
+    showToast(`Removed from Favorites`);
   } else {
     // Add to favorites (at the beginning)
     favoritesList.unshift(itemData);
     favoritesList = favoritesList.slice(0, MAX_FAVORITES); // Trim just in case
+    showToast(`Added to Favorites ❤️`);
   }
   
   saveStorageList(FAVORITES_KEY, favoritesList);
@@ -562,10 +592,13 @@ function setUserRating(rating) {
         if (existingIndex !== -1) {
             ratings.splice(existingIndex, 1);
         }
+        showToast('Rating cleared.');
     } else if (existingIndex !== -1) {
         ratings[existingIndex].rating = finalRating;
+        showToast(`Rated ${finalRating} stars!`);
     } else {
         ratings.push({ id: itemId, rating: finalRating });
+        showToast(`Rated ${finalRating} stars!`);
     }
 
     saveStorageList(RATINGS_KEY, ratings);
@@ -975,6 +1008,7 @@ function applyFilters() {
     
     // 4. Immediately open the full view to show all filtered results.
     openFullView(category);
+    showToast(`Filters Applied to ${category.replace('-', ' ')}`);
 }
 
 
