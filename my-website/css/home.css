@@ -1,28 +1,49 @@
 /* css/home.css */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
+/* === 1. CSS Variables for Theming === */
+:root {
+  --background-dark: #111;
+  --background-mid: #222;
+  --text-light: #fff;
+  --accent-color: red; /* Main highlight color */
+  --accent-hover: #ff4d4d;
+  --link-color: var(--accent-color);
+  --skeleton-color: #333;
+}
+
+/* === 2. Global Reset and Base Styles === */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    font-family: Arial, sans-serif; 
+    background: var(--background-dark); 
+    color: var(--text-light); 
+    /* Ensures smooth scrolling across the app */
+    scroll-behavior: smooth; 
+}
+
+/* === 3. Navigation Bar === */
 .navbar {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 10px; background: #222;
+  padding: 10px; 
+  background: var(--background-mid);
 }
 .logo-text {
   margin: 0;
   font-size: 28px;
   font-weight: bold;
-  color: #fff;
+  color: var(--text-light);
   letter-spacing: 2px;
   text-transform: uppercase;
   font-family: 'Arial Black', Arial, sans-serif;
 }
-.nav-links { display: flex; align-items: center; gap: 10px; }
-.nav-links a { color: white; text-decoration: none; margin: 0 5px; }
+.nav-links { display: flex; align-items: center; gap: var(--spacing-md, 10px); }
+.nav-links a { color: var(--text-light); text-decoration: none; margin: 0 5px; }
 
 /* Search button styling */
 .search-icon-btn {
   background: none;
   border: none;
-  color: white;
+  color: var(--text-light);
   cursor: pointer;
   font-size: 1.2em;
   padding: 5px 10px;
@@ -32,6 +53,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   color: #ddd;
 }
 
+/* === 4. Banner and Slideshow === */
 .banner {
   height: 50vh;
   position: relative;
@@ -56,7 +78,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   background-size: cover;
   background-position: center;
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* Move title to the bottom */
   padding: 20px;
   cursor: pointer;
   transition: transform 0.5s ease;
@@ -65,7 +87,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 .slide h1 {
   background: rgba(0,0,0,0.7);
   padding: 10px;
-  color: #fff;
+  color: var(--text-light);
   font-size: 2em;
 }
 
@@ -74,12 +96,13 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   top: 50%;
   transform: translateY(-50%);
   background: rgba(0,0,0,0.5);
-  color: white;
+  color: var(--text-light);
   padding: 10px;
   cursor: pointer;
   font-size: 24px;
   user-select: none;
   border-radius: 5px;
+  z-index: 1;
 }
 
 .prev { left: 10px; }
@@ -103,24 +126,20 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .dot.active {
-  background: #fff;
+  background: var(--text-light);
 }
 
-.row {
+/* === 5. Content Rows and Lists === */
+.row, .list-container-no-header {
   margin: 20px;
-}
-/* For Favorites and Recently Viewed sections */
-.list-container-no-header {
-    margin: 20px;
 }
 
 .list-container-no-header h2 {
     margin-bottom: 10px;
-    color: #fff;
+    color: var(--text-light);
 }
 
-
-/* New: Header structure for filter/show more */
+/* Header structure for filter/show more */
 .row-header {
     display: flex; 
     justify-content: space-between; 
@@ -132,36 +151,37 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   margin: 0;
 }
 
-/* New: Filter Button and Show More Link Styling */
+/* Filter Button and Show More Link Styling */
 .filter-btn {
   background: #444;
-  color: #fff;
+  color: var(--text-light);
   border: 1px solid #666;
   padding: 5px 10px;
   border-radius: 5px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
   font-size: 0.9em;
   margin-right: 10px;
+  white-space: nowrap; /* Prevent button text from wrapping */
 }
 
 .filter-btn:hover {
   background: #666;
 }
 
-/* NEW: Clear Filter Button Styling */
+/* Styling for the clear filter button */
 .clear-filter-btn {
-  background: #600; /* Darker red for clear */
-  border: 1px solid red;
-  margin-right: 5px; /* Adjust spacing */
+  background: #600; 
+  border: 1px solid var(--accent-color);
+  margin-right: 5px; 
 }
 
 .clear-filter-btn:hover {
-  background: red;
+  background: var(--accent-color);
 }
 
 .show-more-link {
-  color: red;
+  color: var(--link-color);
   text-decoration: none;
   font-weight: bold;
   font-size: 0.95em;
@@ -169,36 +189,31 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .show-more-link:hover {
-  color: #fff;
+  color: var(--text-light);
 }
-/* End New: Header Styling */
-
 
 .list {
   display: flex;
   overflow-x: auto;
   padding-bottom: 10px;
-  /* Improvement: Hide scrollbar for a cleaner UI */
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
-  -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+  -webkit-overflow-scrolling: touch; 
 }
 
-/* Improvement: Hide scrollbar for Chrome, Safari and Opera */
+/* Hide scrollbar for Chrome, Safari and Opera */
 .list::-webkit-scrollbar {
   display: none;
 }
 
-/* NEW: Styling for the dedicated link slideshow area */
+/* Dedicated link slideshow area */
 .link-slideshow-container {
-    padding-top: 5px; /* Add a bit of space below the banner */
-    border-bottom: 2px solid #333; /* Visual separator */
+    padding-top: 5px; 
+    border-bottom: 2px solid #333; 
     margin-bottom: 20px;
 }
 
-/* Ensure the link container elements behave like images in the list */
 .list a {
-    /* Required to make the transform effect work when hovering over the link */
     display: block; 
     flex-shrink: 0; 
     margin-right: 10px;
@@ -207,54 +222,41 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
     transition: transform 0.3s ease, filter 0.3s ease;
 }
 
-/* Apply the existing image hover effect to the link itself */
 .list a:hover {
     transform: scale(1.05);
     filter: brightness(1.2);
     z-index: 2;
 }
 
-/* Ensure the image inside the link follows the list image rules */
+.list a img, .list img {
+  width: 150px;
+  height: 225px; 
+  object-fit: cover;
+  flex-shrink: 0; 
+  margin-right: 10px; /* Only applies to .list img, but harmless here */
+  cursor: pointer;
+  border-radius: 5px;
+  transition: transform 0.3s ease, filter 0.3s ease; /* Ensure transition exists here for consistency */
+}
+
 .list a img {
-  width: 150px;
-  /* Improvement: Ensure consistent image height/ratio */
-  height: 225px; 
-  object-fit: cover;
-  flex-shrink: 0; /* Prevents images from shrinking on smaller lists */
-  margin-right: 0; /* Already handled by the 'a' tag margin */
-  cursor: pointer;
-  border-radius: 5px;
-  transition: none; /* Already handled by the 'a' tag transition */
+    margin-right: 0; /* Override list img margin when inside an 'a' */
 }
 
-
-.list img {
-  width: 150px;
-  /* Improvement: Ensure consistent image height/ratio */
-  height: 225px; 
-  object-fit: cover;
-  flex-shrink: 0; /* Prevents images from shrinking on smaller lists */
-  margin-right: 10px;
-  cursor: pointer;
-  border-radius: 5px;
-  transition: transform 0.3s ease, filter 0.3s ease;
-}
-
-/* Original image hover styling is still needed for non-link images */
 .list img:hover {
   transform: scale(1.05);
   filter: brightness(1.2);
   z-index: 2;
 }
 
-/* === NEW: Skeleton Loading Effect === */
+
+/* === 6. Skeleton Loading Effect === */
 .skeleton {
-  background: #333; /* Dark gray placeholder color */
+  background: var(--skeleton-color); 
   position: relative;
   overflow: hidden;
 }
 
-/* Optional: Subtle animation for the loading effect */
 .skeleton::after {
   content: '';
   position: absolute;
@@ -279,12 +281,11 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 }
 
-/* Apply skeleton dimensions to list images and links before they load */
 .list.loading-list img, .list.loading-list a img, .list.loading-list a {
   width: 150px;
   height: 225px;
   border-radius: 5px;
-  background: #333; /* Fallback background for skeleton */
+  background: var(--skeleton-color); 
 }
 
 .list.loading-list .skeleton {
@@ -292,33 +293,33 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
     height: 225px;
     margin-right: 10px;
     border-radius: 5px;
-    /* Ensure skeleton placeholders are clickable/linkable targets */
     display: inline-block; 
 }
-/* === END NEW: Skeleton Loading Effect === */
 
-
+/* === 7. Modals (Details/Playback) === */
 .modal {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0,0,0,0.8);
+  background: rgba(0,0,0,0.9);
   display: none;
   justify-content: center;
   align-items: center;
   z-index: 10;
+  padding: 10px; /* Added padding for small screens */
 }
 
 .modal-content {
-  background: #222;
+  background: var(--background-mid);
   padding: 20px;
   width: 100%;
   max-width: 800px;
-  max-height: 90vh;
+  max-height: 95vh; /* Adjusted for better mobile fit */
   overflow-y: auto;
   position: relative;
   text-align: center;
   border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .modal-body {
@@ -332,6 +333,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   width: 30%;
   height: auto;
   border-radius: 5px;
+  object-fit: cover;
 }
 
 .modal-text {
@@ -339,10 +341,9 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   text-align: left;
 }
 
-/* NEW: User Rating and Favorite Heart Icon in Modal */
 .favorite-icon {
   cursor: pointer;
-  color: #fff; /* Default color */
+  color: #fff; 
   font-size: 1.2em;
   margin-left: 10px;
   transition: color 0.2s;
@@ -350,10 +351,9 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .favorite-icon.active {
-  color: red; /* Color when favorited */
+  color: var(--accent-color); 
 }
 
-/* Styling for the user-rateable stars */
 .user-star {
     cursor: pointer;
     color: gold;
@@ -367,20 +367,19 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   top: 10px; right: 20px;
   cursor: pointer;
   font-size: 24px;
+  transition: transform 0.2s;
 }
 
-/* UPDATED: Server selector to support the Save Default button */
-.server-selector {
+.close:hover {
+    transform: scale(1.1);
+}
+
+.server-selector, .season-selector {
   margin: 15px 0;
   text-align: left;
   display: flex;
   align-items: center;
-  flex-wrap: wrap; /* Allow wrap on small screens */
-}
-
-.season-selector {
-  margin: 15px 0;
-  text-align: left;
+  flex-wrap: wrap; 
 }
 
 .season-selector select, .server-selector select {
@@ -388,7 +387,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   border-radius: 5px;
   border: none;
   background: #333;
-  color: #fff;
+  color: var(--text-light);
   min-width: 150px;
 }
 
@@ -407,15 +406,16 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   padding: 10px;
   border-radius: 5px;
   cursor: pointer;
-  flex: 1 1 calc(50% - 5px);
-  transition: background 0.3s;
+  /* Adjusted for better multi-column layout on medium screens */
+  flex: 1 1 calc(50% - 5px); 
+  transition: background 0.3s, border 0.3s;
   display: flex;
   align-items: center;
 }
 
-.episode-item.active { /* Highlight active episode */
+.episode-item.active { 
     background: #444; 
-    border: 1px solid red;
+    border: 1px solid var(--accent-color);
 }
 
 .episode-item:hover {
@@ -431,25 +431,27 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .episode-item span {
-  color: #fff;
+  color: var(--text-light);
   flex-grow: 1;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.search-modal { /* Reused for full-view-modal */
+
+/* === 8. Search/Full View Modal === */
+.search-modal {
   position: fixed;
   top: 0; left: 0;
-  width: 100vw; /* Using 100vw/100vh for guaranteed full screen */
+  width: 100vw; 
   height: 100vh;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95); /* Increased opacity for full view */
   display: none;
   justify-content: flex-start;
   align-items: center;
   flex-direction: column;
   padding-top: 50px;
-  z-index: 9999; /* Higher z-index to cover everything */
+  z-index: 9999; 
 }
 
 .search-modal input {
@@ -460,19 +462,21 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   border: none;
   margin-bottom: 20px;
   font-size: 16px;
+  background: #333;
+  color: var(--text-light);
 }
 
-.search-modal h2 { /* Styling for the full-view title */
-    color: #fff;
+.search-modal h2 { 
+    color: var(--text-light);
     margin-bottom: 20px;
 }
 
 .search-modal .results {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  gap: 15px; /* Increased gap for better spacing */
   width: 90%;
-  max-width: 800px;
+  max-width: 900px; /* Slightly wider max-width for full view */
   max-height: 80vh;
   overflow-y: auto;
   padding: 10px;
@@ -484,10 +488,11 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   border-radius: 5px;
   cursor: pointer;
   transition: transform 0.2s;
+  object-fit: cover;
 }
 
 .search-modal img:hover {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .search-modal .close {
@@ -497,7 +502,33 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   font-size: 30px;
 }
 
-/* NEW: Filter Modal Styling */
+.full-view-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 5%;
+    width: 100%;
+    max-width: 900px; 
+}
+
+.full-view-controls label {
+    font-weight: bold;
+    color: var(--accent-color);
+    white-space: nowrap;
+}
+
+.full-view-controls select {
+    padding: 8px;
+    border-radius: 5px;
+    border: none;
+    background: #333;
+    color: var(--text-light);
+    min-width: 150px;
+    flex-grow: 1;
+}
+
+/* === 9. Filter Modal Styling === */
 .filter-modal {
   position: fixed;
   top: 0; left: 0;
@@ -510,12 +541,12 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .filter-content {
-  background: #222;
+  background: var(--background-mid);
   padding: 30px;
   width: 90%;
   max-width: 400px;
   border-radius: 10px;
-  color: #fff;
+  color: var(--text-light);
   position: relative;
   text-align: left;
 }
@@ -524,7 +555,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
-    color: red;
+    color: var(--accent-color);
 }
 
 .filter-content select {
@@ -532,7 +563,7 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   padding: 10px;
   margin-bottom: 15px;
   background: #333;
-  color: #fff;
+  color: var(--text-light);
   border: 1px solid #555;
   border-radius: 5px;
 }
@@ -540,8 +571,8 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 .filter-content button {
   width: 100%;
   padding: 10px;
-  background: red;
-  color: white;
+  background: var(--accent-color);
+  color: var(--text-light);
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -551,54 +582,26 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 }
 
 .filter-content button:hover {
-    background: #ff4d4d;
-}
-/* END NEW: Filter Modal Styling */
-
-/* NEW: Styles for the Full View Modal Controls */
-.full-view-controls {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    margin-bottom: 20px;
-    padding: 0 5%;
-    width: 100%;
-    max-width: 800px; /* Align with results max-width */
+    background: var(--accent-hover);
 }
 
-.full-view-controls label {
-    font-weight: bold;
-    color: red;
-    white-space: nowrap;
-}
-
-.full-view-controls select {
-    padding: 8px;
-    border-radius: 5px;
-    border: none;
-    background: #333;
-    color: #fff;
-    min-width: 150px;
-    flex-grow: 1;
-}
-
-/* === NEW: Toast Notification Styling === */
+/* === 10. Toast Notification Styling === */
 #toast-container {
     position: fixed;
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 10000; /* Ensure it's above all modals */
+    z-index: 10000; 
     display: flex;
     flex-direction: column;
     align-items: center;
-    pointer-events: none; /* Allows clicks to pass through */
+    pointer-events: none; 
     max-width: 90%;
 }
 
 .toast {
-    background-color: red;
-    color: white;
+    background-color: var(--accent-color);
+    color: var(--text-light);
     padding: 10px 20px;
     border-radius: 5px;
     margin-bottom: 10px;
@@ -607,17 +610,63 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
     transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
     transform: translateY(-20px);
     font-weight: bold;
-    pointer-events: all; /* Allows interaction if needed, but usually not for toasts */
+    pointer-events: all; 
 }
 
 .toast.show {
     opacity: 1;
     transform: translateY(0);
 }
-/* === END NEW: Toast Notification Styling === */
+
+/* === 11. Footer === */
+.footer {
+  background: var(--background-mid);
+  color: #ccc;
+  padding: 20px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.footer-links a {
+  color: var(--link-color);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.footer-links a:hover {
+  color: var(--text-light);
+}
+
+.error-message {
+  color: #ff6b6b;
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 5px;
+  margin: 10px;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #ccc;
+}
 
 
-/* MOBILE DISPLAY START */
+/* === 12. Mobile Responsiveness === */
 @media (max-width: 768px) {
   .navbar {
     flex-direction: column;
@@ -625,25 +674,30 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   }
 
   .nav-links {
-    flex-direction: column;
+    flex-direction: row; /* Keep nav links horizontal to save space */
     width: 100%;
-    gap: 10px;
-    margin-top: 10px;
-    align-items: stretch;
+    gap: 15px; /* Increased gap */
+    margin-top: 5px;
+    justify-content: flex-end;
   }
 
   .nav-links a {
     text-align: center;
-    padding: 5px 0;
+    padding: 5px;
     background: #333;
     border-radius: 5px;
   }
   
   .search-icon-btn {
-    align-self: flex-end;
-    position: absolute;
-    top: 10px;
-    right: 10px;
+    align-self: flex-start; /* Reset align */
+    position: static; /* No absolute positioning needed if nav-links handles search */
+    margin-right: -10px; /* Pull it slightly to the right */
+  }
+
+  .logo-text {
+    font-size: 18px;
+    margin-bottom: 5px;
+    letter-spacing: 1px;
   }
   
   .row-header {
@@ -651,54 +705,41 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
       align-items: flex-start;
   }
   
-  /* NEW: Adjust button size and text for small screens */
   .row-header div {
-      /* Keep existing flex/center */
       display: flex; 
       align-items: center;
       margin-top: 10px;
   }
   
-  .filter-btn {
-      /* Make the button smaller and hide text, showing only icon */
-      padding: 5px 8px; /* Compact padding */
-      font-size: 0.8em;
-      text-indent: -9999px;
-      line-height: 0;
-      width: 35px; /* Fixed width for icon */
-      overflow: hidden;
+  /* Compact Button Styling: Hide text and only show icon */
+  .filter-btn, .clear-filter-btn {
+      padding: 8px; /* Square button */
+      width: 38px; 
+      height: 38px;
+      font-size: 0; /* Hide text */
       position: relative;
   }
-
-  .filter-btn i {
-      /* Bring the icon back into view */
+  
+  /* Position Font Awesome icon in the center */
+  .filter-btn i, .clear-filter-btn i {
+      font-size: 1.2em;
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      text-indent: 0;
-      font-size: 1.2em;
   }
-  
-  /* Ensure Clear button is also compact */
-  .clear-filter-btn {
-      width: 35px;
-  }
-  
-  /* Show More link adjustment */
+
   .show-more-link {
       font-size: 0.85em;
   }
-  /* END NEW MOBILE BUTTON ADJUSTMENTS */
   
-  /* Server selector wrap for small screens */
   .server-selector {
       flex-direction: column;
       align-items: flex-start;
   }
   .server-selector label, .server-selector select, .server-selector button {
       margin-top: 5px; 
-      margin-left: 0 !important; /* Override inline style on button */
+      margin-left: 0 !important; 
       width: 100%;
   }
 
@@ -717,11 +758,6 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
 
   .dots {
     bottom: 5px;
-  }
-
-  .dot {
-    width: 8px;
-    height: 8px;
   }
 
   .modal-body {
@@ -745,10 +781,6 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
   .episode-item {
     flex: 1 1 100%;
   }
-
-  .search-modal input {
-    margin-top: 0;
-  }
 }
 
 @media (max-width: 500px) {
@@ -760,102 +792,8 @@ body { font-family: Arial, sans-serif; background: #111; color: #fff; }
     .full-view-controls select {
         width: 100%;
     }
-}
-
-@media (max-width: 480px) {
-  .slide h1 {
-    font-size: 1.2em;
-    padding: 5px;
-  }
-
-  .row h2 {
-    font-size: 18px;
-  }
-
-  .modal-content {
-    width: 95%;
-    padding: 15px;
-  }
-
-  .modal-body img {
-    width: 50%;
-  }
-
-  .search-modal .close {
-    font-size: 24px;
-    top: 10px;
-    right: 20px;
-  }
-
-  .episode-item img {
-    width: 40px;
-  }
-}
-/* MOBILE DISPLAY END */
-
-.footer {
-  background: #222;
-  color: #ccc;
-  padding: 20px;
-  text-align: center;
-  margin-top: 40px;
-}
-
-.footer-content {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.footer-links {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.footer-links a {
-  color: red;
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.footer-links a:hover {
-  color: #fff;
-}
-
-/* Responsive adjustments */
-@media (max-width: 600px) {
-  .footer-content {
-    font-size: 14px;
-  }
-
-  .footer-links {
-    flex-direction: row;
-    gap: 8px;
-  }
-}
-
-.error-message {
-  color: #ff6b6b;
-  text-align: center;
-  padding: 20px;
-  background: rgba(255, 107, 107, 0.1);
-  border-radius: 5px;
-  margin: 10px;
-}
-
-.loading {
-  text-align: center;
-  padding: 20px;
-  color: #ccc;
-}
-
-/* Mobile fix for logo spacing */
-@media (max-width: 768px) {
-  .logo-text {
-    font-size: 18px;
-    margin-bottom: 5px;
-    letter-spacing: 1px;
-  }
+    .slide h1 {
+        font-size: 1.2em;
+        padding: 5px;
+    }
 }
