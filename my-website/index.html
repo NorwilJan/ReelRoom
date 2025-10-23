@@ -6,7 +6,6 @@
   <title>ReelRoom</title>
   <link rel="stylesheet" href="css/home.css">
   <link rel="preload" href="css/home.css" as="style">
-  <link rel="preload" href="js/home.js" as="script">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script defer src="js/home.js"></script>
@@ -20,7 +19,7 @@
     <h1 class="logo-text">REELROOM</h1>
     <div class="nav-links">
       <a href="index.html">Home</a>
-      <button class="search-icon-btn" onclick="openSearchModal()">
+      <button class="search-icon-btn" id="search-btn" aria-label="Open Search">
         <i class="fas fa-search"></i>
       </button>
     </div>
@@ -29,8 +28,8 @@
   <div class="banner" id="banner">
     <div class="slideshow-container">
       <div class="slides" id="slides"></div>
-      <a class="prev" onclick="changeSlide(-1)">&#10094;</a>
-      <a class="next" onclick="changeSlide(1)">&#10095;</a>
+      <a class="prev" id="prev-slide-btn">&#10094;</a>
+      <a class="next" id="next-slide-btn">&#10095;</a>
       <div class="dots" id="dots"></div>
     </div>
   </div>
@@ -45,6 +44,7 @@
         <a href="#"><div class="skeleton"></div></a>
     </div>
   </div>
+  
   <div class="list-container-no-header">
     <div class="row-header">
         <h2>Your Favorites <span style="font-size: 0.8em; color: #aaa;" id="favorites-count"></span></h2>
@@ -185,7 +185,7 @@
 
   <div class="modal" id="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal()" style="color: red;">&times;</span>
+      <span class="close" id="modal-close-btn" style="color: red;">&times;</span>
       <div class="modal-body">
         <img id="modal-image" src="" alt="" />
         <div class="modal-text">
@@ -197,13 +197,13 @@
           <div class="stars" id="modal-rating-tmdb"></div> 
           
           <div style="margin-top: 10px;">
-              <label style="color: red; font-weight: bold;">Your Rating:</label>
+              <label style="color: var(--accent-color); font-weight: bold;">Your Rating:</label>
               <div class="stars" id="modal-rating-user" data-rating="0">
-                  <i class="far fa-star user-star" data-value="1" onclick="setUserRating(1)"></i>
-                  <i class="far fa-star user-star" data-value="2" onclick="setUserRating(2)"></i>
-                  <i class="far fa-star user-star" data-value="3" onclick="setUserRating(3)"></i>
-                  <i class="far fa-star user-star" data-value="4" onclick="setUserRating(4)"></i>
-                  <i class="far fa-star user-star" data-value="5" onclick="setUserRating(5)"></i>
+                  <i class="far fa-star user-star" data-value="1" id="star-1"></i>
+                  <i class="far fa-star user-star" data-value="2" id="star-2"></i>
+                  <i class="far fa-star user-star" data-value="3" id="star-3"></i>
+                  <i class="far fa-star user-star" data-value="4" id="star-4"></i>
+                  <i class="far fa-star user-star" data-value="5" id="star-5"></i>
               </div>
           </div>
           <p id="modal-description"></p>
@@ -211,18 +211,14 @@
       </div>
       <div class="server-selector">
         <label for="server">Change Server:</label>
-        <select id="server" onchange="changeServer()">
-          <option value="vidsrc.cc">Vidsrc.cc</option>
-          <option value="vidsrc.me">Vidsrc.me</option>
-          <option value="player.videasy.net">Player.Videasy.net</option>
-        </select>
-        <button onclick="saveDefaultServer()" style="background: #333; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+        <select id="server"></select>
+        <button id="save-default-server-btn" style="background: #333; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px;">
             <i class="fas fa-save"></i> Save as Default
         </button>
       </div>
       <div class="season-selector" id="season-selector" style="display: none;">
         <label for="season">Select Season:</label>
-        <select id="season" onchange="loadEpisodes()"></select>
+        <select id="season"></select>
       </div>
       <div class="episode-list" id="episode-list"></div>
       <iframe id="modal-video" width="100%" height="315" frameborder="0" allowfullscreen></iframe>
@@ -230,14 +226,14 @@
   </div>
 
   <div class="search-modal" id="search-modal">
-    <span class="close" onclick="closeSearchModal()" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." onkeyup="debouncedSearchTMDB()" />
+    <span class="close" id="search-modal-close-btn" style="color: red;">&times;</span>
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." />
     <div class="results" id="search-results"></div>
   </div>
   
   <div class="filter-modal" id="filter-modal">
     <div class="filter-content">
-        <span class="close" onclick="document.getElementById('filter-modal').style.display='none';" style="color: red;">&times;</span>
+        <span class="close" id="filter-modal-close-btn" style="color: var(--accent-color);">&times;</span>
         <h2 id="filter-modal-title">Filter Content</h2>
         <p>Apply filters to start a new search list.</p>
         
@@ -251,7 +247,7 @@
             <option value="">Any Genre</option>
         </select>
         
-        <button onclick="applyFilters()">Apply Filters and Show More</button>
+        <button id="apply-filters-btn">Apply Filters and Show More</button>
     </div>
   </div>
 
