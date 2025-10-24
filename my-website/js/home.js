@@ -107,6 +107,7 @@ async function fetchCategoryContent(category, page, filters = {}) {
         const sortBy = filters.sort_by || 'popularity.desc';
         baseParams += `&sort_by=${sortBy}`;
         
+        // This is where the filters are applied
         const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
         let fetchURL = '';
         let mediaType = category.includes('movie') ? 'movie' : 'tv';
@@ -840,13 +841,17 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
   }
 }
 
+/**
+ * UPDATED FUNCTION: Populates the Year and Genre dropdowns in the Filter Modal.
+ */
 function populateFilterOptions() {
     const yearSelect = document.getElementById('filter-year');
     const genreSelect = document.getElementById('filter-genre');
     
     if (!yearSelect || !genreSelect) return; 
 
-    // Populate Year
+    // 1. Populate Year Options (Current year back 20 years)
+    yearSelect.innerHTML = '<option value="">Any Year</option>';
     const currentYear = new Date().getFullYear();
     for (let i = 0; i < 20; i++) {
         const year = currentYear - i;
@@ -854,7 +859,8 @@ function populateFilterOptions() {
         yearSelect.appendChild(option);
     }
     
-    // Populate Genre
+    // 2. Populate Genre Options using the global GENRES array
+    genreSelect.innerHTML = '<option value="">Any Genre</option>';
     GENRES.forEach(genre => {
         const option = new Option(genre.name, genre.id);
         genreSelect.appendChild(option);
@@ -1192,6 +1198,7 @@ async function init() {
   
   populateServerOptions(); // Populate server dropdown once
   attachListeners(); // Attach all event handlers
+  populateFilterOptions(); // NEW: Populate filter dropdowns
   
   // Show loading/skeletons for all sections
   const categoryIds = Object.keys(categoryState);
@@ -1204,7 +1211,6 @@ async function init() {
   displayShopeeLinks();
   displayFavorites();
   displayRecentlyViewed();
-  populateFilterOptions(); 
 
   // Use Promise.allSettled for robust parallel loading
   const fetchPromises = categoryIds.map(category => fetchCategoryContent(category, 1));
