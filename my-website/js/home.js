@@ -1,1335 +1,521 @@
-// js/home.js
-const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
+// =====================================================================
+// Reel Room - Home Logic (js/home.js)
+// =====================================================================
+
+// --- TMDB API CONSTANTS ---
+const API_KEY = 'YOUR_API_KEY'; // Replace with your actual TMDB API key
 const BASE_URL = 'https://api.themoviedb.org/3';
-const IMG_URL = 'https://image.tmdb.org/t/p/original';
-const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
-
-// --- CONFIGURATION OBJECTS ---
-const PLAYER_CONFIG = {
-    'vidsrc.cc': { 
-        name: 'Vidsrc.cc',
-        movie: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`, 
-        tv: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}` 
-    },
-    'vidsrc.me': { 
-        name: 'Vidsrc.me',
-        movie: (id) => `https://vidsrc.net/embed/movie/?tmdb=${id}`, 
-        tv: (id, s, e) => `https://vidsrc.net/embed/tv/?tmdb=${id}&season=${s}&episode=${e}` 
-    },
-    'player.videasy.net': { 
-        name: 'Player.Videasy.net',
-        movie: (id) => `https://player.videasy.net/movie/${id}`, 
-        tv: (id, s, e) => `https://player.videasy.net/tv/${id}/${s}/${e}` 
-    },
-};
-
-const GENRES = [
-  { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' }, 
-  { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' }, 
-  { id: 18, name: 'Drama' }, { id: 10751, name: 'Family' }, 
-  { id: 27, name: 'Horror' }, { id: 878, name: 'Science Fiction' }, 
-  { id: 53, name: 'Thriller' }, { id: 10749, name: 'Romance' },
-  { id: 16, name: 'Animation' }, { id: 9648, name: 'Mystery' }
-];
-
-// --- APPLICATION STATE ---
-let currentItem;
-let currentSeason = 1;
-let currentEpisode = 1;
-let slideshowItems = [];
-let currentSlide = 0;
-let slideshowInterval;
-let scrollPosition = 0; 
-let currentFullView = null; 
-let currentCategoryToFilter = null; 
-
-let categoryState = {
-    movies: { page: 1, isLoading: false, filters: {} },
-    tvshows: { page: 1, isLoading: false, filters: {} },
-    anime: { page: 1, isLoading: false, filters: {} },
-    'tagalog-movies': { page: 1, isLoading: false, filters: {} },
-    'netflix-movies': { page: 1, isLoading: false, filters: {} },
-    'netflix-tv': { page: 1, isLoading: false, filters: {} },
-    'korean-drama': { page: 1, isLoading: false, filters: {} }
-};
+const IMG_URL = 'https://image.tmdb.org/t/p/w500';
+const FALLBACK_IMAGE = 'https://via.placeholder.com/500x750?text=Image+Not+Available';
 
 // --- LOCAL STORAGE CONSTANTS ---
 const FAVORITES_KEY = 'reelroom_favorites';
 const RECENTLY_VIEWED_KEY = 'reelroom_recent';
-const RATINGS_KEY = 'reelroom_ratings';         
-const WATCH_PROGRESS_KEY = 'reelroom_progress'; 
-const USER_SETTINGS_KEY = 'reelroom_user_settings'; 
-const MAX_RECENT = 15; 
-const MAX_FAVORITES = 30; 
+const RATINGS_KEY = 'reelroom_ratings';
+const WATCH_PROGRESS_KEY = 'reelroom_progress';
+const USER_SETTINGS_KEY = 'reelroom_user_settings';
+const SEARCH_HISTORY_KEY = 'reelroom_search_history'; 
+const MAX_RECENT = 15;
+const MAX_FAVORITES = 30;
+const MAX_HISTORY = 10; 
 
+// --- APPLICATION STATE ---
+let allCategories = ['now_playing', 'popular', 'top_rated', 'upcoming'];
+let favoritesList = [];
+let recentlyViewed = [];
+let ratings = {};
+let watchProgress = {};
+let isLightMode = false;
+let currentCategoryToFilter = null;
+let fullViewScrollPositions = {}; // Object to store scroll position per category
+
+let searchState = {
+    page: 0,
+    query: '',
+    isLoading: false,
+    totalPages: 1
+}; 
+
+let categoryState = {
+    'now_playing': { page: 1, totalPages: 1, isLoading: false },
+    'popular': { page: 1, totalPages: 1, isLoading: false },
+    'top_rated': { page: 1, totalPages: 1, isLoading: false },
+    'upcoming': { page: 1, totalPages: 1, isLoading: false },
+    'favorite': { page: 1, totalPages: 1, isLoading: false }
+};
+
+// --- UTILITY FUNCTIONS ---
 
 /**
- * Utility function to debounce another function call.
+ * Debounce utility function to limit the rate of function calls.
  */
 function debounce(func, delay) {
-  let timeout;
-  return function(...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), delay);
-  };
+    let timeout;
+    const debounced = function(...args) {
+        const context = this;
+        const later = function() {
+            timeout = null;
+            func.apply(context, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, delay);
+    };
+    debounced.timeout = null; 
+    return debounced;
 }
-
-
-// --- CORE API & UI UTILITIES ---
-
-async function testApiKey() {
-    try {
-        const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&page=1`);
-        if (res.status === 401) {
-            throw new Error("TMDB API Key is invalid. Please check your key.");
-        }
-        if (!res.ok) {
-            throw new Error(`TMDB API request failed with status: ${res.status}`);
-        }
-        return true;
-    } catch (error) {
-        console.error("API Key Test Failed:", error.message);
-        const errorMessage = `
-            ❌ **Initialization Failed** ❌
-            Reason: ${error.message}
-            
-            Action Required: Check your '${API_KEY}' key on TMDB.
-        `;
-        showError(errorMessage, 'empty-message');
-        document.getElementById('empty-message').style.display = 'block';
-        return false;
-    }
-}
-
-async function fetchCategoryContent(category, page, filters = {}) {
-    try {
-        let baseParams = `&page=${page}&include_adult=false&include_video=false`; 
-        const sortBy = filters.sort_by || 'popularity.desc';
-        baseParams += `&sort_by=${sortBy}`;
-        
-        // This is where the filters are applied
-        const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
-        let fetchURL = '';
-        let mediaType = category.includes('movie') ? 'movie' : 'tv';
-
-        if (category === 'movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
-        } else if (category === 'tvshows') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}${baseParams}${filterParams}`;
-        } else if (category === 'anime') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&with_original_language=ja${baseParams}${filterParams}`;
-        } else if (category === 'tagalog-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_original_language=tl${baseParams}${filterParams}`;
-        } else if (category === 'netflix-movies') {
-            fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
-        } else if (category === 'netflix-tv') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_watch_providers=8&watch_region=US${baseParams}${filterParams}`;
-        } else if (category === 'korean-drama') {
-            fetchURL = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_original_language=ko&with_genres=18${baseParams}${filterParams}`;
-        } else {
-            throw new Error('Unknown category.');
-        }
-
-        const res = await fetch(fetchURL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        
-        if (data.results) {
-            data.results.forEach(item => item.media_type = item.media_type || mediaType);
-        }
-        return data;
-    } catch (error) {
-        console.error(`Error fetching ${category}:`, error);
-        return { results: [], total_pages: 1 };
-    }
-}
-
-async function fetchSeasonsAndEpisodes(tvId) {
-  try {
-    const res = await fetch(`${BASE_URL}/tv/${tvId}?api_key=${API_KEY}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return data.seasons || [];
-  } catch (error) {
-    console.error('Error fetching seasons:', error);
-    return [];
-  }
-}
-
-async function fetchEpisodes(tvId, seasonNumber) {
-  try {
-    const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return data.episodes || [];
-  } catch (error) {
-    console.error('Error fetching episodes:', error);
-    return [];
-  }
-}
-
-function removeLoadingAndError(containerId) {
-    const container = document.getElementById(containerId);
-    if (container) {
-        container.querySelector('.loading')?.remove();
-        container.querySelector('.error-message')?.remove();
-        container.classList.remove('loading-list');
-        container.querySelectorAll('.skeleton').forEach(el => el.remove());
-    }
-}
-
-function showError(message, containerId) {
-  removeLoadingAndError(containerId);
-  const container = document.getElementById(containerId);
-  if (container) {
-    const error = document.createElement('p');
-    error.className = 'error-message';
-    error.style.whiteSpace = 'pre-wrap';
-    error.textContent = message;
-    container.appendChild(error);
-  }
-}
-
-function showLoading(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  
-  container.querySelector('.error-message')?.remove();
-  
-  if (container.classList.contains('list')) {
-      container.classList.add('loading-list');
-      // Adding skeleton placeholders if they don't exist
-      if (container.children.length === 0) {
-        for(let i=0; i<5; i++) {
-            const skeleton = document.createElement('div');
-            skeleton.className = 'skeleton';
-            container.appendChild(skeleton);
-        }
-      }
-  }
-  
-  // Only add 'Loading...' text for the slides
-  if(container.id === 'slides' && !container.querySelector('.loading')) {
-      const loading = document.createElement('h1');
-      loading.className = 'loading';
-      loading.textContent = 'Loading...';
-      container.appendChild(loading);
-  }
-}
-
-function displaySlides() {
-  const slidesContainer = document.getElementById('slides');
-  const dotsContainer = document.getElementById('dots');
-  
-  slidesContainer.innerHTML = '';
-  dotsContainer.innerHTML = '';
-  removeLoadingAndError('slides');
-
-  if (slideshowItems.length === 0) {
-    slidesContainer.innerHTML = '<h1 class="loading">No featured content available</h1>';
-    return;
-  }
-
-  slideshowItems.forEach((item, index) => {
-    if (!item.backdrop_path) return;
-    const slide = document.createElement('div');
-    slide.className = 'slide';
-    slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
-    slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
-    
-    // Attach event listener in JS
-    slide.addEventListener('click', () => showDetails(item));
-    
-    slidesContainer.appendChild(slide);
-
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    if (index === currentSlide) dot.className += ' active';
-    
-    // Attach event listener in JS
-    dot.addEventListener('click', () => {
-        currentSlide = index;
-        showSlide();
-    });
-    
-    dotsContainer.appendChild(dot);
-  });
-
-  showSlide();
-}
-
-function showSlide() {
-  const slides = document.querySelectorAll('#slides .slide');
-  const dots = document.querySelectorAll('#dots .dot');
-  if (slides.length === 0) return;
-  slides.forEach((slide) => {
-    slide.style.transform = `translateX(-${currentSlide * 100}%)`;
-  });
-  dots.forEach((dot, index) => {
-    dot.className = index === currentSlide ? 'dot active' : 'dot';
-  });
-  clearInterval(slideshowInterval);
-  slideshowInterval = setInterval(() => {
-    currentSlide = (currentSlide + 1) % slides.length;
-    showSlide();
-  }, 5000);
-}
-
-function changeSlide(n) {
-  const slides = document.querySelectorAll('#slides .slide');
-  if (slides.length === 0) return;
-  currentSlide = (currentSlide + n + slides.length) % slides.length;
-  showSlide();
-}
-
-function displayList(items, containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) {
-    console.error(`Container ${containerId} not found`);
-    return;
-  }
-  
-  removeLoadingAndError(containerId);
-
-  if (items.length === 0 && container.children.length === 0) {
-    container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content available.</p>';
-    return;
-  }
-
-  items.forEach(item => {
-    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
-
-    const img = document.createElement('img');
-    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-    img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
-    img.setAttribute('data-id', item.id);
-    
-    // Attach listener
-    img.addEventListener('click', () => showDetails(item));
-    
-    container.appendChild(img);
-  });
-}
-
-function displayShopeeLinks() {
-    const shopeeLinks = [
-        { 
-            url: 'https://collshp.com/reelroom', 
-            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-7ras9-m8on3bi10kula8@resize_w1080_nl.webp',
-            alt: 'ReelRoom Official Shopee Store'
-        },
-        { 
-            url: 'https://collshp.com/reelroom', 
-            img: 'https://down-ph.img.susercontent.com/file/ph-11134207-7rasd-m8vm437l4fg308@resize_w1080_nl.webp', 
-            alt: 'Best Seller Deal'
-        },
-        { 
-            url: 'https://collshp.com/reelroom', 
-            img: 'https://down-ph.img.susercontent.com/file/3c7cc4df24ee620a24bd45f2a35efd88@resize_w1080_nl.webp', 
-            alt: 'Promo Alert'
-        }
-    ];
-
-    const container = document.getElementById('shopee-link-list');
-    if (!container) return;
-    
-    removeLoadingAndError('shopee-link-list');
-    container.innerHTML = ''; 
-
-    shopeeLinks.forEach(item => {
-        const link = document.createElement('a');
-        link.href = item.url;
-        link.target = '_blank'; 
-        
-        const img = document.createElement('img');
-        img.src = item.img;
-        img.alt = item.alt;
-        
-        link.appendChild(img);
-        container.appendChild(link);
-    });
-}
-
-
-// --- LOCAL STORAGE & USER FUNCTIONS ---
 
 function loadStorageList(key) {
-  try {
-    const json = localStorage.getItem(key);
-    return json ? JSON.parse(json) : [];
-  } catch (e) {
-    console.error(`Error loading storage list for key: ${key}`, e);
-    return [];
-  }
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
 }
 
 function saveStorageList(key, list) {
-  try {
     localStorage.setItem(key, JSON.stringify(list));
-  } catch (e) {
-    console.error(`Error saving storage list for key: ${key}`, e);
-  }
 }
 
-function showToast(message, duration = 3000) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 10); 
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-        toast.addEventListener('transitionend', () => {
-            toast.remove();
-        }, { once: true });
-    }, duration);
+function saveSettings() {
+    const settings = {
+        isLightMode: isLightMode
+    };
+    localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
 }
 
-function loadUserSettings() {
-    try {
-        const json = localStorage.getItem(USER_SETTINGS_KEY);
-        // Default to the most reliable player and dark theme
-        return json ? JSON.parse(json) : { 
-            defaultServer: 'player.videasy.net',
-            theme: 'dark'
-        };
-    } catch (e) {
-        console.error("Error loading user settings:", e);
-        return { 
-            defaultServer: 'player.videasy.net',
-            theme: 'dark'
-        };
+function loadSettings() {
+    const defaultSettings = {
+        isLightMode: false
+    };
+    const settingsData = localStorage.getItem(USER_SETTINGS_KEY);
+    const settings = settingsData ? JSON.parse(settingsData) : defaultSettings;
+
+    isLightMode = settings.isLightMode === true; 
+
+    const fullViewModal = document.getElementById('full-view-modal');
+    if (isLightMode) {
+        document.body.classList.add('light-mode');
+        fullViewModal.classList.add('light-mode'); // FIX: Apply class to modal on load
+        document.getElementById('light-mode-toggle').innerHTML = '<i class="fas fa-moon"></i>';
+        document.getElementById('light-mode-toggle').title = 'Switch to Dark Mode';
+    } else {
+        document.getElementById('light-mode-toggle').innerHTML = '<i class="fas fa-sun"></i>';
+        document.getElementById('light-mode-toggle').title = 'Switch to Light Mode';
     }
-}
-
-function saveUserSettings(settings) {
-    let currentSettings = loadUserSettings();
-    // Merge new settings with existing ones
-    let newSettings = { ...currentSettings, ...settings };
-    try {
-        localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(newSettings));
-    } catch (e) {
-        console.error("Error saving user settings:", e);
-    }
-}
-
-function saveDefaultServer() {
-    const selectedServer = document.getElementById('server').value;
-    
-    saveUserSettings({ defaultServer: selectedServer });
-    
-    const serverName = PLAYER_CONFIG[selectedServer]?.name || selectedServer;
-    showToast(`✅ Default server set to ${serverName}!`); 
 }
 
 /**
- * THEME LOGIC (UNCHANGED)
+ * Shows a toast notification.
  */
-function applyTheme(isLight) {
-    const body = document.body;
-    const icon = document.getElementById('theme-toggle-btn')?.querySelector('i');
-    
-    if (isLight) {
-        body.classList.add('light-mode');
-        // Sun icon for Light Mode (telling user they can switch to Dark)
-        if(icon) icon.className = 'fas fa-sun'; 
-        saveUserSettings({ theme: 'light' });
-    } else {
-        body.classList.remove('light-mode');
-        // Moon icon for Dark Mode (telling user they can switch to Light)
-        if(icon) icon.className = 'fas fa-moon'; 
-        saveUserSettings({ theme: 'dark' });
+function showToast(message, duration = 3000) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, duration);
+}
+
+/**
+ * Shows an error message in a specific container.
+ */
+function showError(message, containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = `<p class="error-message">${message}</p>`;
     }
 }
 
-function loadThemePreference() {
-    const settings = loadUserSettings();
-    const isLight = settings.theme === 'light';
-    applyTheme(isLight);
+// --- HISTORY MANAGEMENT ---
+
+function saveSearchQuery(query) {
+    if (!query || query.length < 3) return;
+    query = query.trim().toLowerCase();
+
+    let history = loadStorageList(SEARCH_HISTORY_KEY);
+
+    // Remove if already exists to move it to the top
+    history = history.filter(q => q !== query);
+
+    // Add the new query to the front
+    history.unshift(query);
+
+    // Limit the array size
+    history = history.slice(0, MAX_HISTORY);
+
+    saveStorageList(SEARCH_HISTORY_KEY, history);
 }
 
-function toggleTheme() {
-    const isLight = document.body.classList.contains('light-mode');
-    // Toggle the theme (if it's currently light, switch to dark, and vice versa)
-    applyTheme(!isLight);
-}
-// END THEME LOGIC
-
-function addToRecentlyViewed(item) {
-  const itemData = {
-    id: item.id,
-    title: item.title || item.name,
-    poster_path: item.poster_path,
-    media_type: item.media_type || (item.title ? 'movie' : 'tv')
-  };
-  
-  let recentList = loadStorageList(RECENTLY_VIEWED_KEY);
-  recentList = recentList.filter(i => i.id !== itemData.id);
-  recentList.unshift(itemData);
-  recentList = recentList.slice(0, MAX_RECENT);
-  
-  saveStorageList(RECENTLY_VIEWED_KEY, recentList);
-  displayRecentlyViewed();
+function loadSearchHistory() {
+    return loadStorageList(SEARCH_HISTORY_KEY);
 }
 
-function toggleFavorite(item) {
-  const itemData = {
-    id: item.id,
-    title: item.title || item.name,
-    poster_path: item.poster_path,
-    media_type: item.media_type || (item.title ? 'movie' : 'tv')
-  };
-
-  let favoritesList = loadStorageList(FAVORITES_KEY);
-  const isFavorite = favoritesList.some(i => i.id === itemData.id);
-  
-  if (isFavorite) {
-    favoritesList = favoritesList.filter(i => i.id !== itemData.id);
-    showToast(`Removed from Favorites`);
-  } else {
-    favoritesList.unshift(itemData);
-    favoritesList = favoritesList.slice(0, MAX_FAVORITES); 
-    showToast(`Added to Favorites ❤️`);
-  }
-  
-  saveStorageList(FAVORITES_KEY, favoritesList);
-  
-  document.getElementById('favorite-toggle').classList.toggle('active', !isFavorite);
-  displayFavorites();
-}
-
-function displayFavorites() {
-    const favorites = loadStorageList(FAVORITES_KEY);
-    const container = document.getElementById('favorites-list');
-    const countSpan = document.getElementById('favorites-count');
-    
-    removeLoadingAndError('favorites-list'); 
+function displaySearchHistory(container) {
+    const history = loadSearchHistory();
     container.innerHTML = '';
-    
-    countSpan.textContent = `(${favorites.length})`;
-    
-    if (favorites.length === 0) {
-        container.innerHTML = '<p style="color: #ccc; padding: 10px; width: 100%;">Add movies or shows to your favorites by clicking the heart icon in the details window.</p>';
+
+    if (history.length === 0) {
+        container.innerHTML = '<p style="color: var(--secondary-color); text-align: center; margin-top: 20px;">Your recent searches will appear here.</p>';
         return;
     }
-    
-    favorites.forEach(item => {
-        const img = document.createElement('img');
-        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-        img.alt = item.title || item.name || 'Unknown';
-        img.setAttribute('data-id', item.id);
-        img.addEventListener('click', () => showDetails(item)); 
-        container.appendChild(img);
+
+    const title = document.createElement('h3');
+    title.textContent = 'Recent Searches';
+    title.style.margin = '10px 10px 5px';
+    title.style.color = 'var(--text-color)';
+    container.appendChild(title);
+
+    const list = document.createElement('div');
+    list.style.textAlign = 'left';
+    list.style.padding = '0 10px';
+    list.style.display = 'flex';
+    list.style.flexWrap = 'wrap';
+
+    history.forEach(query => {
+        const item = document.createElement('button');
+        item.className = 'history-btn';
+        item.innerHTML = `<i class="fas fa-history"></i> ${query}`;
+
+        item.addEventListener('click', () => {
+            document.getElementById('search-input').value = query;
+            debouncedSearchTMDB.flush(); // Execute immediately
+        });
+        list.appendChild(item);
     });
-}
 
-function displayRecentlyViewed() {
-    const recent = loadStorageList(RECENTLY_VIEWED_KEY);
-    const container = document.getElementById('recently-viewed-list');
-    
-    removeLoadingAndError('recently-viewed-list');
-    container.innerHTML = '';
-    
-    if (recent.length === 0) {
-        container.innerHTML = '<p style="color: #ccc; padding: 10px; width: 100%;">Your recently viewed items will appear here.</p>';
-        return;
-    }
-    
-    recent.forEach(item => {
-        const img = document.createElement('img');
-        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-        img.alt = item.title || item.name || 'Unknown';
-        img.setAttribute('data-id', item.id);
-        img.addEventListener('click', () => showDetails(item));
-        container.appendChild(img);
-    });
-}
-
-function loadUserRating(itemId) {
-    const ratings = loadStorageList(RATINGS_KEY);
-    return ratings.find(r => r.id === itemId)?.rating || 0;
-}
-
-function setUserRating(rating) {
-    if (!currentItem) return;
-    const itemId = currentItem.id;
-
-    let ratings = loadStorageList(RATINGS_KEY);
-    const existingIndex = ratings.findIndex(r => r.id === itemId);
-
-    const currentRating = parseInt(document.getElementById('modal-rating-user').getAttribute('data-rating'));
-    const finalRating = (rating === currentRating) ? 0 : rating;
-
-    if (finalRating === 0) { 
-        if (existingIndex !== -1) {
-            ratings.splice(existingIndex, 1);
-        }
-        showToast('Rating cleared.');
-    } else if (existingIndex !== -1) {
-        ratings[existingIndex].rating = finalRating;
-        showToast(`Rated ${finalRating} stars!`);
-    } else {
-        ratings.push({ id: itemId, rating: finalRating });
-        showToast(`Rated ${finalRating} stars!`);
-    }
-
-    saveStorageList(RATINGS_KEY, ratings);
-    updateUserRatingDisplay(finalRating);
-}
-
-function updateUserRatingDisplay(rating) {
-    const stars = document.querySelectorAll('#modal-rating-user .user-star');
-    document.getElementById('modal-rating-user').setAttribute('data-rating', rating);
-    
-    stars.forEach(star => {
-        const value = parseInt(star.getAttribute('data-value'));
-        if (value <= rating) {
-            star.className = 'fas fa-star user-star'; // Solid star
-        } else {
-            star.className = 'far fa-star user-star'; // Outline star
-        }
-    });
-}
-
-function saveWatchProgress(itemId, server, season, episode) {
-    let progressList = loadStorageList(WATCH_PROGRESS_KEY);
-    const existingIndex = progressList.findIndex(p => p.id === itemId);
-    
-    const progressData = {
-        id: itemId,
-        server: server,
-        season: season,
-        episode: episode
-    };
-
-    if (existingIndex !== -1) {
-        progressList[existingIndex] = progressData;
-    } else {
-        progressList.push(progressData);
-    }
-
-    saveStorageList(WATCH_PROGRESS_KEY, progressList);
-}
-
-function loadWatchProgress(itemId) {
-    const progressList = loadStorageList(WATCH_PROGRESS_KEY);
-    return progressList.find(p => p.id === itemId);
+    container.appendChild(list);
 }
 
 
-// --- SCROLL & FILTER LOGIC ---
+// --- DATA FETCHING & RENDERING ---
 
-function addScrollListener(category) {
-  const containerId = category + '-list';
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  
-  container.onscroll = function () {
+/**
+ * Fetches data for a category.
+ */
+async function fetchMovies(category, isInitialLoad = false) {
     const state = categoryState[category];
-    
-    if (
-      !state.isLoading &&
-      container.scrollLeft + container.clientWidth >= container.scrollWidth - 50
-    ) {
-      loadMore(category);
-    }
-  };
-}
-
-async function loadMore(category) {
-  const state = categoryState[category];
-  if (state.isLoading) return;
-
-  state.isLoading = true;
-  const containerId = category + '-list';
-  
-  showLoading(containerId);
-  
-  state.page++;
-
-  try {
-    const data = await fetchCategoryContent(category, state.page, state.filters);
-    const items = data.results || [];
-    
-    if (items.length === 0) {
-        state.page--; 
-        document.getElementById(containerId)?.querySelector('.loading')?.remove();
-        state.isLoading = false; 
+    if (state.isLoading || (!isInitialLoad && state.page >= state.totalPages)) {
         return;
     }
-    
-    displayList(items, containerId);
-
-  } catch (error) {
-    console.error(`Error loading more for ${category}:`, error);
-    showError(`Failed to load more ${category}.`, containerId);
-    state.page--;
-  } finally {
-    state.isLoading = false;
-    document.getElementById(containerId)?.querySelector('.loading')?.remove();
-    document.getElementById(containerId)?.classList.remove('loading-list');
-  }
-}
-
-function updateFilterButtons(category, filters) {
-    const row = document.getElementById(`${category}-row`);
-    const filterBtn = row.querySelector('.filter-btn:not(.clear-filter-btn)');
-    const clearBtn = row.querySelector('.clear-filter-btn');
-    
-    if (!filterBtn || !clearBtn) return; 
-
-    const isFiltered = filters.year || filters.genre;
-
-    if (isFiltered) {
-        const genreName = filters.genre ? (GENRES.find(g => g.id == filters.genre)?.name || 'Genre') : '';
-        const yearText = filters.year || '';
-        
-        // Update button text for larger screens, keep icon for small screens
-        filterBtn.innerHTML = `<i class="fas fa-filter"></i> ${genreName} ${yearText}`.trim(); 
-        filterBtn.style.background = 'red';
-        filterBtn.style.color = 'white';
-        clearBtn.style.display = 'inline-block';
-        // Add aria-label for accessibility
-        filterBtn.setAttribute('aria-label', `Active Filters: ${genreName} ${yearText}`);
-    } else {
-        filterBtn.innerHTML = '<i class="fas fa-filter"></i>'; 
-        filterBtn.style.background = '#444';
-        filterBtn.style.color = '#fff';
-        clearBtn.style.display = 'none';
-        filterBtn.setAttribute('aria-label', 'Open Filter');
-    }
-}
-
-async function loadRowContent(category, filters = {}) {
-    const state = categoryState[category];
-    if (state.isLoading) return;
 
     state.isLoading = true;
-    const containerId = `${category}-list`;
-    showLoading(containerId);
+    const listContainer = document.getElementById(`${category}-list`);
 
-    state.page = 1; 
+    // Only show loading if it's the first load or user scrolled to bottom of a short list
+    if (isInitialLoad || listContainer.children.length === 0) {
+        listContainer.innerHTML = '<p class="loading">Loading movies...</p>';
+    }
 
-    const data = await fetchCategoryContent(category, 1, filters);
-    state.filters = filters;
+    try {
+        const res = await fetch(`${BASE_URL}/movie/${category}?api_key=${API_KEY}&page=${state.page}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
 
-    const container = document.getElementById(containerId);
-    if(container) container.innerHTML = '';
-    displayList(data.results, containerId);
-    
-    updateFilterButtons(category, filters);
-    
-    state.isLoading = false;
-    document.getElementById(containerId)?.querySelector('.loading')?.remove();
-    document.getElementById(containerId)?.classList.remove('loading-list');
+        if (state.page === 1) {
+            listContainer.innerHTML = ''; // Clear only on first page load
+        } else {
+            listContainer.querySelector('.loading')?.remove(); // Remove load message
+        }
+
+        state.totalPages = data.total_pages;
+
+        data.results.forEach(movie => {
+            renderMovieCard(movie, listContainer, category);
+        });
+
+    } catch (error) {
+        console.error(`Error fetching ${category}:`, error);
+        showError('Failed to load movies.', `${category}-list`);
+    } finally {
+        state.isLoading = false;
+    }
 }
 
-function clearFilters(category) {
-    categoryState[category].filters = {};
-    loadRowContent(category);
-    showToast(`Filters cleared for ${category.replace('-', ' ')}`);
+/**
+ * Renders a movie card and appends it to the container.
+ */
+function renderMovieCard(item, container, category) {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+    card.dataset.id = item.id;
+    card.dataset.category = category;
+
+    const img = document.createElement('img');
+    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
+    img.alt = item.title || item.name || 'Unknown';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'card-overlay';
+
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.textContent = item.title || item.name || 'Unknown';
+
+    overlay.appendChild(title);
+    card.appendChild(img);
+    card.appendChild(overlay);
+
+    card.addEventListener('click', () => showDetails(item));
+    container.appendChild(card);
 }
 
+// --- DETAILS MODAL ---
 
-// START: Full View & Filter Modal Updates
+function showDetails(item) {
+    // Save to recently viewed
+    addToRecentlyViewed(item);
+    updateRecentlyViewedList();
 
-function openFullView(category) {
+    const modal = document.getElementById('details-modal');
+    const content = document.getElementById('details-content');
+
+    // Show loading spinner
+    content.innerHTML = '<p class="loading-full-screen">Loading details...</p>';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevents body scrolling behind the modal
+
+    // Fetch full details
+    fetch(`${BASE_URL}/movie/${item.id}?api_key=${API_KEY}`)
+        .then(res => res.json())
+        .then(details => {
+            const isFavorite = favoritesList.some(fav => fav.id === details.id);
+            const currentRating = ratings[details.id] || 0;
+            const progress = watchProgress[details.id] || 0;
+            const runtime = details.runtime ? `${Math.floor(details.runtime / 60)}h ${details.runtime % 60}m` : 'N/A';
+            const genres = details.genres.map(g => g.name).join(', ') || 'N/A';
+            const year = details.release_date ? details.release_date.split('-')[0] : 'N/A';
+
+            content.innerHTML = `
+                <div class="details-header" style="background-image: linear-gradient(to top, rgba(18, 18, 18, 1), rgba(18, 18, 18, 0.5)), url(${details.backdrop_path ? `${IMG_URL}${details.backdrop_path}` : FALLBACK_IMAGE});">
+                    <img src="${details.poster_path ? `${IMG_URL}${details.poster_path}` : FALLBACK_IMAGE}" alt="${details.title}" class="details-poster">
+                    <div class="details-title-area">
+                        <h1>${details.title}</h1>
+                        <p class="details-tagline">${details.tagline || ''}</p>
+                        <div class="details-meta">
+                            <span><i class="fas fa-calendar"></i> ${year}</span>
+                            <span><i class="fas fa-clock"></i> ${runtime}</span>
+                            <span><i class="fas fa-star"></i> ${details.vote_average.toFixed(1)} / 10</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="details-body">
+                    <p class="details-overview">${details.overview || 'No overview available.'}</p>
+                    <p class="details-genres"><strong>Genres:</strong> ${genres}</p>
+                    
+                    <div class="details-actions">
+                        <button id="favorite-btn" class="${isFavorite ? 'active' : ''}">
+                            <i class="fas fa-heart"></i> ${isFavorite ? 'In Favorites' : 'Add to Favorites'}
+                        </button>
+                        <button class="rating-btn" onclick="openRatingModal(${details.id}, '${details.title}')">
+                            <i class="fas fa-star"></i> Rate (${currentRating > 0 ? currentRating.toFixed(1) : 'Unrated'})
+                        </button>
+                    </div>
+
+                    <div class="progress-bar-container">
+                        <h3>Watch Progress</h3>
+                        <div class="progress-bar-wrapper">
+                            <div id="progress-bar" style="width: ${progress}%;"></div>
+                            <span id="progress-text">${progress}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="${progress}" id="progress-slider" oninput="updateProgressDisplay(this.value)">
+                    </div>
+
+                </div>
+            `;
+
+            document.getElementById('favorite-btn').addEventListener('click', () => toggleFavorite(details));
+            document.getElementById('progress-slider').addEventListener('change', (e) => saveProgress(details.id, e.target.value));
+
+            // Initial setup for progress text
+            document.getElementById('progress-text').textContent = `${progress}%`;
+
+        })
+        .catch(error => {
+            console.error('Error fetching details:', error);
+            showError('Failed to load movie details. Please try again.', 'details-content');
+        });
+}
+
+function closeDetailsModal() {
+    document.getElementById('details-modal').style.display = 'none';
+    document.body.style.overflow = ''; // Important: Restore body scrolling
+}
+
+// --- FULL VIEW MODAL & ADVANCED FILTERING ---
+
+function openFullView(category, title) {
     currentFullView = category;
-    
-    let filters = { ...categoryState[category].filters }; 
-    filters.sort_by = filters.sort_by || 'popularity.desc'; 
-    
-    document.body.style.overflow = 'hidden'; 
-    
-    const fullViewContainer = document.createElement('div');
-    fullViewContainer.id = 'full-view-modal';
-    fullViewContainer.className = 'search-modal'; 
-    fullViewContainer.style.display = 'flex';
-    document.body.appendChild(fullViewContainer);
+    const modal = document.getElementById('full-view-modal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 
-    const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    
-    // Updated HTML for the Full View Modal to include the filter button
-    fullViewContainer.innerHTML = `
-        <span class="close" id="full-view-close-btn" style="color: red;">&times;</span>
-        <h2 style="text-transform: uppercase;">${title}</h2>
-        
-        <div class="full-view-controls">
-            <label for="full-view-sort">Sort By:</label>
-            <select id="full-view-sort">
-                <option value="popularity.desc">Popularity (Descending)</option>
-                <option value="release_date.desc">Release Date (Newest)</option>
-                <option value="vote_average.desc">Rating (Highest)</option>
-                <option value="title.asc">Title (A-Z)</option>
-            </select>
-            <button class="filter-btn" id="full-view-filter-btn" aria-label="Open Filters">
-                <i class="fas fa-filter"></i> Filters
-            </button>
-        </div>
-        <div class="results" id="${category}-full-list"></div>
-    `;
-    
-    document.getElementById('full-view-close-btn').addEventListener('click', closeFullView);
-    document.getElementById('full-view-sort').addEventListener('change', applyFullViewSort);
-    // NEW LISTENER for the filter button inside the full view
-    document.getElementById('full-view-filter-btn').addEventListener('click', () => {
-        openFilterModal(category, true); // Pass 'true' to indicate full-view context
-    }); 
-    
-    document.getElementById('full-view-sort').value = filters.sort_by;
+    // Apply Light Mode class when opening the modal
+    if (isLightMode) {
+        modal.classList.add('light-mode');
+    } else {
+        modal.classList.remove('light-mode');
+    }
 
-    categoryState[category].page = 0; 
-    loadMoreFullView(category, filters, true); 
-    
+    document.getElementById('full-view-title').textContent = title;
+    // Hide all full-view lists
+    document.querySelectorAll('.full-view-list').forEach(list => list.style.display = 'none');
+    // Show the target list
     const listContainer = document.getElementById(`${category}-full-list`);
+    listContainer.style.display = 'grid';
+
+    document.getElementById('full-view-category').textContent = category;
+
+    // Reset filtering UI
+    document.getElementById('full-view-genre').value = '';
+    document.getElementById('full-view-sort').value = 'popularity.desc';
+    document.getElementById('full-view-year').value = '';
+    currentCategoryToFilter = null;
+    
+    // Reset state and load first page
+    categoryState[category].page = 1;
+    categoryState[category].totalPages = 1;
+
+    // Load initial data with default filters
+    loadMoreFullView(category, {
+        sort_by: 'popularity.desc',
+        with_genres: '',
+        primary_release_year: ''
+    }, true);
+
+    // Restore saved scroll position if available
+    listContainer.scrollTop = fullViewScrollPositions[category] || 0; 
+
+    // Setup scroll listener for pagination and saving position
     listContainer.onscroll = function () {
-        scrollPosition = listContainer.scrollTop; 
-        
+        // Save current scroll position
+        fullViewScrollPositions[category] = listContainer.scrollTop; 
+
+        // Check for scroll near bottom
         if (
             !categoryState[category].isLoading &&
+            categoryState[category].page < categoryState[category].totalPages &&
             listContainer.scrollTop + listContainer.clientHeight >= listContainer.scrollHeight - 50
         ) {
+            // Get current filter values for the next page load
+            const filters = getFullViewFilters();
             loadMoreFullView(category, filters);
         }
     };
 }
 
 function closeFullView() {
-    const modal = document.getElementById('full-view-modal');
-    if (modal) modal.remove();
-    currentFullView = null;
-    scrollPosition = 0; 
-    document.body.style.overflow = ''; 
+    // Save scroll position before closing
+    const category = document.getElementById('full-view-category').textContent;
+    const listContainer = document.getElementById(`${category}-full-list`);
+    fullViewScrollPositions[category] = listContainer.scrollTop; 
+
+    document.getElementById('full-view-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    document.getElementById('full-view-genre-list').innerHTML = '';
 }
 
-function displayFullList(items, containerId, isFirstLoad = false) {
-  const container = document.getElementById(containerId);
-  if (isFirstLoad) {
-      container.innerHTML = ''; 
-  }
-  
-  items.forEach(item => {
-    if (container.querySelector(`img[data-id="${item.id}"]`)) return;
-
-    const img = document.createElement('img');
-    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-    img.alt = item.title || item.name || 'Unknown';
-    img.setAttribute('data-id', item.id);
-    
-    img.addEventListener('click', () => showDetails(item, true)); 
-    
-    container.appendChild(img);
-  });
+function getFullViewFilters() {
+    return {
+        sort_by: document.getElementById('full-view-sort').value,
+        with_genres: currentCategoryToFilter, // Use the dynamically filtered genre
+        primary_release_year: document.getElementById('full-view-year').value
+    };
 }
 
-function applyFullViewSort() {
-    if (!currentFullView) return;
-    
-    const sortValue = document.getElementById('full-view-sort').value;
-    const category = currentFullView;
-    const state = categoryState[category];
+// Global filter application function
+function applyFullViewFilters() {
+    const category = document.getElementById('full-view-category').textContent;
+    const filters = getFullViewFilters();
 
-    state.filters.sort_by = sortValue;
-    state.page = 0; 
-    
-    loadMoreFullView(category, state.filters, true);
+    // Reset to page 1 for a new filter query
+    categoryState[category].page = 1;
+    categoryState[category].totalPages = 1;
+
+    // Scroll to top on new filter application
+    document.getElementById(`${category}-full-list`).scrollTop = 0;
+
+    loadMoreFullView(category, filters, true);
 }
+
 
 async function loadMoreFullView(category, filters, isFirstLoad = false) {
-  const state = categoryState[category];
-  const containerId = `${category}-full-list`;
-  const container = document.getElementById(containerId); 
-
-  if (state.isLoading) return;
-
-  state.isLoading = true;
-  
-  showLoading(containerId);
-  
-  state.page++; 
-  let currentPage = state.page;
-
-  try {
-    const data = await fetchCategoryContent(category, currentPage, filters);
-
-    const items = data.results || [];
-    
-    if (items.length === 0) {
-        if (currentPage > 1) { 
-            state.page--; 
-        }
-        document.getElementById(containerId)?.querySelector('.loading')?.remove();
-        state.isLoading = false;
-        
-        if (isFirstLoad && container.children.length === 0) {
-            container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content matches your active filter in the full view.</p>';
-        }
-        
+    const state = categoryState[category];
+    if (state.isLoading || (!isFirstLoad && state.page >= state.totalPages)) {
         return;
     }
-    
-    displayFullList(items, containerId, isFirstLoad);
 
-  } catch (error) {
-    console.error(`Error loading more for ${category}:`, error);
-    showError(`Failed to load more ${category}.`, containerId);
-    state.page--; 
-  } finally {
-    state.isLoading = false;
-    document.getElementById(containerId)?.querySelector('.loading')?.remove();
-    
-    if (isFirstLoad && scrollPosition > 0 && container) {
-        container.scrollTop = scrollPosition;
-    }
-  }
-}
+    state.isLoading = true;
+    const container = document.getElementById(`${category}-full-list`);
 
-/**
- * UPDATED: Populates filter options and prepares the modal. Now accepts isFullView flag.
- */
-function openFilterModal(category, isFullView = false) {
-    currentCategoryToFilter = category;
-    
-    const modalTitle = document.getElementById('filter-modal-title');
-    const filterModal = document.getElementById('filter-modal');
-    
-    if (!modalTitle || !filterModal) return;
-
-    const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    modalTitle.textContent = `Filter ${title}`;
-    
-    const currentFilters = categoryState[category].filters;
-    
-    // Set current values
-    document.getElementById('filter-year').value = currentFilters.year || '';
-    document.getElementById('filter-genre').value = currentFilters.genre ? String(currentFilters.genre) : '';
-    
-    // Update button text and data-target-view based on context
-    const applyBtn = document.getElementById('apply-filters-btn');
-    if (isFullView) {
-        applyBtn.textContent = 'Apply Filters and Reload List';
-        applyBtn.setAttribute('data-target-view', 'full');
+    // Determine the API endpoint
+    let endpoint;
+    if (category === 'favorite') {
+        // Favorites are loaded from local storage, not TMDB. This is a placeholder.
+        state.isLoading = false;
+        if (isFirstLoad) {
+            container.innerHTML = '<p class="error-message">Filtering is disabled for Local Favorites list.</p>';
+            favoritesList.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'full-view-card';
+                card.innerHTML = `
+                    <img src="${item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE}" alt="${item.title}">
+                    <div class="full-view-info">
+                        <h3>${item.title || item.name}</h3>
+                        <p class="full-view-release"><i class="fas fa-calendar"></i> ${item.release_date ? item.release_date.split('-')[0] : 'N/A'}</p>
+                        <p class="full-view-rating"><i class="fas fa-heart"></i> Favorite</p>
+                        <p class="full-view-overview">Stored locally. Filtering not supported here.</p>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    closeFullView();
+                    showDetails(item);
+                });
+                container.appendChild(card);
+            });
+            if (favoritesList.length === 0) {
+                container.innerHTML = '<p class="error-message">Your favorites list is empty.</p>';
+            }
+        }
+        state.totalPages = 1;
+        return;
     } else {
-        applyBtn.textContent = 'Apply Filters and Show More';
-        applyBtn.setAttribute('data-target-view', 'row');
+        endpoint = `${BASE_URL}/discover/movie?api_key=${API_KEY}&page=${state.page}`;
+
+        // Append filter parameters
+        if (filters.sort_by) endpoint += `&sort_by=${filters.sort_by}`;
+        if (filters.with_genres) endpoint += `&with_genres=${filters.with_genres}`;
+        if (filters.primary_release_year) endpoint += `&primary_release_year=${filters.primary_release_year}`;
     }
-    
-    filterModal.style.display = 'flex';
-}
 
-function populateFilterOptions() {
-    const yearSelect = document.getElementById('filter-year');
-    const genreSelect = document.getElementById('filter-genre');
-    
-    if (!yearSelect || !genreSelect) return; 
 
-    // 1. Populate Year Options (Current year back 20 years)
-    yearSelect.innerHTML = '<option value="">Any Year</option>';
-    const currentYear = new Date().getFullYear();
-    for (let i = 0; i < 20; i++) {
-        const year = currentYear - i;
-        const option = new Option(year, year);
-        yearSelect.appendChild(option);
-    }
-    
-    // 2. Populate Genre Options using the global GENRES array
-    genreSelect.innerHTML = '<option value="">Any Genre</option>';
-    GENRES.forEach(genre => {
-        const option = new Option(genre.name, genre.id);
-        genreSelect.appendChild(option);
-    });
-}
-
-/**
- * UPDATED: Handles filter application and targets the correct view (row vs. full).
- */
-function applyFilters() {
-    const year = document.getElementById('filter-year').value;
-    const genre = document.getElementById('filter-genre').value;
-    const category = currentCategoryToFilter;
-    const targetView = document.getElementById('apply-filters-btn').getAttribute('data-target-view');
-
-    if (!category) return;
-    
-    document.getElementById('filter-modal').style.display = 'none';
-    
-    // Ensure genre is an integer if a value is selected, and keep the current sort_by setting
-    const newFilters = { 
-        year: year, 
-        genre: genre ? parseInt(genre) : '',
-        sort_by: categoryState[category].filters.sort_by 
-    };
-
-    categoryState[category].filters = newFilters;
-    updateFilterButtons(category, newFilters);
-    
-    // Based on where the filter was opened, update the relevant view
-    if (targetView === 'full') {
-        const fullViewSort = document.getElementById('full-view-sort');
-        if(fullViewSort) fullViewSort.value = newFilters.sort_by; // Sync the sort dropdown
-        
-        categoryState[category].page = 0; // Reset page count for full view
-        loadMoreFullView(category, newFilters, true);
-        
-        showToast(`Filters Applied to Full View`);
+    // Add loading indicator
+    if (isFirstLoad) {
+        container.innerHTML = '<p class="loading-full-screen">Loading movies...</p>';
     } else {
-        // This is the original path from the main page row filter (applies filter, then opens full view)
-        loadRowContent(category, newFilters);
-        openFullView(category);
-        showToast(`Filters Applied and Full View Opened`);
-    }
-}
-
-// END: Full View & Filter Modal Updates
-
-// --- DETAILS & MODAL LOGIC (MODIFIED for Auto-Highlight and Default Server) ---
-
-// Helper function to populate server options once
-function populateServerOptions() {
-    const serverSelect = document.getElementById('server');
-    if (!serverSelect) return;
-    serverSelect.innerHTML = '';
-    
-    for (const key in PLAYER_CONFIG) {
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = PLAYER_CONFIG[key].name;
-        serverSelect.appendChild(option);
-    }
-}
-
-async function showDetails(item, isFullViewOpen = false) {
-  addToRecentlyViewed(item);
-  currentItem = item;
-  
-  const userRating = loadUserRating(item.id);
-  updateUserRatingDisplay(userRating);
-  const progress = loadWatchProgress(item.id);
-  const settings = loadUserSettings();
-  const defaultServer = settings.defaultServer || 'player.videasy.net';
-  
-  document.getElementById('server').value = progress?.server || defaultServer; 
-
-  document.getElementById('modal-item-title').textContent = item.title || item.name || 'Unknown';
-  document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-  document.getElementById('modal-rating-tmdb').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
-  
-  const favoritesList = loadStorageList(FAVORITES_KEY);
-  const isFavorite = favoritesList.some(i => i.id === item.id);
-  document.getElementById('favorite-toggle').classList.toggle('active', isFavorite);
-  
-  // Re-attach listener for the specific item
-  const favoriteToggle = document.getElementById('favorite-toggle');
-  favoriteToggle.onclick = () => toggleFavorite(item);
-
-
-  const seasonSelector = document.getElementById('season-selector');
-  const episodeList = document.getElementById('episode-list');
-  const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
-
-
-  if (isTVShow) {
-    seasonSelector.style.display = 'block';
-    const tvId = item.id || currentItem.id;
-    
-    const seasons = await fetchSeasonsAndEpisodes(tvId);
-    const seasonSelect = document.getElementById('season');
-    seasonSelect.innerHTML = '';
-    
-    seasons.filter(s => s.season_number > 0).forEach(season => {
-      const option = document.createElement('option');
-      option.value = season.season_number;
-      option.textContent = `Season ${season.season_number}`;
-      seasonSelect.appendChild(option);
-    });
-    
-    currentSeason = progress?.season || seasons.find(s => s.season_number > 0)?.season_number || 1;
-    seasonSelect.value = currentSeason;
-    
-    await loadEpisodes();
-  } else {
-    seasonSelector.style.display = 'none';
-    episodeList.innerHTML = '';
-    changeServer();
-  }
-  
-  document.body.style.overflow = 'hidden';
-  document.getElementById('modal').style.display = 'flex';
-  
-  if (isFullViewOpen) {
-      document.getElementById('full-view-modal').style.display = 'none';
-  }
-}
-
-async function loadEpisodes() {
-  if (!currentItem) return;
-  const seasonNumber = document.getElementById('season').value;
-  currentSeason = seasonNumber;
-  const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
-  const episodeList = document.getElementById('episode-list');
-  episodeList.innerHTML = '';
-  
-  const progress = loadWatchProgress(currentItem.id);
-  
-  // Determine the episode to auto-select: Next episode from progress OR Episode 1
-  let targetEpisode = (progress && progress.season == currentSeason) 
-    ? (progress.episode + 1) // Start on the next episode
-    : 1; 
-  
-  // Cap at max available episode
-  if (targetEpisode > episodes.length) {
-      targetEpisode = episodes.length;
-  }
-  // Ensure it's at least 1
-  if (targetEpisode < 1 && episodes.length > 0) {
-      targetEpisode = 1;
-  }
-
-  episodes.forEach(episode => {
-    const div = document.createElement('div');
-    div.className = 'episode-item';
-    div.setAttribute('data-episode-number', episode.episode_number); 
-    
-    const img = episode.still_path
-      ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" />`
-      : '';
-    div.innerHTML = `${img}<span>E${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
-    
-    div.addEventListener('click', () => {
-      currentEpisode = episode.episode_number;
-      changeServer();
-      document.querySelectorAll('.episode-item').forEach(e => e.classList.remove('active'));
-      div.classList.add('active');
-      
-      saveWatchProgress(currentItem.id, document.getElementById('server').value, currentSeason, currentEpisode);
-    });
-    episodeList.appendChild(div);
-  });
-  
-  if (episodes.length > 0) {
-      const targetElement = episodeList.querySelector(`.episode-item[data-episode-number="${targetEpisode}"]`);
-      
-      if (targetElement) {
-          targetElement.click(); 
-          episodeList.scrollTop = targetElement.offsetTop - (episodeList.clientHeight / 2);
-      } else {
-          // Fallback to the very first episode if the list isn't empty
-          episodeList.querySelector('.episode-item')?.click();
-      }
-  }
-}
-
-function changeServer() {
-  if (!currentItem) return;
-  const server = document.getElementById('server').value;
-  const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
-  
-  saveWatchProgress(currentItem.id, server, currentSeason, currentEpisode); 
-
-  const config = PLAYER_CONFIG[server];
-  let embedURL = '';
-  
-  if (config) {
-      embedURL = type === 'tv'
-          ? config.tv(currentItem.id, currentSeason, currentEpisode)
-          : config.movie(currentItem.id);
-  }
-
-  document.getElementById('modal-video').src = embedURL;
-}
-
-function closeModal() {
-  document.getElementById('modal').style.display = 'none';
-  document.getElementById('modal-video').src = '';
-  document.getElementById('episode-list').innerHTML = '';
-  document.getElementById('season-selector').style.display = 'none';
-  
-  document.body.style.overflow = '';
-  
-  const fullViewModal = document.getElementById('full-view-modal');
-  if (fullViewModal) {
-      fullViewModal.style.display = 'flex';
-  }
-}
-
-function openSearchModal() {
-  document.body.style.overflow = 'hidden'; 
-  document.getElementById('search-modal').style.display = 'flex';
-  document.getElementById('search-input').focus();
-}
-
-function closeSearchModal() {
-  document.body.style.overflow = ''; 
-  document.getElementById('search-modal').style.display = 'none';
-  document.getElementById('search-results').innerHTML = '';
-  document.getElementById('search-input').value = '';
-}
-
-const debouncedSearchTMDB = debounce(async () => {
-  const query = document.getElementById('search-input').value;
-  const container = document.getElementById('search-results');
-  container.innerHTML = '';
-  
-  if (!query.trim()) return;
-
-  container.innerHTML = '<p class="loading">Searching...</p>';
-
-  try {
-    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    container.innerHTML = ''; 
-    data.results
-      .filter(item => item.media_type !== 'person' && item.poster_path)
-      .forEach(item => {
-        const img = document.createElement('img');
-        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
-        img.alt = item.title || item.name || 'Unknown';
-        
-        // Attach listener
-        img.addEventListener('click', () => {
-            closeSearchModal();
-            showDetails(item);
-        });
-        
-        container.appendChild(img);
-      });
-      
-    if (container.children.length === 0) {
-        container.innerHTML = '<p style="color: #ccc; text-align: center; margin-top: 20px;">No results found.</p>';
+        container.querySelector('.loading-full-screen')?.remove();
+        container.insertAdjacentHTML('beforeend', '<p class="loading-full-screen">Loading more...</p>');
     }
 
-  } catch (error) {
-    console.error('Error searching:', error);
-    showError('Search failed. Try again.', 'search-results');
-  }
-}, 300);
+    try {
+        const res = await fetch(endpoint);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
 
+        state.totalPages = data.total_pages;
 
-// --- EVENT LISTENER SETUP (UNCHANGED) ---
+        if (isFirstLoad) {
+            container.innerHTML = '';
+            currentFullView = category;
+        } else {
+            container.querySelector('.loading-full-screen')?.remove();
+        }
 
-function attachListeners() {
-    // Navbar/Modal Closers
-    document.getElementById('search-btn').addEventListener('click', openSearchModal);
-    document.getElementById('search-modal-close-btn').addEventListener('click', closeSearchModal);
-    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
-    document.getElementById('filter-modal-close-btn').addEventListener('click', () => {
-        document.getElementById('filter-modal').style.display='none';
-    });
-    
-    // Theme Toggle
-    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+        if (data.results.length === 0) {
+            container.innerHTML = '<p class="error-message">No movies found matching these filters.</p>';
+            state.totalPages = state.page; // Stop further attempts
+            return;
+        }
 
-    // Slideshow Controls
-    document.getElementById('prev-slide-btn').addEventListener('click', () => changeSlide(-1));
-    document.getElementById('next-slide-btn').addEventListener('click', () => changeSlide(1));
-
-    // Search Input
-    document.getElementById('search-input').addEventListener('keyup', debouncedSearchTMDB);
-
-    // Modal Controls
-    document.getElementById('server').addEventListener('change', changeServer);
-    document.getElementById('season').addEventListener('change', loadEpisodes);
-    document.getElementById('save-default-server-btn').addEventListener('click', saveDefaultServer);
-    
-    // User Rating Stars
-    for (let i = 1; i <= 5; i++) {
-        document.getElementById(`star-${i}`).addEventListener('click', () => setUserRating(i));
-    }
-    
-    // Filter Modal/Buttons
-    document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
-    
-    document.querySelectorAll('.show-more-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            openFullView(link.getAttribute('data-category'));
-        });
-    });
-
-    document.querySelectorAll('.filter-btn:not(.clear-filter-btn)').forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault(); 
-            openFilterModal(button.getAttribute('data-category'));
-        });
-    });
-    
-    document.querySelectorAll('.clear-filter-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            clearFilters(button.getAttribute('data-category'));
-        });
-    });
-}
-
-
-// --- INITIALIZATION (UNCHANGED) ---
-
-async function init() {
-  document.getElementById('empty-message').style.display = 'none';
-  
-  const apiKeyValid = await testApiKey();
-  if (!apiKeyValid) {
-      return;
-  }
-  
-  loadThemePreference(); // Load theme immediately before showing content
-  populateServerOptions(); // Populate server dropdown once
-  attachListeners(); // Attach all event handlers
-  populateFilterOptions(); // Populate filter dropdowns
-  
-  // Show loading/skeletons for all sections
-  const categoryIds = Object.keys(categoryState);
-  categoryIds.forEach(id => showLoading(`${id}-list`));
-  showLoading('shopee-link-list');
-  showLoading('favorites-list'); 
-  showLoading('recently-viewed-list');
-  showLoading('slides');
-  
-  displayShopeeLinks();
-  displayFavorites();
-  displayRecentlyViewed();
-
-  // Use Promise.allSettled for robust parallel loading
-  const fetchPromises = categoryIds.map(category => fetchCategoryContent(category, 1));
-  const results = await Promise.allSettled(fetchPromises);
-  
-  let allResults = [];
-  
-  results.forEach((result, index) => {
-    const category = categoryIds[index];
-    const containerId = `${category}-list`;
-    
-    if (result.status === 'fulfilled' && result.value.results) {
-        const data = result.value;
-        displayList(data.results, containerId);
-        addScrollListener(category);
-        
-        // Collect results for the slideshow
-        allResults = allResults.concat(data.results);
-    } else {
-        console.error(`Failed to load ${category}:`, result.reason);
-        showError(`Failed to load ${category}.`, containerId);
-    }
-  });
-
-  // Display Slideshow
-  slideshowItems = allResults
-    .filter(item => item && item.backdrop_path)
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) // Sort by popularity for better quality slides
-    .slice(0, 7);
-    
-  displaySlides();
-}
-
-init();
+        data.results.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'full-view-card';
+            card.innerHTML = `
+                <img src="${item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE}" alt="${item.title}">
+                <div class="full-view-info">
