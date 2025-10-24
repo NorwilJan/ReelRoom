@@ -797,3 +797,42 @@ body {
         padding: 5px;
     }
 }
+
+/* === 13. Light Mode Theme Override (NEW) === */
+body.light-mode {
+  --background-dark: #f0f0f0; /* Light background */
+  --background-mid: #ffffff; /* White card/modal background */
+  --text-light: #111; /* Dark text */
+  --accent-color: #007bff; /* Primary blue accent */
+  --accent-hover: #0056b3;
+  --link-color: var(--accent-color);
+  --skeleton-color: #e0e0e0; /* Lighter skeleton */
+}
+
+/* Ensure the navbar/footer/modals respect the light mode background */
+body.light-mode .navbar,
+body.light-mode .footer,
+body.light-mode .modal-content,
+body.light-mode .filter-content,
+body.light-mode .search-modal input {
+  background: var(--background-mid);
+}
+
+/* Adjust star colors for visibility against light background */
+body.light-mode .stars,
+body.light-mode .user-star {
+    color: orange; 
+}
+
+/* Adjust episode item colors for light mode */
+body.light-mode .episode-item {
+    background: #e9e9e9;
+    color: var(--text-light);
+}
+body.light-mode .episode-item.active {
+    background: #d0d0d0;
+    border: 1px solid var(--accent-color);
+}
+body.light-mode .episode-item span {
+    color: var(--text-light); /* Ensure text remains visible */
+}
