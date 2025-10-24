@@ -4,7 +4,7 @@ const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 
-// --- CONFIGURATION OBJECTS (NEW) ---
+// --- CONFIGURATION OBJECTS ---
 const PLAYER_CONFIG = {
     'vidsrc.cc': { 
         name: 'Vidsrc.cc',
@@ -32,7 +32,7 @@ const GENRES = [
   { id: 16, name: 'Animation' }, { id: 9648, name: 'Mystery' }
 ];
 
-// --- APPLICATION STATE (CLEANER) ---
+// --- APPLICATION STATE ---
 let currentItem;
 let currentSeason = 1;
 let currentEpisode = 1;
@@ -396,17 +396,26 @@ function showToast(message, duration = 3000) {
 function loadUserSettings() {
     try {
         const json = localStorage.getItem(USER_SETTINGS_KEY);
-        // Default to the most reliable player
-        return json ? JSON.parse(json) : { defaultServer: 'player.videasy.net' };
+        // Default to the most reliable player and dark theme
+        return json ? JSON.parse(json) : { 
+            defaultServer: 'player.videasy.net',
+            theme: 'dark'
+        };
     } catch (e) {
         console.error("Error loading user settings:", e);
-        return { defaultServer: 'player.videasy.net' };
+        return { 
+            defaultServer: 'player.videasy.net',
+            theme: 'dark'
+        };
     }
 }
 
 function saveUserSettings(settings) {
+    let currentSettings = loadUserSettings();
+    // Merge new settings with existing ones
+    let newSettings = { ...currentSettings, ...settings };
     try {
-        localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
+        localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(newSettings));
     } catch (e) {
         console.error("Error saving user settings:", e);
     }
@@ -414,14 +423,45 @@ function saveUserSettings(settings) {
 
 function saveDefaultServer() {
     const selectedServer = document.getElementById('server').value;
-    const settings = loadUserSettings();
     
-    settings.defaultServer = selectedServer;
-    saveUserSettings(settings);
+    saveUserSettings({ defaultServer: selectedServer });
     
     const serverName = PLAYER_CONFIG[selectedServer]?.name || selectedServer;
     showToast(`✅ Default server set to ${serverName}!`); 
 }
+
+/**
+ * NEW THEME LOGIC
+ */
+function applyTheme(isLight) {
+    const body = document.body;
+    const icon = document.getElementById('theme-toggle-btn')?.querySelector('i');
+    
+    if (isLight) {
+        body.classList.add('light-mode');
+        // Sun icon for Light Mode (telling user they can switch to Dark)
+        if(icon) icon.className = 'fas fa-sun'; 
+        saveUserSettings({ theme: 'light' });
+    } else {
+        body.classList.remove('light-mode');
+        // Moon icon for Dark Mode (telling user they can switch to Light)
+        if(icon) icon.className = 'fas fa-moon'; 
+        saveUserSettings({ theme: 'dark' });
+    }
+}
+
+function loadThemePreference() {
+    const settings = loadUserSettings();
+    const isLight = settings.theme === 'light';
+    applyTheme(isLight);
+}
+
+function toggleTheme() {
+    const isLight = document.body.classList.contains('light-mode');
+    // Toggle the theme (if it's currently light, switch to dark, and vice versa)
+    applyTheme(!isLight);
+}
+// END NEW THEME LOGIC
 
 function addToRecentlyViewed(item) {
   const itemData = {
@@ -1142,6 +1182,9 @@ function attachListeners() {
     document.getElementById('filter-modal-close-btn').addEventListener('click', () => {
         document.getElementById('filter-modal').style.display='none';
     });
+    
+    // Theme Toggle (NEW)
+    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
 
     // Slideshow Controls
     document.getElementById('prev-slide-btn').addEventListener('click', () => changeSlide(-1));
@@ -1196,9 +1239,10 @@ async function init() {
       return;
   }
   
+  loadThemePreference(); // <-- NEW: Load theme immediately before showing content
   populateServerOptions(); // Populate server dropdown once
   attachListeners(); // Attach all event handlers
-  populateFilterOptions(); // NEW: Populate filter dropdowns
+  populateFilterOptions(); // Populate filter dropdowns
   
   // Show loading/skeletons for all sections
   const categoryIds = Object.keys(categoryState);
