@@ -431,7 +431,7 @@ function saveDefaultServer() {
 }
 
 /**
- * NEW THEME LOGIC
+ * THEME LOGIC (UNCHANGED)
  */
 function applyTheme(isLight) {
     const body = document.body;
@@ -461,7 +461,7 @@ function toggleTheme() {
     // Toggle the theme (if it's currently light, switch to dark, and vice versa)
     applyTheme(!isLight);
 }
-// END NEW THEME LOGIC
+// END THEME LOGIC
 
 function addToRecentlyViewed(item) {
   const itemData = {
@@ -739,6 +739,8 @@ function clearFilters(category) {
 }
 
 
+// START: Full View & Filter Modal Updates
+
 function openFullView(category) {
     currentFullView = category;
     
@@ -755,6 +757,7 @@ function openFullView(category) {
 
     const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     
+    // Updated HTML for the Full View Modal to include the filter button
     fullViewContainer.innerHTML = `
         <span class="close" id="full-view-close-btn" style="color: red;">&times;</span>
         <h2 style="text-transform: uppercase;">${title}</h2>
@@ -767,12 +770,20 @@ function openFullView(category) {
                 <option value="vote_average.desc">Rating (Highest)</option>
                 <option value="title.asc">Title (A-Z)</option>
             </select>
+            <button class="filter-btn" id="full-view-filter-btn" aria-label="Open Filters">
+                <i class="fas fa-filter"></i> Filters
+            </button>
         </div>
         <div class="results" id="${category}-full-list"></div>
     `;
     
     document.getElementById('full-view-close-btn').addEventListener('click', closeFullView);
     document.getElementById('full-view-sort').addEventListener('change', applyFullViewSort);
+    // NEW LISTENER for the filter button inside the full view
+    document.getElementById('full-view-filter-btn').addEventListener('click', () => {
+        openFilterModal(category, true); // Pass 'true' to indicate full-view context
+    }); 
+    
     document.getElementById('full-view-sort').value = filters.sort_by;
 
     categoryState[category].page = 0; 
@@ -858,7 +869,7 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
         document.getElementById(containerId)?.querySelector('.loading')?.remove();
         state.isLoading = false;
         
-        if (container.children.length === 0) {
+        if (isFirstLoad && container.children.length === 0) {
             container.innerHTML = '<p style="color: #ccc; text-align: center; width: 100%;">No content matches your active filter in the full view.</p>';
         }
         
@@ -882,8 +893,38 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
 }
 
 /**
- * UPDATED FUNCTION: Populates the Year and Genre dropdowns in the Filter Modal.
+ * UPDATED: Populates filter options and prepares the modal. Now accepts isFullView flag.
  */
+function openFilterModal(category, isFullView = false) {
+    currentCategoryToFilter = category;
+    
+    const modalTitle = document.getElementById('filter-modal-title');
+    const filterModal = document.getElementById('filter-modal');
+    
+    if (!modalTitle || !filterModal) return;
+
+    const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    modalTitle.textContent = `Filter ${title}`;
+    
+    const currentFilters = categoryState[category].filters;
+    
+    // Set current values
+    document.getElementById('filter-year').value = currentFilters.year || '';
+    document.getElementById('filter-genre').value = currentFilters.genre ? String(currentFilters.genre) : '';
+    
+    // Update button text and data-target-view based on context
+    const applyBtn = document.getElementById('apply-filters-btn');
+    if (isFullView) {
+        applyBtn.textContent = 'Apply Filters and Reload List';
+        applyBtn.setAttribute('data-target-view', 'full');
+    } else {
+        applyBtn.textContent = 'Apply Filters and Show More';
+        applyBtn.setAttribute('data-target-view', 'row');
+    }
+    
+    filterModal.style.display = 'flex';
+}
+
 function populateFilterOptions() {
     const yearSelect = document.getElementById('filter-year');
     const genreSelect = document.getElementById('filter-genre');
@@ -907,44 +948,47 @@ function populateFilterOptions() {
     });
 }
 
-function openFilterModal(category) {
-    currentCategoryToFilter = category;
-    
-    const modalTitle = document.getElementById('filter-modal-title');
-    const filterModal = document.getElementById('filter-modal');
-    
-    if (!modalTitle || !filterModal) return;
-
-    const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    modalTitle.textContent = `Filter ${title}`;
-    
-    const currentFilters = categoryState[category].filters;
-    document.getElementById('filter-year').value = currentFilters.year || '';
-    document.getElementById('filter-genre').value = currentFilters.genre || '';
-    
-    filterModal.style.display = 'flex';
-}
-
+/**
+ * UPDATED: Handles filter application and targets the correct view (row vs. full).
+ */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
     const genre = document.getElementById('filter-genre').value;
     const category = currentCategoryToFilter;
+    const targetView = document.getElementById('apply-filters-btn').getAttribute('data-target-view');
 
     if (!category) return;
     
     document.getElementById('filter-modal').style.display = 'none';
     
-    const newFilters = { year: year, genre: genre };
+    // Ensure genre is an integer if a value is selected, and keep the current sort_by setting
+    const newFilters = { 
+        year: year, 
+        genre: genre ? parseInt(genre) : '',
+        sort_by: categoryState[category].filters.sort_by 
+    };
 
     categoryState[category].filters = newFilters;
     updateFilterButtons(category, newFilters);
     
-    loadRowContent(category, newFilters);
-    
-    openFullView(category);
-    showToast(`Filters Applied to ${category.replace('-', ' ')}`);
+    // Based on where the filter was opened, update the relevant view
+    if (targetView === 'full') {
+        const fullViewSort = document.getElementById('full-view-sort');
+        if(fullViewSort) fullViewSort.value = newFilters.sort_by; // Sync the sort dropdown
+        
+        categoryState[category].page = 0; // Reset page count for full view
+        loadMoreFullView(category, newFilters, true);
+        
+        showToast(`Filters Applied to Full View`);
+    } else {
+        // This is the original path from the main page row filter (applies filter, then opens full view)
+        loadRowContent(category, newFilters);
+        openFullView(category);
+        showToast(`Filters Applied and Full View Opened`);
+    }
 }
 
+// END: Full View & Filter Modal Updates
 
 // --- DETAILS & MODAL LOGIC (MODIFIED for Auto-Highlight and Default Server) ---
 
@@ -1172,7 +1216,7 @@ const debouncedSearchTMDB = debounce(async () => {
 }, 300);
 
 
-// --- EVENT LISTENER SETUP (NEW UNIFIED FUNCTION) ---
+// --- EVENT LISTENER SETUP (UNCHANGED) ---
 
 function attachListeners() {
     // Navbar/Modal Closers
@@ -1183,7 +1227,7 @@ function attachListeners() {
         document.getElementById('filter-modal').style.display='none';
     });
     
-    // Theme Toggle (NEW)
+    // Theme Toggle
     document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
 
     // Slideshow Controls
@@ -1229,7 +1273,7 @@ function attachListeners() {
 }
 
 
-// --- INITIALIZATION ---
+// --- INITIALIZATION (UNCHANGED) ---
 
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
@@ -1239,7 +1283,7 @@ async function init() {
       return;
   }
   
-  loadThemePreference(); // <-- NEW: Load theme immediately before showing content
+  loadThemePreference(); // Load theme immediately before showing content
   populateServerOptions(); // Populate server dropdown once
   attachListeners(); // Attach all event handlers
   populateFilterOptions(); // Populate filter dropdowns
