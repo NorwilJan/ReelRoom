@@ -1,1006 +1,305 @@
-/* css/home.css */
-
-/* === 1. CSS Variables for Theming === */
-:root {
-  --background-dark: #111;
-  --background-mid: #222;
-  --text-light: #fff;
-  --text-dark: #111; /* Explicit dark text variable */
-  --accent-color: red; /* Main highlight color */
-  --accent-hover: #ff4d4d;
-  --link-color: var(--accent-color);
-  --skeleton-color: #333;
-
-  /* --- NEW SPACING VARIABLES --- */
-  --spacing-xs: 5px;
-  --spacing-sm: 10px;
-  --spacing-md: 20px; /* For main content margin/padding */
-  
-  /* --- NEW Z-INDEX VARIABLES --- */
-  --z-base: 10;
-  --z-modal: 1000;
-  --z-toast: 9999;
+/* Global Reset and Base Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #141414;
+    color: #fff;
 }
 
-/* === 2. Global Reset and Base Styles === */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { 
-    font-family: Arial, sans-serif; 
-    background: var(--background-dark); 
-    color: var(--text-light); 
-    /* Ensures smooth scrolling across the app */
-    scroll-behavior: smooth; 
-}
-
-/* === 3. Navigation Bar === */
+/* Header and Navigation */
 .navbar {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: var(--spacing-sm); /* Used 10px variable */
-  background: var(--background-mid);
-}
-.logo-text {
-  margin: 0;
-  font-size: 28px;
-  font-weight: bold;
-  color: var(--text-light);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-family: 'Arial Black', Arial, sans-serif;
-}
-.nav-links { display: flex; align-items: center; gap: var(--spacing-sm); }
-.nav-links a { 
-    color: var(--text-light); 
-    text-decoration: none; 
-    margin: 0 var(--spacing-xs); /* Used 5px variable */
-    padding: var(--spacing-xs); /* Used 5px variable */
-    border-radius: var(--spacing-xs);
-    transition: background 0.2s;
-}
-.nav-links a:hover {
-    background: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: #000;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
-/* Search button styling */
-.search-icon-btn {
-  background: none;
-  border: none;
-  color: var(--text-light);
-  cursor: pointer;
-  font-size: 1.2em;
-  padding: var(--spacing-xs) var(--spacing-sm); /* Used 5px and 10px variables */
-  transition: color 0.2s;
-}
-.search-icon-btn:hover {
-  color: #ddd;
+.logo {
+    color: #e50914; /* Netflix Red */
+    font-size: 2em;
+    margin: 0;
 }
 
-/* === 4. Banner and Slideshow === */
-.banner {
-  height: 50vh;
-  position: relative;
-  overflow: hidden;
-}
-
-.slideshow-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.slides {
-  display: flex;
-  width: 100%;
-  height: 100%;
-}
-
-.slide {
-  min-width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: flex-end; /* Move title to the bottom */
-  padding: var(--spacing-md); /* Used 20px variable */
-  cursor: pointer;
-  transition: transform 0.5s ease;
-}
-
-.slide h1 {
-  background: rgba(0,0,0,0.7);
-  padding: var(--spacing-sm); /* Used 10px variable */
-  color: var(--text-light);
-  font-size: 2em;
-  border-radius: var(--spacing-xs);
-}
-
-.prev, .next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0,0,0,0.5);
-  color: var(--text-light);
-  padding: var(--spacing-sm); /* Used 10px variable */
-  cursor: pointer;
-  font-size: 24px;
-  user-select: none;
-  border-radius: var(--spacing-xs);
-  z-index: var(--z-base); /* Used z-base variable */
-}
-
-.prev { left: var(--spacing-sm); }
-.next { right: var(--spacing-sm); }
-
-.dots {
-  position: absolute;
-  bottom: var(--spacing-sm);
-  width: 100%;
-  text-align: center;
-}
-
-.dot {
-  display: inline-block;
-  width: var(--spacing-sm);
-  height: var(--spacing-sm);
-  margin: 0 var(--spacing-xs);
-  background: #bbb;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.dot.active {
-  background: var(--text-light);
-}
-
-/* === 5. Content Rows and Lists === */
-.row, .list-container-no-header {
-  margin: var(--spacing-md); /* Used 20px variable */
-}
-
-.list-container-no-header h2 {
-    margin-bottom: var(--spacing-sm); /* Used 10px variable */
-    color: var(--text-light);
-}
-
-/* Header structure for filter/show more */
-.row-header {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: var(--spacing-sm); /* Used 10px variable */
-}
-
-.row h2 {
-  margin: 0;
-}
-
-/* Filter Button and Show More Link Styling */
-.filter-btn {
-  background: #444;
-  color: var(--text-light);
-  border: 1px solid #666;
-  padding: 5px var(--spacing-sm);
-  border-radius: var(--spacing-xs);
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  font-size: 0.9em;
-  margin-right: var(--spacing-sm); /* Used 10px variable */
-  white-space: nowrap; /* Prevent button text from wrapping */
-}
-
-.filter-btn:hover {
-  background: #666;
-}
-
-/* Styling for the clear filter button */
-.clear-filter-btn {
-  background: #600; 
-  border: 1px solid var(--accent-color);
-  margin-right: var(--spacing-xs); 
-}
-
-.clear-filter-btn:hover {
-  background: var(--accent-color);
-}
-
-.show-more-link {
-  color: var(--link-color);
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 0.95em;
-  transition: color 0.2s;
-}
-
-.show-more-link:hover {
-  color: var(--text-light);
-}
-
-.list {
-  display: flex;
-  overflow-x: auto;
-  padding-bottom: var(--spacing-sm); /* Used 10px variable */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-  -webkit-overflow-scrolling: touch; 
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-.list::-webkit-scrollbar {
-  display: none;
-}
-
-/* Dedicated link slideshow area */
-.link-slideshow-container {
-    padding-top: var(--spacing-xs); 
-    border-bottom: 2px solid #333; 
-    margin-bottom: var(--spacing-md); /* Used 20px variable */
-}
-
-.list a {
-    display: block; 
-    flex-shrink: 0; 
-    margin-right: var(--spacing-sm); /* Used 10px variable */
+.navbar a, .navbar button {
+    color: #fff;
+    text-decoration: none;
+    margin-left: 20px;
+    font-size: 1.1em;
+    background: none;
+    border: none;
     cursor: pointer;
-    border-radius: var(--spacing-xs);
-    transition: transform 0.3s ease, filter 0.3s ease;
 }
 
-.list a:hover {
-    transform: scale(1.05);
-    filter: brightness(1.2);
-    z-index: var(--z-base); 
+.navbar a:hover, .navbar button:hover {
+    color: #aaa;
 }
 
-.list a img, .list img {
-  width: 150px;
-  height: 225px; 
-  object-fit: cover;
-  flex-shrink: 0; 
-  margin-right: var(--spacing-sm); /* Used 10px variable */
-  cursor: pointer;
-  border-radius: var(--spacing-xs);
-  transition: transform 0.3s ease, filter 0.3s ease; /* Ensure transition exists here for consistency */
-}
-
-.list a img {
-    margin-right: 0; /* Override list img margin when inside an 'a' */
-}
-
-.list img:hover {
-  transform: scale(1.05);
-  filter: brightness(1.2);
-  z-index: var(--z-base); 
-}
-
-
-/* === 6. Skeleton Loading Effect === */
-.skeleton {
-  background: var(--skeleton-color); 
-  position: relative;
-  overflow: hidden;
-}
-
-.skeleton::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.1) 20%,
-    rgba(255, 255, 255, 0.3) 60%,
-    rgba(255, 255, 255, 0)
-  );
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-.list.loading-list img, .list.loading-list a img, .list.loading-list a {
-  width: 150px;
-  height: 225px;
-  border-radius: var(--spacing-xs);
-  background: var(--skeleton-color); 
-}
-
-.list.loading-list .skeleton {
-    min-width: 150px;
-    height: 225px;
-    margin-right: var(--spacing-sm); /* Used 10px variable */
-    border-radius: var(--spacing-xs);
-    display: inline-block; 
-}
-
-/* === 7. Modals (Details/Playback) === */
-.modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.9);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: var(--z-modal); /* Used variable */
-  padding: var(--spacing-sm); /* Used 10px variable */
-}
-
-.modal-content {
-  background: var(--background-mid);
-  padding: var(--spacing-md); /* Used 20px variable */
-  width: 100%;
-  max-width: 800px;
-  max-height: 95vh; /* Adjusted for better mobile fit */
-  overflow-y: auto;
-  position: relative;
-  text-align: center;
-  border-radius: var(--spacing-sm);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-
-.modal-body {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md); /* Used 20px variable */
-  margin-bottom: var(--spacing-md); /* Used 20px variable */
-}
-
-.modal-body img {
-  width: 30%;
-  height: auto;
-  border-radius: var(--spacing-xs);
-  object-fit: cover;
-}
-
-.modal-text {
-  flex: 1;
-  text-align: left;
-}
-.modal-text h2, .modal-text p {
-    color: var(--text-light);
-}
-
-/* --- NEW PLAYER CONTROLS STYLES --- */
-.video-player-container {
+/* Hero Section */
+.hero-section {
     position: relative;
-    width: 100%;
-    /* Standard 16:9 aspect ratio */
-    padding-top: 56.25%; 
+    height: 70vh;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    padding: 0 40px;
+}
+
+.hero-content {
+    max-width: 500px;
+    z-index: 1;
+}
+
+.hero-content h2 {
+    font-size: 3em;
     margin-bottom: 10px;
-    border-radius: var(--spacing-xs);
+}
+
+.hero-content p {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px #000;
+}
+
+.hero-btn {
+    padding: 10px 20px;
+    font-size: 1.1em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.play-btn-hero {
+    background-color: #fff;
+    color: #000;
+}
+
+.more-info-btn-hero {
+    background-color: rgba(109, 109, 110, 0.7);
+    color: #fff;
+}
+
+/* Movie Rows */
+.movie-rows {
+    padding: 20px 0 50px 0;
+}
+
+.movie-row {
+    margin-bottom: 30px;
+}
+
+.row-title {
+    font-size: 1.5em;
+    margin-left: 40px;
+    margin-bottom: 10px;
+}
+
+.movie-list {
+    display: flex;
+    overflow-x: scroll; /* Allows horizontal scrolling */
+    padding: 10px 40px;
+    gap: 10px;
+}
+
+/* Hide scrollbar for aesthetics, but keep functionality */
+.movie-list::-webkit-scrollbar {
+    display: none;
+}
+.movie-list {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.movie-card {
+    flex-shrink: 0; /* Prevents cards from shrinking */
+    width: 200px; /* Standard card width */
+    height: 300px; /* Standard card height */
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+    border-radius: 5px;
     overflow: hidden;
 }
 
-.video-player-container iframe {
+.movie-card:hover {
+    transform: scale(1.05);
+    z-index: 5;
+}
+
+.movie-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 🎥 Video Modal and Player Styles 🎥 */
+.video-modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.9); /* Black background with opacity */
+}
+
+.modal-content {
+    position: relative;
+    margin: 5% auto; /* 5% from the top and centered */
+    width: 80%; /* Could be adjusted */
+    max-width: 900px;
+    background-color: #111;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.close-modal-btn {
+    color: #aaa;
+    float: right;
+    font-size: 30px;
+    font-weight: bold;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    z-index: 2010;
+}
+
+.close-modal-btn:hover,
+.close-modal-btn:focus {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Video Player Container */
+.video-player-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    margin-bottom: 20px;
+}
+
+.video-player {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    background-color: #000;
 }
 
-.player-controls {
+/* Custom Controls */
+.custom-controls {
     position: absolute;
-    top: 0;
-    right: 0;
-    z-index: var(--z-base); 
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm);
-}
-
-.player-control-btn {
-    background: rgba(0, 0, 0, 0.7);
-    color: var(--text-light);
-    border: none;
-    padding: 10px;
-    border-radius: var(--spacing-xs);
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-    font-size: 1.1em;
-}
-
-.player-control-btn:hover {
-    background: var(--accent-color);
-}
-
-/* Specific style for Watched button when active/marked */
-.player-control-btn.watched {
-    background: #008000; /* Green */
-    color: var(--text-light);
-}
-.player-control-btn.watched:hover {
-    background: #00b300;
-}
-/* --- END NEW PLAYER CONTROLS STYLES --- */
-
-
-.favorite-icon {
-  cursor: pointer;
-  color: #fff; 
-  font-size: 1.2em;
-  margin-left: var(--spacing-sm);
-  transition: color 0.2s;
-  vertical-align: middle;
-}
-
-.favorite-icon.active {
-  color: var(--accent-color); 
-}
-
-.user-star {
-    cursor: pointer;
-    color: gold;
-    font-size: 1.2em;
-    margin-right: 2px;
-}
-.stars { color: gold; }
-
-.close {
-  position: absolute;
-  top: var(--spacing-sm); 
-  right: var(--spacing-md);
-  cursor: pointer;
-  font-size: 24px;
-  color: var(--text-light) !important; /* Default to white/light text */
-  transition: transform 0.2s;
-}
-
-.close:hover {
-    transform: scale(1.1);
-}
-
-.server-selector, .season-selector {
-  margin: 15px 0;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap; 
-}
-.server-selector label, .season-selector label {
-    color: var(--text-light);
-}
-
-
-.season-selector select, .server-selector select {
-  padding: var(--spacing-xs);
-  border-radius: var(--spacing-xs);
-  border: none;
-  background: #333;
-  color: var(--text-light);
-  min-width: 150px;
-}
-
-.episode-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm); /* Used 10px variable */
-  margin-bottom: var(--spacing-md); /* Used 20px variable */
-  max-height: 200px;
-  overflow-y: auto;
-  padding-right: var(--spacing-xs);
-}
-
-.episode-item {
-  background: #333;
-  padding: var(--spacing-sm); /* Used 10px variable */
-  border-radius: var(--spacing-xs);
-  cursor: pointer;
-  /* Adjusted for better multi-column layout on medium screens */
-  flex: 1 1 calc(50% - 5px); 
-  transition: background 0.3s, border 0.3s;
-  display: flex;
-  align-items: center;
-}
-
-.episode-item.active { 
-    background: #444; 
-    border: 1px solid var(--accent-color);
-}
-
-/* NEW: Style for watched episode */
-.episode-item.watched {
-    border-left: 5px solid #008000; /* Green bar for watched */
-    opacity: 0.8;
-}
-
-.episode-item:hover {
-  background: #444;
-}
-
-.episode-item img {
-  width: 50px;
-  height: auto;
-  border-radius: var(--spacing-xs);
-  margin-right: var(--spacing-sm); /* Used 10px variable */
-  vertical-align: middle;
-}
-
-.episode-item span {
-  color: var(--text-light);
-  flex-grow: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-
-/* === 8. Search/Full View Modal === */
-.search-modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw; 
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.95); /* Increased opacity for full view */
-  display: none;
-  justify-content: flex-start;
-  align-items: center;
-  flex-direction: column;
-  padding-top: 50px;
-  z-index: var(--z-toast); /* Used z-toast variable, as this is the highest layer */
-}
-
-.search-modal input {
-  width: 90%;
-  max-width: 500px;
-  padding: var(--spacing-sm); /* Used 10px variable */
-  border-radius: var(--spacing-xs);
-  border: none;
-  margin-bottom: var(--spacing-md); /* Used 20px variable */
-  font-size: 16px;
-  background: #333;
-  color: var(--text-light);
-}
-
-.search-modal h2 { 
-    color: var(--text-light);
-    margin-bottom: var(--spacing-md); /* Used 20px variable */
-}
-
-.search-modal .results {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 15px; /* Increased gap for better spacing */
-  width: 90%;
-  max-width: 900px; /* Slightly wider max-width for full view */
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: var(--spacing-sm); /* Used 10px variable */
-}
-
-.search-modal img {
-  width: 100%;
-  height: auto;
-  border-radius: var(--spacing-xs);
-  cursor: pointer;
-  transition: transform 0.2s;
-  object-fit: cover;
-}
-
-.search-modal img:hover {
-  transform: scale(1.03);
-}
-
-.search-modal .close {
-  position: absolute;
-  top: var(--spacing-md); /* Used 20px variable */
-  right: 30px;
-  font-size: 30px;
-}
-
-.full-view-controls {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    margin-bottom: var(--spacing-md); /* Used 20px variable */
-    padding: 0 5%;
+    bottom: 0;
+    left: 0;
     width: 100%;
-    max-width: 900px; 
-}
-
-.full-view-controls label {
-    font-weight: bold;
-    color: var(--accent-color);
-    white-space: nowrap;
-}
-
-.full-view-controls select {
-    padding: 8px;
-    border-radius: var(--spacing-xs);
-    border: none;
-    background: #333;
-    color: var(--text-light);
-    min-width: 150px;
-    flex-grow: 1;
-}
-
-/* === 9. Filter Modal Styling === */
-.filter-modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.95);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: var(--z-modal); /* Used variable */
-}
-
-.filter-content {
-  background: var(--background-mid);
-  padding: 30px;
-  width: 90%;
-  max-width: 400px;
-  border-radius: var(--spacing-sm);
-  color: var(--text-light);
-  position: relative;
-  text-align: left;
-}
-
-.filter-content label {
-    display: block;
-    margin-bottom: var(--spacing-xs);
-    font-weight: bold;
-    color: var(--accent-color);
-}
-
-.filter-content select {
-  width: 100%;
-  padding: var(--spacing-sm); /* Used 10px variable */
-  margin-bottom: 15px;
-  background: #333;
-  color: var(--text-light);
-  border: 1px solid #555;
-  border-radius: var(--spacing-xs);
-}
-
-.filter-content button {
-  width: 100%;
-  padding: var(--spacing-sm); /* Used 10px variable */
-  background: var(--accent-color);
-  color: var(--text-light);
-  border: none;
-  border-radius: var(--spacing-xs);
-  cursor: pointer;
-  font-size: 1em;
-  margin-top: var(--spacing-sm); /* Used 10px variable */
-  transition: background 0.2s;
-}
-
-.filter-content button:hover {
-    background: var(--accent-hover);
-}
-
-/* === 10. Toast Notification Styling === */
-#toast-container {
-    position: fixed;
-    top: var(--spacing-md); /* Used 20px variable */
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: var(--z-toast); /* Used variable */
+    height: 100%; /* Initially cover the entire area */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 20%);
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    pointer-events: none; 
-    max-width: 90%;
-}
-
-.toast {
-    background-color: var(--accent-color);
-    color: var(--text-light);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--spacing-xs);
-    margin-bottom: var(--spacing-sm);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-    transform: translateY(-20px);
-    font-weight: bold;
-    pointer-events: all; 
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* === 11. Footer === */
-.footer {
-  background: var(--background-mid);
-  color: #ccc;
-  padding: var(--spacing-md); /* Used 20px variable */
-  text-align: center;
-  margin-top: 40px;
-}
-
-.footer-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.footer-links {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.footer-links a {
-  color: var(--link-color);
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.footer-links a:hover {
-  color: var(--text-light);
-}
-
-.error-message {
-  color: #ff6b6b;
-  text-align: center;
-  padding: var(--spacing-md);
-  background: rgba(255, 107, 107, 0.1);
-  border-radius: var(--spacing-xs);
-  margin: var(--spacing-sm);
-}
-
-.loading {
-  text-align: center;
-  padding: var(--spacing-md);
-  color: #ccc;
-}
-
-
-/* === 12. Mobile Responsiveness === */
-@media (max-width: 768px) {
-  .navbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .nav-links {
-    flex-direction: row; /* Keep nav links horizontal to save space */
-    width: 100%;
-    gap: 15px; /* Increased gap */
-    margin-top: var(--spacing-xs);
     justify-content: flex-end;
-  }
+    pointer-events: none; /* Allows clicks to pass through when hidden */
+}
 
-  .nav-links a {
-    text-align: center;
-    padding: var(--spacing-xs);
-    background: #333;
-    border-radius: var(--spacing-xs);
-  }
-  
-  .search-icon-btn {
-    align-self: flex-start; /* Reset align */
-    position: static; /* No absolute positioning needed if nav-links handles search */
-    margin-right: -10px; /* Pull it slightly to the right */
-  }
+/* Show controls when container is hovered or video is paused */
+.video-player-container:hover .custom-controls,
+.video-player-container.paused .custom-controls,
+.video-player-container.show-controls .custom-controls {
+    opacity: 1;
+    pointer-events: all; /* Enable interaction when visible */
+}
 
-  .logo-text {
-    font-size: 18px;
-    margin-bottom: var(--spacing-xs);
-    letter-spacing: 1px;
-  }
-  
-  .row-header {
-      flex-direction: column;
-      align-items: flex-start;
-  }
-  
-  .row-header div {
-      display: flex; 
-      align-items: center;
-      margin-top: var(--spacing-sm); /* Used 10px variable */
-  }
-  
-  /* Compact Button Styling: Hide text and only show icon for ROW filters */
-  .row .row-header .filter-btn:not(.clear-filter-btn) {
-      padding: 8px; /* Square button */
-      width: 38px; 
-      height: 38px;
-      font-size: 0; /* Hide text */
-      position: relative;
-  }
+.progress-bar-container {
+    padding: 0 10px;
+}
 
-  /* Position Font Awesome icon in the center */
-  .row .row-header .filter-btn:not(.clear-filter-btn) i {
-      font-size: 1.2em;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-  }
+.progress-bar {
+    width: 100%;
+    height: 5px;
+    cursor: pointer;
+    /* Custom styling for range input */
+    -webkit-appearance: none;
+    background: #555;
+    border-radius: 5px;
+    margin: 0;
+}
 
-  .show-more-link {
-      font-size: 0.85em;
-  }
-  
-  .server-selector {
-      flex-direction: column;
-      align-items: flex-start;
-  }
-  .server-selector label, .server-selector select, .server-selector button {
-      margin-top: var(--spacing-xs); 
-      margin-left: 0 !important; 
-      width: 100%;
-  }
+.progress-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    background: #e50914;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+}
 
-  .banner {
-    height: 30vh;
-  }
-
-  .slide h1 {
-    font-size: 1.5em;
-  }
-
-  .prev, .next {
-    font-size: 18px;
-    padding: 8px;
-  }
-
-  .dots {
-    bottom: var(--spacing-xs);
-  }
-
-  .modal-body {
-    flex-direction: column;
+.controls-bottom-row {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-  }
-
-  .modal-body img {
-    width: 50%;
-  }
-
-  .modal-text {
-    text-align: center;
-  }
-
-  .episode-list {
-    flex-direction: column;
-    max-height: 150px;
-  }
-
-  .episode-item {
-    flex: 1 1 100%;
-  }
+    padding: 10px 20px;
 }
 
-@media (max-width: 500px) {
-    .full-view-controls {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-xs);
-    }
-    .full-view-controls select, .full-view-controls button {
-        width: 100%;
-    }
-    .slide h1 {
-        font-size: 1.2em;
-        padding: var(--spacing-xs);
-    }
+.controls-left, .controls-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-/* === 13. Light Mode Theme Override (UPDATED for better contrast) === */
-body.light-mode {
-  --background-dark: #f0f0f0; /* Light background */
-  --background-mid: #ffffff; /* White card/modal background */
-  --text-light: #111; /* Dark text */
-  --accent-color: #007bff; /* Primary blue accent */
-  --accent-hover: #0056b3;
-  --link-color: var(--accent-color);
-  --skeleton-color: #e0e0e0; /* Lighter skeleton */
-  --text-dark: #111; /* Explicit dark text variable */
+.custom-controls button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 5px;
 }
 
-/* Base element overrides */
-body.light-mode .navbar,
-body.light-mode .footer,
-body.light-mode .modal-content,
-body.light-mode .filter-content {
-  background: var(--background-mid);
-  color: var(--text-light);
+.time-display {
+    font-size: 0.9em;
+    color: #ccc;
 }
 
-body.light-mode .search-modal input {
-  background: #f5f5f5; /* Slightly darker input for contrast */
-  color: var(--text-dark);
-  border: 1px solid #ccc;
+.volume-slider {
+    width: 80px;
+    height: 5px;
+    cursor: pointer;
+    /* Basic styling for volume slider */
+    -webkit-appearance: none;
+    background: #555;
+    border-radius: 5px;
 }
 
-body.light-mode .navbar .nav-links a {
-    color: var(--text-light); /* Ensure navbar links are dark */
-    background: #e9e9e9;
-}
-body.light-mode .search-icon-btn i {
-    color: var(--text-light); /* Ensure search icon is dark */
-}
-
-/* Fix 1: Modal Text/Title Visibility */
-body.light-mode h2,
-body.light-mode p,
-body.light-mode label,
-body.light-mode .modal-text h2,
-body.light-mode .modal-text p {
-    color: var(--text-light);
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
 }
 
-/* Fix 2: Slideshow Text Contrast */
-body.light-mode .slide h1 {
-  /* Set a dark background for the text overlay so it's readable */
-  background: rgba(255, 255, 255, 0.7); 
-  color: var(--text-dark); /* Ensure text is dark */
-  padding: 8px;
-  border-radius: 5px;
+/* Modal Title and Overview */
+.modal-title {
+    font-size: 1.8em;
+    margin-top: 15px;
 }
 
-/* Fix 3: Modal Close Button Visibility (was red on white/light gray) */
-body.light-mode .modal .close,
-body.light-mode .search-modal .close,
-body.light-mode .filter-modal .close {
-    color: var(--accent-color) !important; /* Force blue or dark color */
-}
-
-/* Adjusted star colors for visibility against light background */
-body.light-mode .stars,
-body.light-mode .user-star {
-    color: orange; 
-}
-
-/* Adjust episode item colors for light mode */
-body.light-mode .episode-item {
-    background: #e9e9e9;
-    color: var(--text-dark);
-}
-body.light-mode .episode-item.watched {
-    border-left: 5px solid #008000;
-}
-body.light-mode .episode-item span {
-    color: var(--text-dark); /* Ensure episode title text is visible */
-}
-body.light-mode .episode-item.active {
-    background: #d0d0d0;
-    border: 1px solid var(--accent-color);
-}
-
-/* Adjusting button/select elements */
-body.light-mode .server-selector select, 
-body.light-mode .season-selector select {
-    background: #e9e9e9;
-    color: var(--text-dark);
-    border: 1px solid #ccc;
-}
-body.light-mode #save-default-server-btn {
-    background: #ddd !important;
-    color: var(--text-dark) !important;
-    border: 1px solid #bbb !important;
-}
-
-body.light-mode .filter-btn {
-    background: #ddd;
-    color: var(--text-dark);
-    border: 1px solid #bbb;
-}
-body.light-mode .filter-btn:hover {
-    background: #ccc;
-}
-body.light-mode .filter-btn:not(.clear-filter-btn)[style*="background: red"] {
-    background: var(--accent-color) !important;
-    color: #fff !important;
-}
-
-body.light-mode .filter-content select {
-    background: #e9e9e9;
-    color: var(--text-dark);
-    border: 1px solid #ccc;
+.modal-overview {
+    font-size: 1em;
+    line-height: 1.4;
 }
