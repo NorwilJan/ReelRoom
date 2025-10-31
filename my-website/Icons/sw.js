@@ -1,5 +1,4 @@
 const CACHE_NAME = 'reelroom-cache-v1';
-// List of all essential files for offline functionality (The App Shell)
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -7,13 +6,13 @@ const ASSETS_TO_CACHE = [
   '/js/home.js',
   '/manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
-  // Ensure your icon paths are correct!
-  '/icon-72x72.png',
-  '/icon-96x96.png',
-  '/icon-128x128.png',
-  '/icon-152x152.png',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
+  // Include your icon paths here once created: 
+  // '/icons/icon-72x72.png',
+  // '/icons/icon-96x96.png',
+  // '/icons/icon-128x128.png',
+  // '/icons/icon-152x152.png',
+  // '/icons/icon-192x192.png',
+  // '/icons/icon-512x512.png',
 ];
 
 // 1. Install Event: Caches necessary assets (App Shell)
@@ -23,12 +22,10 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('[Service Worker] Caching App Shell');
-        return cache.addAll(ASSETS_TO_CACHE.filter(path => path));
-      })
-      .catch(err => {
-        console.error('Failed to cache assets:', err);
+        return cache.addAll(ASSETS_TO_CACHE.filter(path => path)); // Filter out any empty paths
       })
   );
+  // Force the new service worker to activate immediately
   self.skipWaiting();
 });
 
@@ -38,6 +35,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keyList => {
       return Promise.all(keyList.map(key => {
+        // Delete all caches that don't match the current CACHE_NAME
         if (key !== CACHE_NAME) {
           console.log('[Service Worker] Removing old cache', key);
           return caches.delete(key);
@@ -48,22 +46,20 @@ self.addEventListener('activate', event => {
   return self.clients.claim();
 });
 
-// 3. Fetch Event: Intercepts network requests
+// 3. Fetch Event: Intercepts network requests using a Cache-First strategy
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // Cache-First strategy for the static files (App Shell and CDN fonts)
+  // Cache-First strategy for the static files (App Shell)
   if (ASSETS_TO_CACHE.includes(url.pathname) || url.origin === 'https://cdnjs.cloudflare.com') {
     event.respondWith(
       caches.match(event.request)
         .then(response => {
-          if (response) {
-            return response;
-          }
-          return fetch(event.request);
+          // Return the cached file if found, otherwise fetch it from the network
+          return response || fetch(event.request);
         })
     );
   } 
-  // All other requests (TMDB API, video embeds) go Network-Only
+  // Network-Only for dynamic content (TMDB API, video embeds, movie posters)
   return; 
 });
