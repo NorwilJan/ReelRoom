@@ -58,6 +58,7 @@ const FAVORITES_KEY = 'reelroom_favorites';
 const RECENTLY_VIEWED_KEY = 'reelroom_recent';
 const RATINGS_KEY = 'reelroom_ratings';         
 const WATCH_PROGRESS_KEY = 'reelroom_progress'; 
+const WATCHED_STATUS_KEY = 'reelroom_watched'; // NEW: Tracks watched status
 const USER_SETTINGS_KEY = 'reelroom_user_settings'; 
 const MAX_RECENT = 15; 
 const MAX_FAVORITES = 30; 
@@ -624,6 +625,68 @@ function loadWatchProgress(itemId) {
     return progressList.find(p => p.id === itemId);
 }
 
+// NEW: Watched Status Logic
+
+/**
+ * Marks a movie or episode as watched/unwatched.
+ * @param {boolean} isWatched - True to mark as watched, false to unmark.
+ */
+function toggleWatchedStatus(isWatched) {
+    if (!currentItem) return;
+
+    const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
+    let watchedList = loadStorageList(WATCHED_STATUS_KEY);
+    let key; 
+    let message;
+
+    if (type === 'movie') {
+        key = `m-${currentItem.id}`;
+        message = isWatched ? `Movie marked as Watched! 🍿` : `Movie marked as Unwatched.`;
+    } else {
+        key = `t-${currentItem.id}-s${currentSeason}-e${currentEpisode}`;
+        message = isWatched ? `E${currentEpisode} marked as Watched! 👍` : `E${currentEpisode} marked as Unwatched.`;
+        
+        // Also update the episode list item class
+        const item = document.querySelector(`.episode-item[data-episode-number="${currentEpisode}"]`);
+        if (item) {
+            item.classList.toggle('watched', isWatched);
+        }
+    }
+
+    if (isWatched) {
+        if (!watchedList.includes(key)) {
+            watchedList.push(key);
+        }
+    } else {
+        watchedList = watchedList.filter(k => k !== key);
+    }
+    
+    // Update the button appearance
+    document.getElementById('watched-btn').classList.toggle('watched', isWatched);
+    
+    saveStorageList(WATCHED_STATUS_KEY, watchedList);
+    showToast(message);
+}
+
+/**
+ * Checks if the current item/episode is marked as watched.
+ * @returns {boolean}
+ */
+function loadWatchedStatus() {
+    if (!currentItem) return false;
+    
+    const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
+    const watchedList = loadStorageList(WATCHED_STATUS_KEY);
+    
+    let key;
+    if (type === 'movie') {
+        key = `m-${currentItem.id}`;
+    } else {
+        key = `t-${currentItem.id}-s${currentSeason}-e${currentEpisode}`;
+    }
+    
+    return watchedList.includes(key);
+}
 
 // --- SCROLL & FILTER LOGIC ---
 
@@ -785,6 +848,8 @@ function openFullView(category) {
     }); 
     
     document.getElementById('full-view-sort').value = filters.sort_by;
+    
+    updateFullViewFilterButton(filters); 
 
     categoryState[category].page = 0; 
     loadMoreFullView(category, filters, true); 
@@ -828,6 +893,28 @@ function displayFullList(items, containerId, isFirstLoad = false) {
     
     container.appendChild(img);
   });
+}
+
+function updateFullViewFilterButton(filters) {
+    const filterBtn = document.getElementById('full-view-filter-btn');
+    if (!filterBtn) return;
+
+    const isFiltered = filters.year || filters.genre;
+
+    if (isFiltered) {
+        const genreName = filters.genre ? (GENRES.find(g => g.id == filters.genre)?.name || 'Genre') : '';
+        const yearText = filters.year || '';
+        
+        filterBtn.innerHTML = `<i class="fas fa-filter"></i> ${genreName} ${yearText}`.trim(); 
+        filterBtn.style.background = 'red';
+        filterBtn.style.color = 'white';
+        filterBtn.setAttribute('aria-label', `Active Filters: ${genreName} ${yearText}`);
+    } else {
+        filterBtn.innerHTML = '<i class="fas fa-filter"></i> Filters'; 
+        filterBtn.style.background = '#444';
+        filterBtn.style.color = '#fff';
+        filterBtn.setAttribute('aria-label', 'Open Filters');
+    }
 }
 
 function applyFullViewSort() {
@@ -979,6 +1066,8 @@ function applyFilters() {
         categoryState[category].page = 0; // Reset page count for full view
         loadMoreFullView(category, newFilters, true);
         
+        updateFullViewFilterButton(newFilters); 
+        
         showToast(`Filters Applied to Full View`);
     } else {
         // This is the original path from the main page row filter (applies filter, then opens full view)
@@ -1035,6 +1124,23 @@ async function showDetails(item, isFullViewOpen = false) {
   const seasonSelector = document.getElementById('season-selector');
   const episodeList = document.getElementById('episode-list');
   const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
+  
+  // Player control setup
+  const watchedBtn = document.getElementById('watched-btn');
+  watchedBtn.onclick = () => {
+    const isCurrentlyWatched = watchedBtn.classList.contains('watched');
+    toggleWatchedStatus(!isCurrentlyWatched);
+  };
+  
+  // Set initial watched status for the movie/first episode
+  if (!isTVShow) {
+      watchedBtn.classList.toggle('watched', loadWatchedStatus());
+      watchedBtn.querySelector('span').textContent = watchedBtn.classList.contains('watched') ? 'Watched' : 'Mark Watched';
+  } else {
+      // Defer TV watched status update until after episodes load
+      watchedBtn.classList.remove('watched');
+      watchedBtn.querySelector('span').textContent = 'Mark Watched';
+  }
 
 
   if (isTVShow) {
@@ -1079,6 +1185,7 @@ async function loadEpisodes() {
   episodeList.innerHTML = '';
   
   const progress = loadWatchProgress(currentItem.id);
+  const watchedList = loadStorageList(WATCHED_STATUS_KEY); // Fetch all watched keys
   
   // Determine the episode to auto-select: Next episode from progress OR Episode 1
   let targetEpisode = (progress && progress.season == currentSeason) 
@@ -1099,6 +1206,12 @@ async function loadEpisodes() {
     div.className = 'episode-item';
     div.setAttribute('data-episode-number', episode.episode_number); 
     
+    // Check watched status and apply class
+    const key = `t-${currentItem.id}-s${currentSeason}-e${episode.episode_number}`;
+    if (watchedList.includes(key)) {
+        div.classList.add('watched');
+    }
+    
     const img = episode.still_path
       ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" />`
       : '';
@@ -1111,6 +1224,12 @@ async function loadEpisodes() {
       div.classList.add('active');
       
       saveWatchProgress(currentItem.id, document.getElementById('server').value, currentSeason, currentEpisode);
+      
+      // Update watched button status when episode changes
+      const isWatched = loadWatchedStatus();
+      const watchedBtn = document.getElementById('watched-btn');
+      watchedBtn.classList.toggle('watched', isWatched);
+      watchedBtn.querySelector('span').textContent = isWatched ? 'Watched' : 'Mark Watched';
     });
     episodeList.appendChild(div);
   });
@@ -1133,7 +1252,7 @@ function changeServer() {
   const server = document.getElementById('server').value;
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   
-  saveWatchProgress(currentItem.id, server, currentSeason, currentEpisode); 
+  saveWatchProgress(currentItem.id, currentSeason, currentEpisode); 
 
   const config = PLAYER_CONFIG[server];
   let embedURL = '';
@@ -1145,6 +1264,12 @@ function changeServer() {
   }
 
   document.getElementById('modal-video').src = embedURL;
+  
+  // Update Watched button status when video changes
+  const isWatched = loadWatchedStatus();
+  const watchedBtn = document.getElementById('watched-btn');
+  watchedBtn.classList.toggle('watched', isWatched);
+  watchedBtn.querySelector('span').textContent = isWatched ? 'Watched' : 'Mark Watched';
 }
 
 function closeModal() {
@@ -1160,6 +1285,31 @@ function closeModal() {
       fullViewModal.style.display = 'flex';
   }
 }
+
+// NEW: Fullscreen Toggler for the iframe
+
+function toggleFullscreen() {
+    const playerContainer = document.getElementById('video-player-container');
+
+    if (!document.fullscreenElement) {
+        if (playerContainer.requestFullscreen) {
+            playerContainer.requestFullscreen();
+        } else if (playerContainer.webkitRequestFullscreen) { /* Safari */
+            playerContainer.webkitRequestFullscreen();
+        } else if (playerContainer.msRequestFullscreen) { /* IE11 */
+            playerContainer.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+        }
+    }
+}
+
 
 function openSearchModal() {
   document.body.style.overflow = 'hidden'; 
@@ -1216,7 +1366,7 @@ const debouncedSearchTMDB = debounce(async () => {
 }, 300);
 
 
-// --- EVENT LISTENER SETUP (UNCHANGED) ---
+// --- EVENT LISTENER SETUP (MODIFIED to include new player controls) ---
 
 function attachListeners() {
     // Navbar/Modal Closers
@@ -1242,6 +1392,9 @@ function attachListeners() {
     document.getElementById('season').addEventListener('change', loadEpisodes);
     document.getElementById('save-default-server-btn').addEventListener('click', saveDefaultServer);
     
+    // NEW PLAYER CONTROLS
+    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+
     // User Rating Stars
     for (let i = 1; i <= 5; i++) {
         document.getElementById(`star-${i}`).addEventListener('click', () => setUserRating(i));
@@ -1273,7 +1426,21 @@ function attachListeners() {
 }
 
 
-// --- INITIALIZATION (UNCHANGED) ---
+// --- INITIALIZATION (MODIFIED for PWA Registration) ---
+
+// --- PWA Service Worker Registration ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        console.log('Service Worker registered! Scope is:', reg.scope);
+      })
+      .catch(err => {
+        console.error('Service Worker registration failed:', err);
+      });
+  });
+}
+// -------------------------------------
 
 async function init() {
   document.getElementById('empty-message').style.display = 'none';
