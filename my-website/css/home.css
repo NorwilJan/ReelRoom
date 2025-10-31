@@ -366,6 +366,61 @@ body {
     color: var(--text-light);
 }
 
+/* --- NEW PLAYER CONTROLS STYLES --- */
+.video-player-container {
+    position: relative;
+    width: 100%;
+    /* Standard 16:9 aspect ratio */
+    padding-top: 56.25%; 
+    margin-bottom: 10px;
+    border-radius: var(--spacing-xs);
+    overflow: hidden;
+}
+
+.video-player-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.player-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: var(--z-base); 
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+}
+
+.player-control-btn {
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--text-light);
+    border: none;
+    padding: 10px;
+    border-radius: var(--spacing-xs);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    font-size: 1.1em;
+}
+
+.player-control-btn:hover {
+    background: var(--accent-color);
+}
+
+/* Specific style for Watched button when active/marked */
+.player-control-btn.watched {
+    background: #008000; /* Green */
+    color: var(--text-light);
+}
+.player-control-btn.watched:hover {
+    background: #00b300;
+}
+/* --- END NEW PLAYER CONTROLS STYLES --- */
+
 
 .favorite-icon {
   cursor: pointer;
@@ -448,6 +503,12 @@ body {
 .episode-item.active { 
     background: #444; 
     border: 1px solid var(--accent-color);
+}
+
+/* NEW: Style for watched episode */
+.episode-item.watched {
+    border-left: 5px solid #008000; /* Green bar for watched */
+    opacity: 0.8;
 }
 
 .episode-item:hover {
@@ -900,6 +961,9 @@ body.light-mode .user-star {
 body.light-mode .episode-item {
     background: #e9e9e9;
     color: var(--text-dark);
+}
+body.light-mode .episode-item.watched {
+    border-left: 5px solid #008000;
 }
 body.light-mode .episode-item span {
     color: var(--text-dark); /* Ensure episode title text is visible */
