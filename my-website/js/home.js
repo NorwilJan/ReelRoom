@@ -2,17 +2,18 @@
 // ========================== CONFIGURATION ===========================
 // ====================================================================
 
-// ⚠️ 1. INSERT YOUR TMDB API KEY HERE
-const API_KEY = 'YOUR_TMDB_API_KEY'; 
+// ✅ 1. YOUR TMDB API KEY IS INSERTED HERE
+const API_KEY = '40f1982842db35042e8561b13b38d492'; 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-// Example categories to fetch (YOU MAY HAVE YOUR OWN LIST)
+// Example categories to fetch
 const ENDPOINTS = {
     trending: '/trending/movie/week',
     popular: '/movie/popular',
     topRated: '/movie/top_rated',
-    // ... add your other categories here
+    upcoming: '/movie/upcoming',
+    nowPlaying: '/movie/now_playing',
 };
 
 // ====================================================================
@@ -69,18 +70,13 @@ window.addEventListener('appinstalled', () => {
 const movieRowsContainer = document.getElementById('movie-rows');
 const heroSection = document.getElementById('hero-section');
 
-// ⚠️ 2. IMPLEMENT YOUR getPosterUrl FUNCTION HERE
+// Function to construct the full poster URL
 function getPosterUrl(path) {
-    if (!path) return ''; // Placeholder for missing image
+    if (!path) return ''; // Fallback for missing image path
     return POSTER_BASE_URL + path;
 }
 
-
-// ⚠️ 3. IMPLEMENT YOUR fetchAndDisplayMovies FUNCTION HERE
-// This function needs to:
-// 1. Fetch data from TMDB (e.g., /trending/movie/week)
-// 2. Create the .movie-row and .movie-list structure
-// 3. Call createMovieCard for each movie
+// Function to fetch data and display movie rows
 async function fetchAndDisplayMovies(title, endpoint) {
     const url = `${BASE_URL}${endpoint}?api_key=${API_KEY}`;
     
@@ -90,6 +86,11 @@ async function fetchAndDisplayMovies(title, endpoint) {
         const data = await response.json();
         
         if (data.results && data.results.length > 0) {
+            // Use the first result for the hero section if it's the trending list
+            if (endpoint === ENDPOINTS.trending) {
+                renderHeroSection(data.results[0]);
+            }
+
             const rowTitle = document.createElement('h2');
             rowTitle.classList.add('row-title');
             rowTitle.textContent = title;
@@ -114,15 +115,40 @@ async function fetchAndDisplayMovies(title, endpoint) {
     }
 }
 
+// Function to render the top hero section
+function renderHeroSection(movie) {
+    const backdropUrl = `https://image.tmdb.org/t/p/original${movie.backdrop_path}`;
+    heroSection.style.backgroundImage = `linear-gradient(to top, #141414, transparent 50%), url(${backdropUrl})`;
+    
+    heroSection.innerHTML = `
+        <div class="hero-content">
+            <h2>${movie.title || movie.name}</h2>
+            <p>${movie.overview.substring(0, 150) + '...'}</p>
+            <button class="hero-btn play-btn-hero" data-video-id="${movie.id}">
+                <i class="fas fa-play"></i> Play
+            </button>
+            <button class="hero-btn more-info-btn-hero">
+                <i class="fas fa-info-circle"></i> More Info
+            </button>
+        </div>
+    `;
+
+    // Add event listener to the hero play button
+    document.querySelector('.play-btn-hero').addEventListener('click', (e) => {
+        const PLACEHOLDER_VIDEO_URL = 'videos/placeholder.mp4'; 
+        openVideoModal(movie.title || movie.name, movie.overview, PLACEHOLDER_VIDEO_URL);
+    });
+}
+
+
 // Function to create a single movie card
 function createMovieCard(movie) {
     const movieCard = document.createElement('div');
     movieCard.classList.add('movie-card');
+    
     // Store data needed for the modal
     movieCard.dataset.title = movie.title || movie.name;
     movieCard.dataset.overview = movie.overview;
-    // NOTE: You need a way to get a video URL here for the modal, 
-    // or fetch it on click. Using a placeholder for now.
     movieCard.dataset.videoId = movie.id; 
 
     const img = document.createElement('img');
@@ -136,10 +162,9 @@ function createMovieCard(movie) {
 
     // Event listener to open the modal on click
     movieCard.addEventListener('click', () => {
-        // Since TMDB doesn't give a direct video URL, we must simulate it 
-        // or make another API call to /movie/{movie_id}/videos to get a YouTube key.
-        // For simplicity and testing the player, we'll use a placeholder URL.
-        const PLACEHOLDER_VIDEO_URL = 'videos/placeholder.mp4'; // Replace with a real video path
+        // NOTE: Placeholder used for video URL. Replace with your actual video path 
+        // or logic to fetch the correct trailer URL from TMDB.
+        const PLACEHOLDER_VIDEO_URL = 'videos/placeholder.mp4'; 
         
         openVideoModal(
             movieCard.dataset.title, 
@@ -151,15 +176,13 @@ function createMovieCard(movie) {
     return movieCard;
 }
 
-// ⚠️ 4. IMPLEMENT THE MAIN APPLICATION STARTUP LOGIC HERE
-// Call your fetchAndDisplayMovies for all your categories.
+// Main application startup logic
 document.addEventListener('DOMContentLoaded', () => {
-    // Example calls (replace with your actual endpoints and titles)
+    // Fetch and display all categories
     fetchAndDisplayMovies('Trending Now', ENDPOINTS.trending);
     fetchAndDisplayMovies('Popular Movies', ENDPOINTS.popular);
     fetchAndDisplayMovies('Top Rated', ENDPOINTS.topRated);
-    
-    // Initialize hero section here if you have that logic
+    fetchAndDisplayMovies('Upcoming Releases', ENDPOINTS.upcoming);
 });
 
 
@@ -187,7 +210,6 @@ const fullscreenBtn = document.getElementById('fullscreen-btn');
 function formatTime(seconds) {
     const min = Math.floor(seconds / 60);
     const sec = Math.floor(seconds % 60);
-    // Use Math.max(0, ...) to prevent negative time display if duration is not loaded
     return `${Math.max(0, min)}:${Math.max(0, sec).toString().padStart(2, '0')}`;
 }
 
@@ -212,7 +234,7 @@ function updatePlayPauseIcon() {
 }
 
 function updateProgress() {
-    if (isNaN(videoPlayer.duration)) return; // Skip if metadata isn't loaded
+    if (isNaN(videoPlayer.duration) || videoPlayer.duration === 0) return; 
     
     const percent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
     progressBar.value = percent;
@@ -224,12 +246,6 @@ function updateProgress() {
 function seekVideo() {
     const seekTime = (progressBar.value / 100) * videoPlayer.duration;
     videoPlayer.currentTime = seekTime;
-}
-
-function toggleMute() {
-    videoPlayer.muted = !videoPlayer.muted;
-    updateMuteIcon();
-    volumeSlider.value = videoPlayer.muted ? 0 : videoPlayer.volume;
 }
 
 function updateMuteIcon() {
@@ -270,7 +286,14 @@ videoPlayer.addEventListener('loadedmetadata', updateProgress);
 
 // Listeners for custom controls
 progressBar.addEventListener('input', seekVideo);
-muteUnmuteBtn.addEventListener('click', toggleMute);
+muteUnmuteBtn.addEventListener('click', () => {
+    // Only mute/unmute if the volume slider is not being dragged
+    if (document.activeElement !== volumeSlider) {
+        videoPlayer.muted = !videoPlayer.muted;
+        updateMuteIcon();
+        volumeSlider.value = videoPlayer.muted ? 0 : videoPlayer.volume;
+    }
+});
 volumeSlider.addEventListener('input', setVolume);
 fullscreenBtn.addEventListener('click', toggleFullscreen);
 
@@ -283,13 +306,23 @@ function openVideoModal(movieTitle, movieOverview, videoUrl) {
     videoPlayer.src = videoUrl;
     videoPlayer.load(); 
     
-    // Reset controls state
+    // Set initial volume from slider and update icons
     videoPlayer.volume = volumeSlider.value;
     updateMuteIcon();
     updatePlayPauseIcon();
     
     videoModal.style.display = 'block';
     document.body.style.overflow = 'hidden'; 
+    
+    // Delay play slightly to allow the modal animation to finish
+    setTimeout(() => {
+        videoPlayer.play().catch(error => {
+            console.warn("Autoplay was prevented by the browser.", error);
+            // Since autoplay failed, ensure the pause icon is set
+            updatePlayPauseIcon(); 
+        });
+    }, 100);
+    
     videoPlayer.focus(); // Focus the player for keyboard accessibility
 }
 
@@ -297,7 +330,7 @@ function closeVideoModal() {
     videoPlayer.pause(); 
     videoModal.style.display = 'none';
     document.body.style.overflow = ''; 
-    // Reset fullscreen if active
+    
     if (document.fullscreenElement) {
         document.exitFullscreen();
     }
