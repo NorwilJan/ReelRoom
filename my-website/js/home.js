@@ -744,6 +744,9 @@ function clearFilters(category) {
 function openFullView(category) {
     currentFullView = category;
     
+    // *** FIX 3: Ensure detail modal is closed before opening the full view ***
+    document.getElementById('modal').style.display = 'none'; 
+    
     let filters = { ...categoryState[category].filters }; 
     filters.sort_by = filters.sort_by || 'popularity.desc'; 
     
@@ -824,6 +827,7 @@ function displayFullList(items, containerId, isFirstLoad = false) {
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
     
+    // Pass 'true' to signal that the details modal is opened from the full view
     img.addEventListener('click', () => showDetails(item, true)); 
     
     container.appendChild(img);
@@ -1065,8 +1069,10 @@ async function showDetails(item, isFullViewOpen = false) {
   document.body.style.overflow = 'hidden';
   document.getElementById('modal').style.display = 'flex';
   
-  if (isFullViewOpen) {
-      document.getElementById('full-view-modal').style.display = 'none';
+  // *** FIX 1: Temporarily hide the full view modal if it was open ***
+  const fullViewModal = document.getElementById('full-view-modal');
+  if (fullViewModal && isFullViewOpen) {
+      fullViewModal.style.display = 'none';
   }
 }
 
@@ -1155,6 +1161,7 @@ function closeModal() {
   
   document.body.style.overflow = '';
   
+  // *** FIX 2: Restore the full-view modal if it exists ***
   const fullViewModal = document.getElementById('full-view-modal');
   if (fullViewModal) {
       fullViewModal.style.display = 'flex';
