@@ -29,7 +29,6 @@ self.addEventListener('install', event => {
         console.error('Failed to cache assets:', err);
       })
   );
-  // Force the new service worker to activate immediately
   self.skipWaiting();
 });
 
@@ -39,7 +38,6 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keyList => {
       return Promise.all(keyList.map(key => {
-        // Delete all caches that don't match the current CACHE_NAME
         if (key !== CACHE_NAME) {
           console.log('[Service Worker] Removing old cache', key);
           return caches.delete(key);
