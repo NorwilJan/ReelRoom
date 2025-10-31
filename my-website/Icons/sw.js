@@ -7,7 +7,7 @@ const ASSETS_TO_CACHE = [
   '/js/home.js',
   '/manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
-  // IMPORTANT: Ensure your icon paths are correct!
+  // Ensure your icon paths are correct!
   '/icon-72x72.png',
   '/icon-96x96.png',
   '/icon-128x128.png',
@@ -23,7 +23,6 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('[Service Worker] Caching App Shell');
-        // Filter out any potential empty strings if you modified the array
         return cache.addAll(ASSETS_TO_CACHE.filter(path => path));
       })
       .catch(err => {
@@ -56,21 +55,17 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
   // Cache-First strategy for the static files (App Shell and CDN fonts)
-  // Check if the requested file is in our list of cached assets or is the font CDN
   if (ASSETS_TO_CACHE.includes(url.pathname) || url.origin === 'https://cdnjs.cloudflare.com') {
     event.respondWith(
       caches.match(event.request)
         .then(response => {
-          // Return the cached file if found
           if (response) {
             return response;
           }
-          // If not in cache, fetch from the network
           return fetch(event.request);
         })
     );
   } 
   // All other requests (TMDB API, video embeds) go Network-Only
-  // The default browser fetch handles these.
   return; 
 });
