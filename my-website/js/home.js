@@ -1,17 +1,7 @@
-// js/home.js - MODERNIZED CODE WITH LAZY LOADING & MODAL FIXES
-
+// js/home.js
 const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
-
-// *** NEW: Optimized Image Sizing ***
-const IMAGE_SIZES = {
-    // For main rows, recent, favorites, search results (fast loading posters)
-    poster: 'https://image.tmdb.org/t/p/w342', 
-    // For detail modal background/image (higher quality)
-    detail: 'https://image.tmdb.org/t/p/w500', 
-    // For full-width slides (backdrops)
-    backdrop: 'https://image.tmdb.org/t/p/w1280' 
-};
+const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 
 // --- CONFIGURATION OBJECTS ---
@@ -244,8 +234,7 @@ function displaySlides() {
     if (!item.backdrop_path) return;
     const slide = document.createElement('div');
     slide.className = 'slide';
-    // *** OPTIMIZATION: Use smaller backdrop size ***
-    slide.style.backgroundImage = `url(${IMAGE_SIZES.backdrop}${item.backdrop_path})`;
+    slide.style.backgroundImage = `url(${IMG_URL}${item.backdrop_path})`;
     slide.innerHTML = `<h1>${item.title || item.name || 'Unknown'}</h1>`;
     
     // Attach event listener in JS
@@ -311,13 +300,9 @@ function displayList(items, containerId) {
     if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
-    // *** OPTIMIZATION: Use smaller poster size ***
-    img.src = item.poster_path ? `${IMAGE_SIZES.poster}${item.poster_path}` : FALLBACK_IMAGE;
+    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
     img.setAttribute('data-id', item.id);
-    
-    // *** OPTIMIZATION: Add Native Lazy Loading ***
-    img.setAttribute('loading', 'lazy'); 
     
     // Attach listener
     img.addEventListener('click', () => showDetails(item));
@@ -538,12 +523,9 @@ function displayFavorites() {
     
     favorites.forEach(item => {
         const img = document.createElement('img');
-        // *** OPTIMIZATION: Use smaller poster size ***
-        img.src = item.poster_path ? `${IMAGE_SIZES.poster}${item.poster_path}` : FALLBACK_IMAGE;
+        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
         img.alt = item.title || item.name || 'Unknown';
         img.setAttribute('data-id', item.id);
-        // *** OPTIMIZATION: Add Native Lazy Loading ***
-        img.setAttribute('loading', 'lazy'); 
         img.addEventListener('click', () => showDetails(item)); 
         container.appendChild(img);
     });
@@ -563,12 +545,9 @@ function displayRecentlyViewed() {
     
     recent.forEach(item => {
         const img = document.createElement('img');
-        // *** OPTIMIZATION: Use smaller poster size ***
-        img.src = item.poster_path ? `${IMAGE_SIZES.poster}${item.poster_path}` : FALLBACK_IMAGE;
+        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
         img.alt = item.title || item.name || 'Unknown';
         img.setAttribute('data-id', item.id);
-        // *** OPTIMIZATION: Add Native Lazy Loading ***
-        img.setAttribute('loading', 'lazy');
         img.addEventListener('click', () => showDetails(item));
         container.appendChild(img);
     });
@@ -765,9 +744,6 @@ function clearFilters(category) {
 function openFullView(category) {
     currentFullView = category;
     
-    // *** FIX 3: Ensure detail modal is closed before opening the full view ***
-    document.getElementById('modal').style.display = 'none'; 
-    
     let filters = { ...categoryState[category].filters }; 
     filters.sort_by = filters.sort_by || 'popularity.desc'; 
     
@@ -844,15 +820,10 @@ function displayFullList(items, containerId, isFirstLoad = false) {
     if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
-    // *** OPTIMIZATION: Use smaller poster size ***
-    img.src = item.poster_path ? `${IMAGE_SIZES.poster}${item.poster_path}` : FALLBACK_IMAGE;
+    img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
     
-    // *** OPTIMIZATION: Add Native Lazy Loading ***
-    img.setAttribute('loading', 'lazy'); 
-    
-    // Pass 'true' to signal that the details modal is opened from the full view
     img.addEventListener('click', () => showDetails(item, true)); 
     
     container.appendChild(img);
@@ -1049,10 +1020,7 @@ async function showDetails(item, isFullViewOpen = false) {
 
   document.getElementById('modal-item-title').textContent = item.title || item.name || 'Unknown';
   document.getElementById('modal-description').textContent = item.overview || 'No description available.';
-  
-  // *** OPTIMIZATION: Use the detail image size here ***
-  document.getElementById('modal-image').src = item.poster_path ? `${IMAGE_SIZES.detail}${item.poster_path}` : FALLBACK_IMAGE;
-  
+  document.getElementById('modal-image').src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
   document.getElementById('modal-rating-tmdb').innerHTML = '★'.repeat(Math.round((item.vote_average || 0) / 2));
   
   const favoritesList = loadStorageList(FAVORITES_KEY);
@@ -1097,10 +1065,8 @@ async function showDetails(item, isFullViewOpen = false) {
   document.body.style.overflow = 'hidden';
   document.getElementById('modal').style.display = 'flex';
   
-  // *** FIX 1: Temporarily hide the full view modal if it was open ***
-  const fullViewModal = document.getElementById('full-view-modal');
-  if (fullViewModal && isFullViewOpen) {
-      fullViewModal.style.display = 'none';
+  if (isFullViewOpen) {
+      document.getElementById('full-view-modal').style.display = 'none';
   }
 }
 
@@ -1134,7 +1100,7 @@ async function loadEpisodes() {
     div.setAttribute('data-episode-number', episode.episode_number); 
     
     const img = episode.still_path
-      ? `<img src="${IMAGE_SIZES.detail}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" loading="lazy" />`
+      ? `<img src="${IMG_URL}${episode.still_path}" alt="Episode ${episode.episode_number} thumbnail" />`
       : '';
     div.innerHTML = `${img}<span>E${episode.episode_number}: ${episode.name || 'Untitled'}</span>`;
     
@@ -1189,7 +1155,6 @@ function closeModal() {
   
   document.body.style.overflow = '';
   
-  // *** FIX 2: Restore the full-view modal if it exists ***
   const fullViewModal = document.getElementById('full-view-modal');
   if (fullViewModal) {
       fullViewModal.style.display = 'flex';
@@ -1228,12 +1193,8 @@ const debouncedSearchTMDB = debounce(async () => {
       .filter(item => item.media_type !== 'person' && item.poster_path)
       .forEach(item => {
         const img = document.createElement('img');
-        // *** OPTIMIZATION: Use smaller poster size ***
-        img.src = item.poster_path ? `${IMAGE_SIZES.poster}${item.poster_path}` : FALLBACK_IMAGE;
+        img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
         img.alt = item.title || item.name || 'Unknown';
-        
-        // *** OPTIMIZATION: Add Native Lazy Loading ***
-        img.setAttribute('loading', 'lazy');
         
         // Attach listener
         img.addEventListener('click', () => {
