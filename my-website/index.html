@@ -31,16 +31,16 @@
             </section>
     </main>
 
-    <div id="video-modal" class="video-modal">
+    <div id="video-modal" class="video-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
-            <button id="close-modal-btn" class="close-modal-btn">&times;</button>
+            <button id="close-modal-btn" class="close-modal-btn" aria-label="Close video player">&times;</button>
             
             <div id="video-player-container" class="video-player-container">
-                <video id="video-player" class="video-player" poster=""></video>
+                <video id="video-player" class="video-player" poster="" preload="metadata"></video>
 
                 <div id="custom-controls" class="custom-controls">
                     <div class="progress-bar-container">
-                        <input type="range" id="progress-bar" class="progress-bar" value="0" min="0" max="100">
+                        <input type="range" id="progress-bar" class="progress-bar" value="0" min="0" max="100" aria-label="Video progress seeker">
                     </div>
                     
                     <div class="controls-bottom-row">
@@ -55,7 +55,7 @@
                             <button id="mute-unmute-btn" aria-label="Mute or Unmute">
                                 <i class="fas fa-volume-up"></i>
                             </button>
-                            <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.01" value="1">
+                            <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.01" value="1" aria-label="Volume slider">
                             <button id="fullscreen-btn" aria-label="Toggle Fullscreen">
                                 <i class="fas fa-expand"></i>
                             </button>
