@@ -209,6 +209,7 @@ body {
   font-size: 0.95em;
   transition: color 0.2s;
 }
+
 .show-more-link:hover {
   color: var(--text-light);
 }
