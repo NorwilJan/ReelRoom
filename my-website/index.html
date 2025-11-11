@@ -30,10 +30,12 @@
 
   <div class="banner" id="banner">
     <div class="slideshow-container">
-      <div class="slides" id="slides"></div>
-      <a class="prev" id="prev-slide-btn">&#10094;</a>
-      <a class="next" id="next-slide-btn">&#10095;</a>
-      <div class="dots" id="dots"></div>
+      <div class="slides" id="slides">
+        </div>
+      <a class="prev" id="prev-slide-btn" aria-label="Previous Slide">&#10094;</a>
+      <a class="next" id="next-slide-btn" aria-label="Next Slide">&#10095;</a>
+      <div class="dots" id="dots">
+        </div>
     </div>
   </div>
   
@@ -61,8 +63,8 @@
     <div class="row-header">
         <h2>Trending Movies</h2>
         <div>
-            <button class="filter-btn" data-category="movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="movies" style="display: none;">
+            <button class="filter-btn" data-category="movies" aria-label="Filter Movies"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="movies" style="display: none;" aria-label="Clear Filters">
                 <i class="fas fa-times"></i>
             </button>
             <a href="#" class="show-more-link" data-category="movies">Show More &raquo;</a>
@@ -78,8 +80,8 @@
     <div class="row-header">
         <h2>Trending TV Shows</h2>
         <div>
-            <button class="filter-btn" data-category="tvshows"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="tvshows" style="display: none;">
+            <button class="filter-btn" data-category="tvshows" aria-label="Filter TV Shows"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="tvshows" style="display: none;" aria-label="Clear Filters">
                 <i class="fas fa-times"></i>
             </button>
             <a href="#" class="show-more-link" data-category="tvshows">Show More &raquo;</a>
@@ -95,8 +97,8 @@
     <div class="row-header">
         <h2>Trending Anime</h2>
         <div>
-            <button class="filter-btn" data-category="anime"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="anime" style="display: none;">
+            <button class="filter-btn" data-category="anime" aria-label="Filter Anime"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="anime" style="display: none;" aria-label="Clear Filters">
                 <i class="fas fa-times"></i>
             </button>
             <a href="#" class="show-more-link" data-category="anime">Show More &raquo;</a>
@@ -107,13 +109,13 @@
         <div class="skeleton"></div><div class="skeleton"></div>
     </div>
   </div>
-
+  
   <div class="row" id="tagalog-movies-row">
     <div class="row-header">
         <h2>Trending Tagalog Movies</h2>
         <div>
-            <button class="filter-btn" data-category="tagalog-movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="tagalog-movies" style="display: none;">
+            <button class="filter-btn" data-category="tagalog-movies" aria-label="Filter Tagalog Movies"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="tagalog-movies" style="display: none;" aria-label="Clear Filters">
                 <i class="fas fa-times"></i>
             </button>
             <a href="#" class="show-more-link" data-category="tagalog-movies">Show More &raquo;</a>
@@ -129,8 +131,8 @@
     <div class="row-header">
         <h2>Trending Netflix Movies</h2>
         <div>
-            <button class="filter-btn" data-category="netflix-movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="netflix-movies" style="display: none;">
+            <button class="filter-btn" data-category="netflix-movies" aria-label="Filter Netflix Movies"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="netflix-movies" style="display: none;" aria-label="Clear Filters">
                 <i class="fas fa-times"></i>
             </button>
             <a href="#" class="show-more-link" data-category="netflix-movies">Show More &raquo;</a>
@@ -146,8 +148,8 @@
     <div class="row-header">
         <h2>Trending Netflix TV Shows</h2>
         <div>
-            <button class="filter-btn" data-category="netflix-tv"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="netflix-tv" style="display: none;">
+            <button class="filter-btn" data-category="netflix-tv" aria-label="Filter Netflix TV Shows"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="netflix-tv" style="display: none;" aria-label="Clear Filters">
                 <i class="fas fa-times"></i>
             </button>
             <a href="#" class="show-more-link" data-category="netflix-tv">Show More &raquo;</a>
@@ -163,8 +165,8 @@
     <div class="row-header">
         <h2>Trending Korean Drama</h2>
         <div>
-            <button class="filter-btn" data-category="korean-drama"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="korean-drama" style="display: none;">
+            <button class="filter-btn" data-category="korean-drama" aria-label="Filter Korean Drama"><i class="fas fa-filter"></i></button>
+            <button class="filter-btn clear-filter-btn" data-category="korean-drama" style="display: none;" aria-label="Clear Filters">
                 <i class="fas fa-times"></i>
             </button>
             <a href="#" class="show-more-link" data-category="korean-drama">Show More &raquo;</a>
@@ -188,25 +190,25 @@
 
   <div class="modal" id="modal">
     <div class="modal-content">
-      <span class="close" id="modal-close-btn" style="color: red;">&times;</span>
+      <span class="close" id="modal-close-btn" aria-label="Close Details Modal" style="color: red;">&times;</span>
       <div class="modal-body">
-        <img id="modal-image" src="" alt="" />
+        <img id="modal-image" src="" alt="Poster image" />
         <div class="modal-text">
           <h2 id="modal-title">
             <span id="modal-item-title"></span>
-            <i class="fas fa-heart favorite-icon" id="favorite-toggle"></i>
+            <i class="fas fa-heart favorite-icon" id="favorite-toggle" aria-label="Toggle Favorite"></i>
           </h2>
           
-          <div class="stars" id="modal-rating-tmdb"></div> 
+          <div class="stars" id="modal-rating-tmdb" aria-label="TMDB Rating"></div> 
           
           <div style="margin-top: 10px;">
               <label style="color: var(--accent-color); font-weight: bold;">Your Rating:</label>
-              <div class="stars" id="modal-rating-user" data-rating="0">
-                  <i class="far fa-star user-star" data-value="1" id="star-1"></i>
-                  <i class="far fa-star user-star" data-value="2" id="star-2"></i>
-                  <i class="far fa-star user-star" data-value="3" id="star-3"></i>
-                  <i class="far fa-star user-star" data-value="4" id="star-4"></i>
-                  <i class="far fa-star user-star" data-value="5" id="star-5"></i>
+              <div class="stars" id="modal-rating-user" data-rating="0" aria-label="Rate this item">
+                  <i class="far fa-star user-star" data-value="1" id="star-1" aria-label="1 star"></i>
+                  <i class="far fa-star user-star" data-value="2" id="star-2" aria-label="2 stars"></i>
+                  <i class="far fa-star user-star" data-value="3" id="star-3" aria-label="3 stars"></i>
+                  <i class="far fa-star user-star" data-value="4" id="star-4" aria-label="4 stars"></i>
+                  <i class="far fa-star user-star" data-value="5" id="star-5" aria-label="5 stars"></i>
               </div>
           </div>
           <p id="modal-description"></p>
@@ -228,47 +230,48 @@
       
       <div class="server-selector">
         <label for="server">Change Server:</label>
-        <select id="server"></select>
-        <button id="save-default-server-btn">
+        <select id="server" aria-label="Select Video Server"></select>
+        <button id="save-default-server-btn" aria-label="Save Default Server">
             <i class="fas fa-save"></i> Save as Default
         </button>
       </div>
-      
       <div class="season-selector" id="season-selector" style="display: none;">
         <label for="season">Select Season:</label>
-        <select id="season"></select>
+        <select id="season" aria-label="Select Season"></select>
       </div>
-      
-      <div class="episode-list" id="episode-list"></div>
+      <div class="episode-list" id="episode-list">
+        </div>
       
     </div>
   </div>
 
   <div class="search-modal" id="search-modal">
-    <span class="close" id="search-modal-close-btn" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." />
-    <div class="results" id="search-results"></div>
+    <span class="close" id="search-modal-close-btn" aria-label="Close Search" style="color: red;">&times;</span>
+    <input type="text" id="search-input" placeholder="Search for a movie or show..." aria-label="Search Input" />
+    <div class="results" id="search-results">
+        </div>
   </div>
   
   <div class="filter-modal" id="filter-modal">
     <div class="filter-content">
-        <span class="close" id="filter-modal-close-btn" style="color: var(--accent-color);">&times;</span>
+        <span class="close" id="filter-modal-close-btn" aria-label="Close Filter Modal" style="color: var(--accent-color);">&times;</span>
         <h2 id="filter-modal-title">Filter Content</h2>
         <p>Apply filters to start a new search list.</p>
         
         <label for="filter-year">Select Year:</label>
-        <select id="filter-year">
+        <select id="filter-year" aria-label="Filter by Year">
             <option value="">Any Year</option>
-        </select>
+            </select>
 
         <label for="filter-genre">Select Genre:</label>
-        <select id="filter-genre">
+        <select id="filter-genre" aria-label="Filter by Genre">
             <option value="">Any Genre</option>
-        </select>
+            </select>
         
         <button id="apply-filters-btn">Apply Filters and Show More</button>
     </div>
   </div>
+
   <footer class="footer">
     <div class="footer-content">
       <p>&copy; 2025 ReelRoom. All rights reserved.</p>
