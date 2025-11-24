@@ -8,14 +8,14 @@
   <link rel="preload" href="css/home.css" as="style">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script defer src="js/home.js"></script>
+  <script defer src="js/main.js"></script> 
 </head>
 
 <body>
   
   <div id="toast-container"></div>
   
-  <div class="navbar">
+  <header class="navbar">
     <h1 class="logo-text">REELROOM</h1>
     <div class="nav-links">
       <button class="search-icon-btn" id="theme-toggle-btn" aria-label="Toggle Dark/Light Theme">
@@ -26,167 +26,143 @@
         <i class="fas fa-search"></i>
       </button>
     </div>
-  </div>
+  </header>
 
-  <div class="banner" id="banner">
-    <div class="slideshow-container">
-      <div class="slides" id="slides">
+  <main>
+    <div class="banner" id="banner">
+        <div class="slideshow-container">
+          <div class="slides" id="slides">
+            </div>
+          <a class="prev" id="prev-slide-btn" aria-label="Previous Slide">&#10094;</a>
+          <a class="next" id="next-slide-btn" aria-label="Next Slide">&#10095;</a>
+          <div class="dots" id="dots">
+            </div>
         </div>
-      <a class="prev" id="prev-slide-btn" aria-label="Previous Slide">&#10094;</a>
-      <a class="next" id="next-slide-btn" aria-label="Next Slide">&#10095;</a>
-      <div class="dots" id="dots">
-        </div>
-    </div>
-  </div>
+      </div>
+      
+    <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
+
+    <section class="row link-slideshow-container">
+      <div class="row-header" style="margin-bottom: 5px;">
+          <h2>Featured Deals</h2>
+      </div>
+      <div class="list loading-list" id="shopee-link-list">
+          </div>
+    </section>
+    
+    <section class="list-container-no-header">
+      <div class="row-header">
+          <h2>Your Favorites <span style="font-size: 0.8em; color: #aaa;" id="favorites-count"></span></h2>
+      </div>
+      <div class="list loading-list" id="favorites-list">
+          </div>
+    </section>
+
+    <section class="row" id="movies-row" data-category="movies">
+      <div class="row-header">
+          <h2>Trending Movies</h2>
+          <div>
+              <button class="filter-btn" data-category="movies" aria-label="Filter Movies"><i class="fas fa-filter"></i></button>
+              <button class="filter-btn clear-filter-btn" data-category="movies" style="display: none;" aria-label="Clear Filters">
+                  <i class="fas fa-times"></i>
+              </button>
+              <a href="#" class="show-more-link" data-category="movies">Show More &raquo;</a>
+          </div>
+      </div>
+      <div class="list loading-list" id="movies-list"></div>
+    </section>
+
+    <section class="row" id="tvshows-row" data-category="tvshows">
+      <div class="row-header">
+          <h2>Trending TV Shows</h2>
+          <div>
+              <button class="filter-btn" data-category="tvshows" aria-label="Filter TV Shows"><i class="fas fa-filter"></i></button>
+              <button class="filter-btn clear-filter-btn" data-category="tvshows" style="display: none;" aria-label="Clear Filters">
+                  <i class="fas fa-times"></i>
+              </button>
+              <a href="#" class="show-more-link" data-category="tvshows">Show More &raquo;</a>
+          </div>
+      </div>
+      <div class="list loading-list" id="tvshows-list"></div>
+    </section>
+
+    <section class="row" id="anime-row" data-category="anime">
+      <div class="row-header">
+          <h2>Trending Anime</h2>
+          <div>
+              <button class="filter-btn" data-category="anime" aria-label="Filter Anime"><i class="fas fa-filter"></i></button>
+              <button class="filter-btn clear-filter-btn" data-category="anime" style="display: none;" aria-label="Clear Filters">
+                  <i class="fas fa-times"></i>
+              </button>
+              <a href="#" class="show-more-link" data-category="anime">Show More &raquo;</a>
+          </div>
+      </div>
+      <div class="list loading-list" id="anime-list"></div>
+    </section>
+    
+    <section class="row" id="tagalog-movies-row" data-category="tagalog-movies">
+      <div class="row-header">
+          <h2>Trending Tagalog Movies</h2>
+          <div>
+              <button class="filter-btn" data-category="tagalog-movies" aria-label="Filter Tagalog Movies"><i class="fas fa-filter"></i></button>
+              <button class="filter-btn clear-filter-btn" data-category="tagalog-movies" style="display: none;" aria-label="Clear Filters">
+                  <i class="fas fa-times"></i>
+              </button>
+              <a href="#" class="show-more-link" data-category="tagalog-movies">Show More &raquo;</a>
+          </div>
+      </div>
+      <div class="list loading-list" id="tagalog-movies-list"></div>
+    </section>
+
+    <section class="row" id="netflix-movies-row" data-category="netflix-movies">
+      <div class="row-header">
+          <h2>Trending Netflix Movies</h2>
+          <div>
+              <button class="filter-btn" data-category="netflix-movies" aria-label="Filter Netflix Movies"><i class="fas fa-filter"></i></button>
+              <button class="filter-btn clear-filter-btn" data-category="netflix-movies" style="display: none;" aria-label="Clear Filters">
+                  <i class="fas fa-times"></i>
+              </button>
+              <a href="#" class="show-more-link" data-category="netflix-movies">Show More &raquo;</a>
+          </div>
+      </div>
+      <div class="list loading-list" id="netflix-movies-list"></div>
+    </section>
+
+    <section class="row" id="netflix-tv-row" data-category="netflix-tv">
+      <div class="row-header">
+          <h2>Trending Netflix TV Shows</h2>
+          <div>
+              <button class="filter-btn" data-category="netflix-tv" aria-label="Filter Netflix TV Shows"><i class="fas fa-filter"></i></button>
+              <button class="filter-btn clear-filter-btn" data-category="netflix-tv" style="display: none;" aria-label="Clear Filters">
+                  <i class="fas fa-times"></i>
+              </button>
+              <a href="#" class="show-more-link" data-category="netflix-tv">Show More &raquo;</a>
+          </div>
+      </div>
+      <div class="list loading-list" id="netflix-tv-list"></div>
+    </section>
+
+    <section class="row" id="korean-drama-row" data-category="korean-drama">
+      <div class="row-header">
+          <h2>Trending Korean Drama</h2>
+          <div>
+              <button class="filter-btn" data-category="korean-drama" aria-label="Filter Korean Drama"><i class="fas fa-filter"></i></button>
+              <button class="filter-btn clear-filter-btn" data-category="korean-drama" style="display: none;" aria-label="Clear Filters">
+                  <i class="fas fa-times"></i>
+              </button>
+              <a href="#" class="show-more-link" data-category="korean-drama">Show More &raquo;</a>
+          </div>
+      </div>
+      <div class="list loading-list" id="korean-drama-list"></div>
+    </section>
+    
+    <section class="list-container-no-header">
+      <h2>Recently Viewed</h2>
+      <div class="list loading-list" id="recently-viewed-list"></div>
+    </section>
   
-  <div class="row link-slideshow-container">
-    <div class="row-header" style="margin-bottom: 5px;">
-        <h2>Featured Deals</h2>
-    </div>
-    <div class="list loading-list" id="shopee-link-list">
-        <a href="#"><div class="skeleton"></div></a>
-        <a href="#"><div class="skeleton"></div></a>
-        <a href="#"><div class="skeleton"></div></a>
-    </div>
-  </div>
-  
-  <div class="list-container-no-header">
-    <div class="row-header">
-        <h2>Your Favorites <span style="font-size: 0.8em; color: #aaa;" id="favorites-count"></span></h2>
-    </div>
-    <div class="list loading-list" id="favorites-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
+  </main>
 
-  <div class="row" id="movies-row">
-    <div class="row-header">
-        <h2>Trending Movies</h2>
-        <div>
-            <button class="filter-btn" data-category="movies" aria-label="Filter Movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="movies" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="movies">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="movies-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-
-  <div class="row" id="tvshows-row">
-    <div class="row-header">
-        <h2>Trending TV Shows</h2>
-        <div>
-            <button class="filter-btn" data-category="tvshows" aria-label="Filter TV Shows"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="tvshows" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="tvshows">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="tvshows-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-
-  <div class="row" id="anime-row">
-    <div class="row-header">
-        <h2>Trending Anime</h2>
-        <div>
-            <button class="filter-btn" data-category="anime" aria-label="Filter Anime"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="anime" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="anime">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="anime-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-  
-  <div class="row" id="tagalog-movies-row">
-    <div class="row-header">
-        <h2>Trending Tagalog Movies</h2>
-        <div>
-            <button class="filter-btn" data-category="tagalog-movies" aria-label="Filter Tagalog Movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="tagalog-movies" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="tagalog-movies">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="tagalog-movies-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-
-  <div class="row" id="netflix-movies-row">
-    <div class="row-header">
-        <h2>Trending Netflix Movies</h2>
-        <div>
-            <button class="filter-btn" data-category="netflix-movies" aria-label="Filter Netflix Movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="netflix-movies" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="netflix-movies">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="netflix-movies-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-
-  <div class="row" id="netflix-tv-row">
-    <div class="row-header">
-        <h2>Trending Netflix TV Shows</h2>
-        <div>
-            <button class="filter-btn" data-category="netflix-tv" aria-label="Filter Netflix TV Shows"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="netflix-tv" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="netflix-tv">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="netflix-tv-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-
-  <div class="row" id="korean-drama-row">
-    <div class="row-header">
-        <h2>Trending Korean Drama</h2>
-        <div>
-            <button class="filter-btn" data-category="korean-drama" aria-label="Filter Korean Drama"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="korean-drama" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="korean-drama">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="korean-drama-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-  
-  <div class="list-container-no-header">
-    <h2>Recently Viewed</h2>
-    <div class="list loading-list" id="recently-viewed-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-  
-  <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
 
   <div class="modal" id="modal">
     <div class="modal-content">
@@ -216,11 +192,15 @@
       </div>
       
       <div class="video-player-container" id="video-player-container">
-          <iframe id="modal-video" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
+          <iframe id="modal-video" width="100%" height="100%" frameborder="0" allowfullscreen tabindex="0" allow="encrypted-media"></iframe>
           <div class="player-controls">
               <button class="player-control-btn" id="watched-btn" aria-label="Mark as Watched">
                   <i class="fas fa-eye"></i>
                   <span>Mark Watched</span>
+              </button>
+              <button class="player-control-btn" id="next-episode-btn" style="display: none;" aria-label="Play Next Episode">
+                  <i class="fas fa-forward"></i>
+                  <span>Next</span>
               </button>
               <button class="player-control-btn" id="fullscreen-btn" aria-label="Toggle Fullscreen">
                   <i class="fas fa-expand"></i>
@@ -247,6 +227,7 @@
 
   <div class="search-modal" id="search-modal">
     <span class="close" id="search-modal-close-btn" aria-label="Close Search" style="color: red;">&times;</span>
+    <h2>SEARCH REELROOM</h2>
     <input type="text" id="search-input" placeholder="Search for a movie or show..." aria-label="Search Input" />
     <div class="results" id="search-results">
         </div>
@@ -256,7 +237,7 @@
     <div class="filter-content">
         <span class="close" id="filter-modal-close-btn" aria-label="Close Filter Modal" style="color: var(--accent-color);">&times;</span>
         <h2 id="filter-modal-title">Filter Content</h2>
-        <p>Apply filters to start a new search list.</p>
+        <p>Apply filters to refine your search.</p>
         
         <label for="filter-year">Select Year:</label>
         <select id="filter-year" aria-label="Filter by Year">
@@ -274,7 +255,7 @@
 
   <footer class="footer">
     <div class="footer-content">
-      <p>&copy; 2025 ReelRoom. All rights reserved.</p>
+      <p>&copy; 2025 ReelRoom. All rights reserved. Content provided by TMDB.</p>
       <div class="footer-links">
         <a href="#">Disclaimer</a>
         <a href="#">About Us</a>
