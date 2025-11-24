@@ -1,25 +1,25 @@
-// js/main.js
-const API_KEY = '40f1982842db35042e8561b13b38d492'; // <-- YOUR TMDB API KEY INCLUDED HERE
+// js/home.js
+const API_KEY = '40f1982842db35042e8561b13b38d492'; // Your original TMDB API key - UNCHANGED
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
 
 // --- CONFIGURATION OBJECTS ---
 const PLAYER_CONFIG = {
-    'player.videasy.net': { 
-        name: 'Player.Videasy.net (Default)',
-        movie: (id) => `https://player.videasy.net/movie/${id}`, 
-        tv: (id, s, e) => `https://player.videasy.net/tv/${id}/${s}/${e}` 
-    },
     'vidsrc.cc': { 
         name: 'Vidsrc.cc',
         movie: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`, 
         tv: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}` 
     },
-    'vidsrc.net': { 
-        name: 'Vidsrc.net',
+    'vidsrc.me': { 
+        name: 'Vidsrc.me',
         movie: (id) => `https://vidsrc.net/embed/movie/?tmdb=${id}`, 
         tv: (id, s, e) => `https://vidsrc.net/embed/tv/?tmdb=${id}&season=${s}&episode=${e}` 
+    },
+    'player.videasy.net': { 
+        name: 'Player.Videasy.net',
+        movie: (id) => `https://player.videasy.net/movie/${id}`, 
+        tv: (id, s, e) => `https://player.videasy.net/tv/${id}/${s}/${e}` 
     },
 };
 
@@ -33,7 +33,7 @@ const GENRES = [
 ];
 
 // --- APPLICATION STATE ---
-let currentItem = null;
+let currentItem;
 let currentSeason = 1;
 let currentEpisode = 1;
 let slideshowItems = [];
@@ -42,16 +42,15 @@ let slideshowInterval;
 let scrollPosition = 0; 
 let currentFullView = null; 
 let currentCategoryToFilter = null; 
-let allSeasonsData = []; // To store full season data once fetched
 
 let categoryState = {
-    movies: { page: 1, isLoading: false, filters: {}, loaded: false },
-    tvshows: { page: 1, isLoading: false, filters: {}, loaded: false },
-    anime: { page: 1, isLoading: false, filters: {}, loaded: false },
-    'tagalog-movies': { page: 1, isLoading: false, filters: {}, loaded: false },
-    'netflix-movies': { page: 1, isLoading: false, filters: {}, loaded: false },
-    'netflix-tv': { page: 1, isLoading: false, filters: {}, loaded: false },
-    'korean-drama': { page: 1, isLoading: false, filters: {}, loaded: false }
+    movies: { page: 1, isLoading: false, filters: {} },
+    tvshows: { page: 1, isLoading: false, filters: {} },
+    anime: { page: 1, isLoading: false, filters: {} },
+    'tagalog-movies': { page: 1, isLoading: false, filters: {} },
+    'netflix-movies': { page: 1, isLoading: false, filters: {} },
+    'netflix-tv': { page: 1, isLoading: false, filters: {} },
+    'korean-drama': { page: 1, isLoading: false, filters: {} }
 };
 
 // --- LOCAL STORAGE CONSTANTS ---
@@ -59,7 +58,7 @@ const FAVORITES_KEY = 'reelroom_favorites';
 const RECENTLY_VIEWED_KEY = 'reelroom_recent';
 const RATINGS_KEY = 'reelroom_ratings';         
 const WATCH_PROGRESS_KEY = 'reelroom_progress'; 
-const WATCHED_STATUS_KEY = 'reelroom_watched'; 
+const WATCHED_STATUS_KEY = 'reelroom_watched'; // NEW: Tracks watched status
 const USER_SETTINGS_KEY = 'reelroom_user_settings'; 
 const MAX_RECENT = 15; 
 const MAX_FAVORITES = 30; 
@@ -103,22 +102,16 @@ async function testApiKey() {
     }
 }
 
-/**
- * Fetches content for a given category with optional filters.
- * @param {string} category 
- * @param {number} page 
- * @param {Object} filters 
- * @returns {Promise<Object>}
- */
 async function fetchCategoryContent(category, page, filters = {}) {
     try {
         let baseParams = `&page=${page}&include_adult=false&include_video=false`; 
         const sortBy = filters.sort_by || 'popularity.desc';
         baseParams += `&sort_by=${sortBy}`;
         
+        // This is where the filters are applied
         const filterParams = `${filters.year ? `&primary_release_year=${filters.year}` : ''}${filters.genre ? `&with_genres=${filters.genre}` : ''}`;
         let fetchURL = '';
-        let mediaType = category.includes('movie') || category === 'movies' ? 'movie' : 'tv';
+        let mediaType = category.includes('movie') ? 'movie' : 'tv';
 
         if (category === 'movies') {
             fetchURL = `${BASE_URL}/discover/movie?api_key=${API_KEY}${baseParams}${filterParams}`;
@@ -143,7 +136,6 @@ async function fetchCategoryContent(category, page, filters = {}) {
         const data = await res.json();
         
         if (data.results) {
-            // Explicitly set media_type for consistency
             data.results.forEach(item => item.media_type = item.media_type || mediaType);
         }
         return data;
@@ -199,10 +191,6 @@ function showError(message, containerId) {
   }
 }
 
-/**
- * Shows loading state with dynamic skeletons for lists.
- * @param {string} containerId 
- */
 function showLoading(containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -211,16 +199,13 @@ function showLoading(containerId) {
   
   if (container.classList.contains('list')) {
       container.classList.add('loading-list');
-      // Dynamic Skeletons: Max 8 or current children length if content exists
-      const numSkeletons = Math.max(8, container.children.length); 
-      
-      // Clear existing skeletons if not on first load
-      container.querySelectorAll('.skeleton').forEach(el => el.remove());
-
-      for(let i=0; i<numSkeletons; i++) {
-          const skeleton = document.createElement('div');
-          skeleton.className = 'skeleton';
-          container.appendChild(skeleton);
+      // Adding skeleton placeholders if they don't exist
+      if (container.children.length === 0) {
+        for(let i=0; i<5; i++) {
+            const skeleton = document.createElement('div');
+            skeleton.className = 'skeleton';
+            container.appendChild(skeleton);
+        }
       }
   }
   
@@ -298,11 +283,6 @@ function changeSlide(n) {
   showSlide();
 }
 
-/**
- * Displays fetched items in a horizontal list, appending to existing content.
- * @param {Array<Object>} items 
- * @param {string} containerId 
- */
 function displayList(items, containerId) {
   const container = document.getElementById(containerId);
   if (!container) {
@@ -318,16 +298,12 @@ function displayList(items, containerId) {
   }
 
   items.forEach(item => {
-    // Explicitly check if the media_type is valid before displaying
-    if (item.media_type !== 'movie' && item.media_type !== 'tv') return;
-
     if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = (item.title || item.name || 'Unknown') + (item.media_type ? ` (${item.media_type})` : '');
     img.setAttribute('data-id', item.id);
-    img.setAttribute('data-media-type', item.media_type); // Improved media type tracking
     
     // Attach listener
     img.addEventListener('click', () => showDetails(item));
@@ -455,6 +431,9 @@ function saveDefaultServer() {
     showToast(`✅ Default server set to ${serverName}!`); 
 }
 
+/**
+ * THEME LOGIC (UNCHANGED)
+ */
 function applyTheme(isLight) {
     const body = document.body;
     const icon = document.getElementById('theme-toggle-btn')?.querySelector('i');
@@ -483,6 +462,7 @@ function toggleTheme() {
     // Toggle the theme (if it's currently light, switch to dark, and vice versa)
     applyTheme(!isLight);
 }
+// END THEME LOGIC
 
 function addToRecentlyViewed(item) {
   const itemData = {
@@ -645,6 +625,8 @@ function loadWatchProgress(itemId) {
     return progressList.find(p => p.id === itemId);
 }
 
+// NEW: Watched Status Logic
+
 /**
  * Marks a movie or episode as watched/unwatched.
  * @param {boolean} isWatched - True to mark as watched, false to unmark.
@@ -680,9 +662,7 @@ function toggleWatchedStatus(isWatched) {
     }
     
     // Update the button appearance
-    const watchedBtn = document.getElementById('watched-btn');
-    watchedBtn.classList.toggle('watched', isWatched);
-    watchedBtn.querySelector('span').textContent = isWatched ? 'Watched' : 'Mark Watched';
+    document.getElementById('watched-btn').classList.toggle('watched', isWatched);
     
     saveStorageList(WATCHED_STATUS_KEY, watchedList);
     showToast(message);
@@ -708,34 +688,7 @@ function loadWatchedStatus() {
     return watchedList.includes(key);
 }
 
-// --- SCROLL, LAZY LOAD, & FILTER LOGIC (UPDATED) ---
-
-/**
- * Uses Intersection Observer to load content rows when they enter the viewport.
- */
-function setupLazyLoading() {
-    const observer = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const category = entry.target.getAttribute('data-category');
-                const state = categoryState[category];
-                
-                if (category && !state.loaded) {
-                    loadRowContent(category);
-                    state.loaded = true; // Mark as loaded to prevent re-fetching
-                    observer.unobserve(entry.target);
-                }
-            }
-        });
-    }, { 
-        rootMargin: '100px 0px', // Start loading 100px before reaching the row
-        threshold: 0.01 
-    });
-
-    document.querySelectorAll('section.row[data-category]').forEach(row => {
-        observer.observe(row);
-    });
-}
+// --- SCROLL & FILTER LOGIC ---
 
 function addScrollListener(category) {
   const containerId = category + '-list';
@@ -791,8 +744,8 @@ async function loadMore(category) {
 
 function updateFilterButtons(category, filters) {
     const row = document.getElementById(`${category}-row`);
-    const filterBtn = row?.querySelector('.filter-btn:not(.clear-filter-btn)');
-    const clearBtn = row?.querySelector('.clear-filter-btn');
+    const filterBtn = row.querySelector('.filter-btn:not(.clear-filter-btn)');
+    const clearBtn = row.querySelector('.clear-filter-btn');
     
     if (!filterBtn || !clearBtn) return; 
 
@@ -840,8 +793,6 @@ async function loadRowContent(category, filters = {}) {
     state.isLoading = false;
     document.getElementById(containerId)?.querySelector('.loading')?.remove();
     document.getElementById(containerId)?.classList.remove('loading-list');
-    
-    addScrollListener(category); // Re-add scroll listener
 }
 
 function clearFilters(category) {
@@ -861,9 +812,6 @@ function openFullView(category) {
     
     document.body.style.overflow = 'hidden'; 
     
-    // Remove any existing full view modal before creating a new one
-    closeFullView(); 
-
     const fullViewContainer = document.createElement('div');
     fullViewContainer.id = 'full-view-modal';
     fullViewContainer.className = 'search-modal'; 
@@ -872,8 +820,9 @@ function openFullView(category) {
 
     const title = category.replace('-', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     
+    // Updated HTML for the Full View Modal to include the filter button
     fullViewContainer.innerHTML = `
-        <span class="close" id="full-view-close-btn" style="color: var(--accent-color);">&times;</span>
+        <span class="close" id="full-view-close-btn" style="color: red;">&times;</span>
         <h2 style="text-transform: uppercase;">${title}</h2>
         
         <div class="full-view-controls">
@@ -893,8 +842,9 @@ function openFullView(category) {
     
     document.getElementById('full-view-close-btn').addEventListener('click', closeFullView);
     document.getElementById('full-view-sort').addEventListener('change', applyFullViewSort);
+    // NEW LISTENER for the filter button inside the full view
     document.getElementById('full-view-filter-btn').addEventListener('click', () => {
-        openFilterModal(category, true); 
+        openFilterModal(category, true); // Pass 'true' to indicate full-view context
     }); 
     
     document.getElementById('full-view-sort').value = filters.sort_by;
@@ -925,12 +875,6 @@ function closeFullView() {
     document.body.style.overflow = ''; 
 }
 
-/**
- * Displays fetched items in a grid for the full view.
- * @param {Array<Object>} items 
- * @param {string} containerId 
- * @param {boolean} isFirstLoad 
- */
 function displayFullList(items, containerId, isFirstLoad = false) {
   const container = document.getElementById(containerId);
   if (isFirstLoad) {
@@ -938,15 +882,12 @@ function displayFullList(items, containerId, isFirstLoad = false) {
   }
   
   items.forEach(item => {
-    if (item.media_type !== 'movie' && item.media_type !== 'tv') return;
-
     if (container.querySelector(`img[data-id="${item.id}"]`)) return;
 
     const img = document.createElement('img');
     img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
     img.alt = item.title || item.name || 'Unknown';
     img.setAttribute('data-id', item.id);
-    img.setAttribute('data-media-type', item.media_type);
     
     img.addEventListener('click', () => showDetails(item, true)); 
     
@@ -998,18 +939,8 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
 
   state.isLoading = true;
   
-  // Show loading/skeletons only on the first load for a clear visual reset
-  if (isFirstLoad) {
-    container.innerHTML = ''; 
-    showLoading(containerId); // This adds skeleton divs for the grid
-  } else if (!container.querySelector('.loading')) {
-    // Add simple loading text/spinner at the bottom for pagination load
-    const loadingText = document.createElement('p');
-    loadingText.className = 'loading';
-    loadingText.textContent = 'Loading more...';
-    container.appendChild(loadingText);
-  }
-
+  showLoading(containerId);
+  
   state.page++; 
   let currentPage = state.page;
 
@@ -1018,14 +949,11 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
 
     const items = data.results || [];
     
-    // Remove loading indicator regardless of outcome
-    container.querySelector('.loading')?.remove();
-    container.querySelectorAll('.skeleton').forEach(el => el.remove());
-
     if (items.length === 0) {
         if (currentPage > 1) { 
             state.page--; 
         }
+        document.getElementById(containerId)?.querySelector('.loading')?.remove();
         state.isLoading = false;
         
         if (isFirstLoad && container.children.length === 0) {
@@ -1043,7 +971,7 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
     state.page--; 
   } finally {
     state.isLoading = false;
-    container.querySelector('.loading')?.remove();
+    document.getElementById(containerId)?.querySelector('.loading')?.remove();
     
     if (isFirstLoad && scrollPosition > 0 && container) {
         container.scrollTop = scrollPosition;
@@ -1051,6 +979,9 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
   }
 }
 
+/**
+ * UPDATED: Populates filter options and prepares the modal. Now accepts isFullView flag.
+ */
 function openFilterModal(category, isFullView = false) {
     currentCategoryToFilter = category;
     
@@ -1074,8 +1005,7 @@ function openFilterModal(category, isFullView = false) {
         applyBtn.textContent = 'Apply Filters and Reload List';
         applyBtn.setAttribute('data-target-view', 'full');
     } else {
-        // This button is primarily used to open the full view with a filter applied
-        applyBtn.textContent = 'Apply Filters and Open Full View';
+        applyBtn.textContent = 'Apply Filters and Show More';
         applyBtn.setAttribute('data-target-view', 'row');
     }
     
@@ -1105,6 +1035,9 @@ function populateFilterOptions() {
     });
 }
 
+/**
+ * UPDATED: Handles filter application and targets the correct view (row vs. full).
+ */
 function applyFilters() {
     const year = document.getElementById('filter-year').value;
     const genre = document.getElementById('filter-genre').value;
@@ -1115,6 +1048,7 @@ function applyFilters() {
     
     document.getElementById('filter-modal').style.display = 'none';
     
+    // Ensure genre is an integer if a value is selected, and keep the current sort_by setting
     const newFilters = { 
         year: year, 
         genre: genre ? parseInt(genre) : '',
@@ -1124,26 +1058,30 @@ function applyFilters() {
     categoryState[category].filters = newFilters;
     updateFilterButtons(category, newFilters);
     
+    // Based on where the filter was opened, update the relevant view
     if (targetView === 'full') {
         const fullViewSort = document.getElementById('full-view-sort');
-        if(fullViewSort) fullViewSort.value = newFilters.sort_by; 
+        if(fullViewSort) fullViewSort.value = newFilters.sort_by; // Sync the sort dropdown
         
-        categoryState[category].page = 0; 
+        categoryState[category].page = 0; // Reset page count for full view
         loadMoreFullView(category, newFilters, true);
         
         updateFullViewFilterButton(newFilters); 
         
         showToast(`Filters Applied to Full View`);
     } else {
-        // Apply filter to row, then open the full view
+        // This is the original path from the main page row filter (applies filter, then opens full view)
         loadRowContent(category, newFilters);
         openFullView(category);
         showToast(`Filters Applied and Full View Opened`);
     }
 }
 
-// --- DETAILS & MODAL LOGIC (MODIFIED) ---
+// END: Full View & Filter Modal Updates
 
+// --- DETAILS & MODAL LOGIC (MODIFIED for Auto-Highlight and Default Server) ---
+
+// Helper function to populate server options once
 function populateServerOptions() {
     const serverSelect = document.getElementById('server');
     if (!serverSelect) return;
@@ -1182,8 +1120,8 @@ async function showDetails(item, isFullViewOpen = false) {
   const favoriteToggle = document.getElementById('favorite-toggle');
   favoriteToggle.onclick = () => toggleFavorite(item);
 
+
   const seasonSelector = document.getElementById('season-selector');
-  const nextEpisodeBtn = document.getElementById('next-episode-btn');
   const episodeList = document.getElementById('episode-list');
   const isTVShow = item.media_type === 'tv' || (item.name && !item.title);
   
@@ -1196,11 +1134,9 @@ async function showDetails(item, isFullViewOpen = false) {
   
   // Set initial watched status for the movie/first episode
   if (!isTVShow) {
-      nextEpisodeBtn.style.display = 'none';
       watchedBtn.classList.toggle('watched', loadWatchedStatus());
       watchedBtn.querySelector('span').textContent = watchedBtn.classList.contains('watched') ? 'Watched' : 'Mark Watched';
   } else {
-      nextEpisodeBtn.style.display = 'block';
       // Defer TV watched status update until after episodes load
       watchedBtn.classList.remove('watched');
       watchedBtn.querySelector('span').textContent = 'Mark Watched';
@@ -1208,34 +1144,24 @@ async function showDetails(item, isFullViewOpen = false) {
 
 
   if (isTVShow) {
-    seasonSelector.style.display = 'flex';
+    seasonSelector.style.display = 'block';
     const tvId = item.id || currentItem.id;
     
-    // Fetch and store all season data
-    allSeasonsData = await fetchSeasonsAndEpisodes(tvId);
-    
+    const seasons = await fetchSeasonsAndEpisodes(tvId);
     const seasonSelect = document.getElementById('season');
     seasonSelect.innerHTML = '';
     
-    const validSeasons = allSeasonsData.filter(s => s.season_number > 0);
-
-    validSeasons.forEach(season => {
+    seasons.filter(s => s.season_number > 0).forEach(season => {
       const option = document.createElement('option');
       option.value = season.season_number;
       option.textContent = `Season ${season.season_number}`;
       seasonSelect.appendChild(option);
     });
     
-    currentSeason = progress?.season || validSeasons.find(s => s.season_number > 0)?.season_number || 1;
-    // Fallback to the largest season number if currentSeason isn't found
-    if (!validSeasons.some(s => s.season_number == currentSeason)) {
-        currentSeason = validSeasons[validSeasons.length - 1]?.season_number || 1;
-    }
-    
+    currentSeason = progress?.season || seasons.find(s => s.season_number > 0)?.season_number || 1;
     seasonSelect.value = currentSeason;
     
     await loadEpisodes();
-    nextEpisodeBtn.onclick = playNextEpisode;
   } else {
     seasonSelector.style.display = 'none';
     episodeList.innerHTML = '';
@@ -1250,105 +1176,27 @@ async function showDetails(item, isFullViewOpen = false) {
   }
 }
 
-/**
- * Calculates and returns the total number of episodes in all seasons.
- */
-function getTotalEpisodes() {
-    const currentSeasonData = allSeasonsData.find(s => s.season_number == currentSeason);
-    return currentSeasonData?.episode_count || 0;
-}
-
-/**
- * Handles playing the next available episode.
- */
-function playNextEpisode() {
-    if (!currentItem) return;
-    
-    const currentE = currentEpisode;
-    const currentS = currentSeason;
-    const totalE = getTotalEpisodes();
-    const seasonSelect = document.getElementById('season');
-
-    let nextE = currentE + 1;
-    let nextS = currentS;
-    
-    // 1. If we are on the last episode of the current season
-    if (currentE >= totalE && totalE > 0) {
-        nextS = currentS + 1;
-        
-        // Find the index of the next season in the dropdown
-        const nextSeasonOption = seasonSelect.querySelector(`option[value="${nextS}"]`);
-
-        if (nextSeasonOption) {
-            nextE = 1; 
-            // Trigger season change
-            seasonSelect.value = nextS;
-            seasonSelect.dispatchEvent(new Event('change'));
-            showToast(`Starting Season ${nextS}`);
-            return;
-        } else {
-            // End of series
-            showToast('You\'ve reached the end of the available series! 🎉');
-            return; 
-        }
-    } else if (currentE < totalE) {
-        // 2. Play the next episode in the current season
-        currentEpisode = nextE;
-        
-        const targetElement = document.querySelector(`.episode-item[data-episode-number="${currentEpisode}"]`);
-        if (targetElement) {
-            targetElement.click();
-            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-            // Fallback for missing episode data
-            showToast('Could not find next episode data.');
-            changeServer();
-        }
-        showToast(`Playing E${currentEpisode} of S${currentSeason}`);
-        return;
-    }
-}
-
-
 async function loadEpisodes() {
   if (!currentItem) return;
   const seasonNumber = document.getElementById('season').value;
-  currentSeason = parseInt(seasonNumber);
-  
-  const episodes = await fetchEpisodes(currentItem.id, currentSeason);
+  currentSeason = seasonNumber;
+  const episodes = await fetchEpisodes(currentItem.id, seasonNumber);
   const episodeList = document.getElementById('episode-list');
   episodeList.innerHTML = '';
   
   const progress = loadWatchProgress(currentItem.id);
-  const watchedList = loadStorageList(WATCHED_STATUS_KEY); 
+  const watchedList = loadStorageList(WATCHED_STATUS_KEY); // Fetch all watched keys
   
-  // Determine the episode to auto-select:
-  // 1. Next episode from progress
-  // 2. Or, the first available unwatched episode
+  // Determine the episode to auto-select: Next episode from progress OR Episode 1
   let targetEpisode = (progress && progress.season == currentSeason) 
-    ? (progress.episode + 1)
+    ? (progress.episode + 1) // Start on the next episode
     : 1; 
-    
-  // Find the first unwatched episode in the current list
-  let foundUnwatched = false;
-  for (const episode of episodes) {
-      const key = `t-${currentItem.id}-s${currentSeason}-e${episode.episode_number}`;
-      if (!watchedList.includes(key)) {
-          targetEpisode = episode.episode_number;
-          foundUnwatched = true;
-          break;
-      }
-  }
-
-  // Fallback to the last watched episode if all are marked watched
-  if (!foundUnwatched && episodes.length > 0) {
-    targetEpisode = episodes[episodes.length - 1].episode_number;
-  }
   
-  // Ensure it's within bounds
+  // Cap at max available episode
   if (targetEpisode > episodes.length) {
       targetEpisode = episodes.length;
   }
+  // Ensure it's at least 1
   if (targetEpisode < 1 && episodes.length > 0) {
       targetEpisode = 1;
   }
@@ -1391,7 +1239,6 @@ async function loadEpisodes() {
       
       if (targetElement) {
           targetElement.click(); 
-          // Scroll the episode list to the target element
           episodeList.scrollTop = targetElement.offsetTop - (episodeList.clientHeight / 2);
       } else {
           // Fallback to the very first episode if the list isn't empty
@@ -1405,7 +1252,7 @@ function changeServer() {
   const server = document.getElementById('server').value;
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
   
-  saveWatchProgress(currentItem.id, server, currentSeason, currentEpisode); 
+  saveWatchProgress(currentItem.id, currentSeason, currentEpisode); 
 
   const config = PLAYER_CONFIG[server];
   let embedURL = '';
@@ -1434,10 +1281,12 @@ function closeModal() {
   document.body.style.overflow = '';
   
   const fullViewModal = document.getElementById('full-view-modal');
-  if (fullViewModal && fullViewModal.style.display !== 'none') {
+  if (fullViewModal) {
       fullViewModal.style.display = 'flex';
   }
 }
+
+// NEW: Fullscreen Toggler for the iframe
 
 function toggleFullscreen() {
     const playerContainer = document.getElementById('video-player-container');
@@ -1456,7 +1305,7 @@ function toggleFullscreen() {
         } else if (document.webkitExitFullscreen) { /* Safari */
             document.webkitExitFullscreen();
         } else if (document.msExitFullscreen) { /* IE11 */
-            document.exitFullscreen();
+            document.msExitFullscreen();
         }
     }
 }
@@ -1496,7 +1345,6 @@ const debouncedSearchTMDB = debounce(async () => {
         const img = document.createElement('img');
         img.src = item.poster_path ? `${IMG_URL}${item.poster_path}` : FALLBACK_IMAGE;
         img.alt = item.title || item.name || 'Unknown';
-        img.setAttribute('data-media-type', item.media_type); // Set media type
         
         // Attach listener
         img.addEventListener('click', () => {
@@ -1518,7 +1366,7 @@ const debouncedSearchTMDB = debounce(async () => {
 }, 300);
 
 
-// --- EVENT LISTENER SETUP (MODIFIED) ---
+// --- EVENT LISTENER SETUP (MODIFIED to include new player controls) ---
 
 function attachListeners() {
     // Navbar/Modal Closers
@@ -1544,7 +1392,7 @@ function attachListeners() {
     document.getElementById('season').addEventListener('change', loadEpisodes);
     document.getElementById('save-default-server-btn').addEventListener('click', saveDefaultServer);
     
-    // PLAYER CONTROLS
+    // NEW PLAYER CONTROLS
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
 
     // User Rating Stars
@@ -1578,7 +1426,7 @@ function attachListeners() {
 }
 
 
-// --- INITIALIZATION (MODIFIED for Lazy Loading) ---
+// --- INITIALIZATION (MODIFIED for PWA Registration) ---
 
 // --- PWA Service Worker Registration ---
 if ('serviceWorker' in navigator) {
@@ -1602,12 +1450,14 @@ async function init() {
       return;
   }
   
-  loadThemePreference();
-  populateServerOptions(); 
-  attachListeners(); 
-  populateFilterOptions(); 
+  loadThemePreference(); // Load theme immediately before showing content
+  populateServerOptions(); // Populate server dropdown once
+  attachListeners(); // Attach all event handlers
+  populateFilterOptions(); // Populate filter dropdowns
   
-  // Show loading/skeletons only for non-lazy-loaded items
+  // Show loading/skeletons for all sections
+  const categoryIds = Object.keys(categoryState);
+  categoryIds.forEach(id => showLoading(`${id}-list`));
   showLoading('shopee-link-list');
   showLoading('favorites-list'); 
   showLoading('recently-viewed-list');
@@ -1617,15 +1467,36 @@ async function init() {
   displayFavorites();
   displayRecentlyViewed();
 
-  // Load Slideshow Content
-  const slideshowData = await fetchCategoryContent('movies', 1, { sort_by: 'popularity.desc' });
-  slideshowItems = slideshowData.results
-    .filter(item => item && item.backdrop_path)
-    .slice(0, 7);
-  displaySlides();
+  // Use Promise.allSettled for robust parallel loading
+  const fetchPromises = categoryIds.map(category => fetchCategoryContent(category, 1));
+  const results = await Promise.allSettled(fetchPromises);
   
-  // Setup Lazy Loading for the rest of the content rows
-  setupLazyLoading();
+  let allResults = [];
+  
+  results.forEach((result, index) => {
+    const category = categoryIds[index];
+    const containerId = `${category}-list`;
+    
+    if (result.status === 'fulfilled' && result.value.results) {
+        const data = result.value;
+        displayList(data.results, containerId);
+        addScrollListener(category);
+        
+        // Collect results for the slideshow
+        allResults = allResults.concat(data.results);
+    } else {
+        console.error(`Failed to load ${category}:`, result.reason);
+        showError(`Failed to load ${category}.`, containerId);
+    }
+  });
+
+  // Display Slideshow
+  slideshowItems = allResults
+    .filter(item => item && item.backdrop_path)
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) // Sort by popularity for better quality slides
+    .slice(0, 7);
+    
+  displaySlides();
 }
 
 init();
