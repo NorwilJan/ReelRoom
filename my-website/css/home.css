@@ -419,13 +419,6 @@ body {
 .player-control-btn.watched:hover {
     background: #00b300;
 }
-/* Style for the Next Episode button */
-#next-episode-btn {
-    background: #800080; /* Purple */
-}
-#next-episode-btn:hover {
-    background: #a020f0;
-}
 /* --- END NEW PLAYER CONTROLS STYLES --- */
 
 
