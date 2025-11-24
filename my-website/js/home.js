@@ -1,5 +1,5 @@
 // js/main.js
-const API_KEY = '40f1982842db35042e8561b13b38d492'; // <-- REPLACE THIS WITH YOUR ACTUAL TMDB KEY
+const API_KEY = '40f1982842db35042e8561b13b38d492'; // <-- YOUR TMDB API KEY INCLUDED HERE
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/original';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/150x225?text=No+Image';
@@ -80,7 +80,6 @@ function debounce(func, delay) {
 // --- CORE API & UI UTILITIES ---
 
 async function testApiKey() {
-    // ... (unchanged)
     try {
         const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&page=1`);
         if (res.status === 401) {
@@ -112,7 +111,6 @@ async function testApiKey() {
  * @returns {Promise<Object>}
  */
 async function fetchCategoryContent(category, page, filters = {}) {
-    // ... (unchanged)
     try {
         let baseParams = `&page=${page}&include_adult=false&include_video=false`; 
         const sortBy = filters.sort_by || 'popularity.desc';
@@ -156,7 +154,6 @@ async function fetchCategoryContent(category, page, filters = {}) {
 }
 
 async function fetchSeasonsAndEpisodes(tvId) {
-    // ... (unchanged)
   try {
     const res = await fetch(`${BASE_URL}/tv/${tvId}?api_key=${API_KEY}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -169,7 +166,6 @@ async function fetchSeasonsAndEpisodes(tvId) {
 }
 
 async function fetchEpisodes(tvId, seasonNumber) {
-    // ... (unchanged)
   try {
     const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -182,7 +178,6 @@ async function fetchEpisodes(tvId, seasonNumber) {
 }
 
 function removeLoadingAndError(containerId) {
-    // ... (unchanged)
     const container = document.getElementById(containerId);
     if (container) {
         container.querySelector('.loading')?.remove();
@@ -193,7 +188,6 @@ function removeLoadingAndError(containerId) {
 }
 
 function showError(message, containerId) {
-    // ... (unchanged)
   removeLoadingAndError(containerId);
   const container = document.getElementById(containerId);
   if (container) {
@@ -240,7 +234,6 @@ function showLoading(containerId) {
 }
 
 function displaySlides() {
-    // ... (unchanged)
   const slidesContainer = document.getElementById('slides');
   const dotsContainer = document.getElementById('dots');
   
@@ -282,7 +275,6 @@ function displaySlides() {
 }
 
 function showSlide() {
-    // ... (unchanged)
   const slides = document.querySelectorAll('#slides .slide');
   const dots = document.querySelectorAll('#dots .dot');
   if (slides.length === 0) return;
@@ -300,7 +292,6 @@ function showSlide() {
 }
 
 function changeSlide(n) {
-    // ... (unchanged)
   const slides = document.querySelectorAll('#slides .slide');
   if (slides.length === 0) return;
   currentSlide = (currentSlide + n + slides.length) % slides.length;
@@ -346,7 +337,6 @@ function displayList(items, containerId) {
 }
 
 function displayShopeeLinks() {
-    // ... (unchanged)
     const shopeeLinks = [
         { 
             url: 'https://collshp.com/reelroom', 
@@ -389,7 +379,6 @@ function displayShopeeLinks() {
 // --- LOCAL STORAGE & USER FUNCTIONS ---
 
 function loadStorageList(key) {
-    // ... (unchanged)
   try {
     const json = localStorage.getItem(key);
     return json ? JSON.parse(json) : [];
@@ -400,7 +389,6 @@ function loadStorageList(key) {
 }
 
 function saveStorageList(key, list) {
-    // ... (unchanged)
   try {
     localStorage.setItem(key, JSON.stringify(list));
   } catch (e) {
@@ -409,7 +397,6 @@ function saveStorageList(key, list) {
 }
 
 function showToast(message, duration = 3000) {
-    // ... (unchanged)
     const container = document.getElementById('toast-container');
     if (!container) return;
 
@@ -432,7 +419,6 @@ function showToast(message, duration = 3000) {
 }
 
 function loadUserSettings() {
-    // ... (unchanged)
     try {
         const json = localStorage.getItem(USER_SETTINGS_KEY);
         // Default to the most reliable player and dark theme
@@ -450,7 +436,6 @@ function loadUserSettings() {
 }
 
 function saveUserSettings(settings) {
-    // ... (unchanged)
     let currentSettings = loadUserSettings();
     // Merge new settings with existing ones
     let newSettings = { ...currentSettings, ...settings };
@@ -462,7 +447,6 @@ function saveUserSettings(settings) {
 }
 
 function saveDefaultServer() {
-    // ... (unchanged)
     const selectedServer = document.getElementById('server').value;
     
     saveUserSettings({ defaultServer: selectedServer });
@@ -472,7 +456,6 @@ function saveDefaultServer() {
 }
 
 function applyTheme(isLight) {
-    // ... (unchanged)
     const body = document.body;
     const icon = document.getElementById('theme-toggle-btn')?.querySelector('i');
     
@@ -490,21 +473,18 @@ function applyTheme(isLight) {
 }
 
 function loadThemePreference() {
-    // ... (unchanged)
     const settings = loadUserSettings();
     const isLight = settings.theme === 'light';
     applyTheme(isLight);
 }
 
 function toggleTheme() {
-    // ... (unchanged)
     const isLight = document.body.classList.contains('light-mode');
     // Toggle the theme (if it's currently light, switch to dark, and vice versa)
     applyTheme(!isLight);
 }
 
 function addToRecentlyViewed(item) {
-    // ... (unchanged)
   const itemData = {
     id: item.id,
     title: item.title || item.name,
@@ -522,7 +502,6 @@ function addToRecentlyViewed(item) {
 }
 
 function toggleFavorite(item) {
-    // ... (unchanged)
   const itemData = {
     id: item.id,
     title: item.title || item.name,
@@ -549,7 +528,6 @@ function toggleFavorite(item) {
 }
 
 function displayFavorites() {
-    // ... (unchanged)
     const favorites = loadStorageList(FAVORITES_KEY);
     const container = document.getElementById('favorites-list');
     const countSpan = document.getElementById('favorites-count');
@@ -575,7 +553,6 @@ function displayFavorites() {
 }
 
 function displayRecentlyViewed() {
-    // ... (unchanged)
     const recent = loadStorageList(RECENTLY_VIEWED_KEY);
     const container = document.getElementById('recently-viewed-list');
     
@@ -598,13 +575,11 @@ function displayRecentlyViewed() {
 }
 
 function loadUserRating(itemId) {
-    // ... (unchanged)
     const ratings = loadStorageList(RATINGS_KEY);
     return ratings.find(r => r.id === itemId)?.rating || 0;
 }
 
 function setUserRating(rating) {
-    // ... (unchanged)
     if (!currentItem) return;
     const itemId = currentItem.id;
 
@@ -632,7 +607,6 @@ function setUserRating(rating) {
 }
 
 function updateUserRatingDisplay(rating) {
-    // ... (unchanged)
     const stars = document.querySelectorAll('#modal-rating-user .user-star');
     document.getElementById('modal-rating-user').setAttribute('data-rating', rating);
     
@@ -647,7 +621,6 @@ function updateUserRatingDisplay(rating) {
 }
 
 function saveWatchProgress(itemId, server, season, episode) {
-    // ... (unchanged)
     let progressList = loadStorageList(WATCH_PROGRESS_KEY);
     const existingIndex = progressList.findIndex(p => p.id === itemId);
     
@@ -668,7 +641,6 @@ function saveWatchProgress(itemId, server, season, episode) {
 }
 
 function loadWatchProgress(itemId) {
-    // ... (unchanged)
     const progressList = loadStorageList(WATCH_PROGRESS_KEY);
     return progressList.find(p => p.id === itemId);
 }
@@ -678,7 +650,6 @@ function loadWatchProgress(itemId) {
  * @param {boolean} isWatched - True to mark as watched, false to unmark.
  */
 function toggleWatchedStatus(isWatched) {
-    // ... (unchanged)
     if (!currentItem) return;
 
     const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
@@ -722,7 +693,6 @@ function toggleWatchedStatus(isWatched) {
  * @returns {boolean}
  */
 function loadWatchedStatus() {
-    // ... (unchanged)
     if (!currentItem) return false;
     
     const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
@@ -768,7 +738,6 @@ function setupLazyLoading() {
 }
 
 function addScrollListener(category) {
-  // ... (unchanged)
   const containerId = category + '-list';
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -786,7 +755,6 @@ function addScrollListener(category) {
 }
 
 async function loadMore(category) {
-    // ... (unchanged)
   const state = categoryState[category];
   if (state.isLoading) return;
 
@@ -822,7 +790,6 @@ async function loadMore(category) {
 }
 
 function updateFilterButtons(category, filters) {
-    // ... (unchanged)
     const row = document.getElementById(`${category}-row`);
     const filterBtn = row?.querySelector('.filter-btn:not(.clear-filter-btn)');
     const clearBtn = row?.querySelector('.clear-filter-btn');
@@ -852,7 +819,6 @@ function updateFilterButtons(category, filters) {
 }
 
 async function loadRowContent(category, filters = {}) {
-    // ... (unchanged)
     const state = categoryState[category];
     if (state.isLoading) return;
 
@@ -879,7 +845,6 @@ async function loadRowContent(category, filters = {}) {
 }
 
 function clearFilters(category) {
-    // ... (unchanged)
     categoryState[category].filters = {};
     loadRowContent(category);
     showToast(`Filters cleared for ${category.replace('-', ' ')}`);
@@ -889,7 +854,6 @@ function clearFilters(category) {
 // START: Full View & Filter Modal Updates
 
 function openFullView(category) {
-    // ... (unchanged)
     currentFullView = category;
     
     let filters = { ...categoryState[category].filters }; 
@@ -954,7 +918,6 @@ function openFullView(category) {
 }
 
 function closeFullView() {
-    // ... (unchanged)
     const modal = document.getElementById('full-view-modal');
     if (modal) modal.remove();
     currentFullView = null;
@@ -992,7 +955,6 @@ function displayFullList(items, containerId, isFirstLoad = false) {
 }
 
 function updateFullViewFilterButton(filters) {
-    // ... (unchanged)
     const filterBtn = document.getElementById('full-view-filter-btn');
     if (!filterBtn) return;
 
@@ -1015,7 +977,6 @@ function updateFullViewFilterButton(filters) {
 }
 
 function applyFullViewSort() {
-    // ... (unchanged)
     if (!currentFullView) return;
     
     const sortValue = document.getElementById('full-view-sort').value;
@@ -1029,7 +990,6 @@ function applyFullViewSort() {
 }
 
 async function loadMoreFullView(category, filters, isFirstLoad = false) {
-    // ... (unchanged)
   const state = categoryState[category];
   const containerId = `${category}-full-list`;
   const container = document.getElementById(containerId); 
@@ -1092,7 +1052,6 @@ async function loadMoreFullView(category, filters, isFirstLoad = false) {
 }
 
 function openFilterModal(category, isFullView = false) {
-    // ... (unchanged)
     currentCategoryToFilter = category;
     
     const modalTitle = document.getElementById('filter-modal-title');
@@ -1124,7 +1083,6 @@ function openFilterModal(category, isFullView = false) {
 }
 
 function populateFilterOptions() {
-    // ... (unchanged)
     const yearSelect = document.getElementById('filter-year');
     const genreSelect = document.getElementById('filter-genre');
     
@@ -1148,7 +1106,6 @@ function populateFilterOptions() {
 }
 
 function applyFilters() {
-    // ... (unchanged)
     const year = document.getElementById('filter-year').value;
     const genre = document.getElementById('filter-genre').value;
     const category = currentCategoryToFilter;
@@ -1188,7 +1145,6 @@ function applyFilters() {
 // --- DETAILS & MODAL LOGIC (MODIFIED) ---
 
 function populateServerOptions() {
-    // ... (unchanged)
     const serverSelect = document.getElementById('server');
     if (!serverSelect) return;
     serverSelect.innerHTML = '';
@@ -1445,7 +1401,6 @@ async function loadEpisodes() {
 }
 
 function changeServer() {
-    // ... (unchanged)
   if (!currentItem) return;
   const server = document.getElementById('server').value;
   const type = currentItem.media_type || (currentItem.title ? 'movie' : 'tv');
@@ -1471,7 +1426,6 @@ function changeServer() {
 }
 
 function closeModal() {
-    // ... (unchanged)
   document.getElementById('modal').style.display = 'none';
   document.getElementById('modal-video').src = '';
   document.getElementById('episode-list').innerHTML = '';
@@ -1486,7 +1440,6 @@ function closeModal() {
 }
 
 function toggleFullscreen() {
-    // ... (unchanged)
     const playerContainer = document.getElementById('video-player-container');
 
     if (!document.fullscreenElement) {
@@ -1510,14 +1463,12 @@ function toggleFullscreen() {
 
 
 function openSearchModal() {
-    // ... (unchanged)
   document.body.style.overflow = 'hidden'; 
   document.getElementById('search-modal').style.display = 'flex';
   document.getElementById('search-input').focus();
 }
 
 function closeSearchModal() {
-    // ... (unchanged)
   document.body.style.overflow = ''; 
   document.getElementById('search-modal').style.display = 'none';
   document.getElementById('search-results').innerHTML = '';
@@ -1525,7 +1476,6 @@ function closeSearchModal() {
 }
 
 const debouncedSearchTMDB = debounce(async () => {
-    // ... (unchanged)
   const query = document.getElementById('search-input').value;
   const container = document.getElementById('search-results');
   container.innerHTML = '';
