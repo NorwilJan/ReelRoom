@@ -1,286 +1,694 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ReelRoom</title>
-  <link rel="stylesheet" href="css/home.css">
-  <link rel="preload" href="css/home.css" as="style">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script defer src="js/home.js"></script>
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>StreamVault</title>
+
+  <link
+    rel="stylesheet"
+    href="css/home.css"
+  />
+
+  <link
+    rel="preload"
+    href="css/home.css"
+    as="style"
+  />
+
+  <link
+    rel="preload"
+    href="js/home.js"
+    as="script"
+  />
+
+  <link
+    rel="manifest"
+    href="manifest.json"
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  />
+
+  <script
+    defer
+    src="js/home.js"
+  ></script>
+
 </head>
 
 <body>
-  
-  <div id="toast-container"></div>
-  
-  <div class="navbar">
-    <h1 class="logo-text">REELROOM</h1>
+
+  <!-- =========================
+       NAVBAR
+  ========================== -->
+
+  <header class="navbar">
+
+    <a href="index.html">
+
+      <img
+        src="logo.png"
+        alt="Website Logo"
+      />
+
+    </a>
+
     <div class="nav-links">
-      <button class="search-icon-btn" id="theme-toggle-btn" aria-label="Toggle Dark/Light Theme">
-        <i class="fas fa-moon"></i> 
+
+      <a href="index.html">
+        Home
+      </a>
+
+      <input
+        type="text"
+        class="search-bar"
+        placeholder="Search..."
+        readonly
+        onclick="openSearchModal()"
+      />
+
+    </div>
+
+  </header>
+
+
+  <!-- =========================
+       BANNER
+  ========================== -->
+
+  <section
+    class="banner"
+    id="banner"
+  >
+
+    <div class="banner-content">
+
+      <h1 id="banner-title"></h1>
+
+      <button
+        class="banner-btn"
+        onclick="playBanner()"
+      >
+
+        <i class="fa-solid fa-play"></i>
+
+        Watch Now
+
       </button>
-      <a href="index.html">Home</a>
-      <button class="search-icon-btn" id="search-btn" aria-label="Open Search">
-        <i class="fas fa-search"></i>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       CATEGORY FILTER
+  ========================== -->
+
+  <nav class="filter-tabs">
+
+    <button
+      class="tab-btn active"
+      onclick="filterContent('all', this)"
+    >
+      All
+    </button>
+
+    <button
+      class="tab-btn"
+      onclick="filterContent('movie', this)"
+    >
+      Movies
+    </button>
+
+    <button
+      class="tab-btn"
+      onclick="filterContent('tv', this)"
+    >
+      TV Shows
+    </button>
+
+    <button
+      class="tab-btn"
+      onclick="filterContent('anime', this)"
+    >
+      Anime
+    </button>
+
+  </nav>
+
+
+  <!-- =========================
+       GENRES
+  ========================== -->
+
+  <div
+    class="genre-tabs"
+    id="genre-container"
+  >
+
+    <button
+      class="genre-btn active"
+      onclick="filterByGenre('all', this)"
+    >
+      All Genres
+    </button>
+
+    <button
+      class="genre-btn"
+      onclick="filterByGenre(28, this)"
+    >
+      Action
+    </button>
+
+    <button
+      class="genre-btn"
+      onclick="filterByGenre(35, this)"
+    >
+      Comedy
+    </button>
+
+    <button
+      class="genre-btn"
+      onclick="filterByGenre(27, this)"
+    >
+      Horror
+    </button>
+
+    <button
+      class="genre-btn"
+      onclick="filterByGenre(10749, this)"
+    >
+      Romance
+    </button>
+
+    <button
+      class="genre-btn"
+      onclick="filterByGenre(878, this)"
+    >
+      Sci-Fi
+    </button>
+
+  </div>
+
+
+  <!-- =========================
+       CONTINUE WATCHING
+  ========================== -->
+
+  <div
+    class="row"
+    id="continue-row"
+    style="display:none;"
+  >
+
+    <div class="row-header">
+
+      <h2>
+        Continue Watching
+      </h2>
+
+    </div>
+
+    <div
+      class="list"
+      id="continue-list"
+    ></div>
+
+  </div>
+
+
+  <!-- =========================
+       MY LIST
+  ========================== -->
+
+  <div
+    class="row"
+    id="watchlist-row"
+    style="display:none;"
+  >
+
+    <div class="row-header">
+
+      <h2>
+        My List
+      </h2>
+
+    </div>
+
+    <div
+      class="list"
+      id="watchlist-list"
+    ></div>
+
+  </div>
+
+
+  <!-- =========================
+       TRENDING MOVIES
+  ========================== -->
+
+  <div
+    class="row"
+    id="movies-row"
+  >
+
+    <div class="row-header">
+
+      <h2>
+        Trending Movies
+      </h2>
+
+      <button
+        class="see-all-btn"
+        onclick="openGridModal('movies')"
+      >
+        See All &gt;
       </button>
+
     </div>
+
+    <div
+      class="list"
+      id="movies-list"
+    ></div>
+
   </div>
 
-  <div class="banner" id="banner">
-    <div class="slideshow-container">
-      <div class="slides" id="slides">
-        </div>
-      <a class="prev" id="prev-slide-btn" aria-label="Previous Slide">&#10094;</a>
-      <a class="next" id="next-slide-btn" aria-label="Next Slide">&#10095;</a>
-      <div class="dots" id="dots">
-        </div>
-    </div>
-  </div>
-  
-  <div class="row link-slideshow-container">
-    <div class="row-header" style="margin-bottom: 5px;">
-        <h2>Featured Deals</h2>
-    </div>
-    <div class="list loading-list" id="shopee-link-list">
-        <a href="#"><div class="skeleton"></div></a>
-        <a href="#"><div class="skeleton"></div></a>
-        <a href="#"><div class="skeleton"></div></a>
-    </div>
-  </div>
-  
-  <div class="list-container-no-header">
+
+  <!-- =========================
+       TRENDING TV
+  ========================== -->
+
+  <div
+    class="row"
+    id="tvshows-row"
+  >
+
     <div class="row-header">
-        <h2>Your Favorites <span style="font-size: 0.8em; color: #aaa;" id="favorites-count"></span></h2>
+
+      <h2>
+        Trending TV Shows
+      </h2>
+
+      <button
+        class="see-all-btn"
+        onclick="openGridModal('tv')"
+      >
+        See All &gt;
+      </button>
+
     </div>
-    <div class="list loading-list" id="favorites-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-    </div>
+
+    <div
+      class="list"
+      id="tvshows-list"
+    ></div>
+
   </div>
 
-  <div class="row" id="movies-row">
+
+  <!-- =========================
+       TRENDING ANIME
+  ========================== -->
+
+  <div
+    class="row"
+    id="anime-row"
+  >
+
     <div class="row-header">
-        <h2>Trending Movies</h2>
-        <div>
-            <button class="filter-btn" data-category="movies" aria-label="Filter Movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="movies" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="movies">Show More &raquo;</a>
-        </div>
+
+      <h2>
+        Trending Anime
+      </h2>
+
+      <button
+        class="see-all-btn"
+        onclick="openGridModal('anime')"
+      >
+        See All &gt;
+      </button>
+
     </div>
-    <div class="list loading-list" id="movies-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
+
+    <div
+      class="list"
+      id="anime-list"
+    ></div>
+
   </div>
 
-  <div class="row" id="tvshows-row">
+
+  <!-- =========================
+       TAGALOG MOVIES
+  ========================== -->
+
+  <div
+    class="row"
+    id="tagalog-row"
+  >
+
     <div class="row-header">
-        <h2>Trending TV Shows</h2>
-        <div>
-            <button class="filter-btn" data-category="tvshows" aria-label="Filter TV Shows"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="tvshows" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="tvshows">Show More &raquo;</a>
-        </div>
+
+      <h2>
+        Trending Tagalog Movies
+      </h2>
+
+      <button
+        class="see-all-btn"
+        onclick="openGridModal('tagalog')"
+      >
+        See All &gt;
+      </button>
+
     </div>
-    <div class="list loading-list" id="tvshows-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
+
+    <div
+      class="list"
+      id="tagalog-list"
+    ></div>
+
   </div>
 
-  <div class="row" id="anime-row">
+
+  <!-- =========================
+       TAGALOG TV SHOWS
+       NEW
+  ========================== -->
+
+  <div
+    class="row"
+    id="tagalog-tv-row"
+  >
+
     <div class="row-header">
-        <h2>Trending Anime</h2>
-        <div>
-            <button class="filter-btn" data-category="anime" aria-label="Filter Anime"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="anime" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="anime">Show More &raquo;</a>
-        </div>
+
+      <h2>
+        Trending Tagalog TV Shows
+      </h2>
+
+      <button
+        class="see-all-btn"
+        onclick="openGridModal('tagalogTV')"
+      >
+        See All &gt;
+      </button>
+
     </div>
-    <div class="list loading-list" id="anime-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-  
-  <div class="row" id="tagalog-movies-row">
-    <div class="row-header">
-        <h2>Trending Tagalog Movies</h2>
-        <div>
-            <button class="filter-btn" data-category="tagalog-movies" aria-label="Filter Tagalog Movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="tagalog-movies" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="tagalog-movies">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="tagalog-movies-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
+
+    <div
+      class="list"
+      id="tagalog-tv-list"
+    ></div>
+
   </div>
 
-  <div class="row" id="netflix-movies-row">
+
+  <!-- =========================
+       K-DRAMAS
+  ========================== -->
+
+  <div
+    class="row"
+    id="kdrama-row"
+  >
+
     <div class="row-header">
-        <h2>Trending Netflix Movies</h2>
-        <div>
-            <button class="filter-btn" data-category="netflix-movies" aria-label="Filter Netflix Movies"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="netflix-movies" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="netflix-movies">Show More &raquo;</a>
-        </div>
+
+      <h2>
+        Trending K-Dramas
+      </h2>
+
+      <button
+        class="see-all-btn"
+        onclick="openGridModal('kdrama')"
+      >
+        See All &gt;
+      </button>
+
     </div>
-    <div class="list loading-list" id="netflix-movies-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
+
+    <div
+      class="list"
+      id="kdrama-list"
+    ></div>
+
   </div>
 
-  <div class="row" id="netflix-tv-row">
+
+  <!-- =========================
+       TOP RATED VIVAMAX
+  ========================== -->
+
+  <div
+    class="row"
+    id="vivamax-row"
+  >
+
     <div class="row-header">
-        <h2>Trending Netflix TV Shows</h2>
-        <div>
-            <button class="filter-btn" data-category="netflix-tv" aria-label="Filter Netflix TV Shows"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="netflix-tv" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="netflix-tv">Show More &raquo;</a>
-        </div>
+
+      <h2>
+        Top Rated Vivamax
+      </h2>
+
+      <button
+        class="see-all-btn"
+        onclick="openGridModal('vivamax')"
+      >
+        See All &gt;
+      </button>
+
     </div>
-    <div class="list loading-list" id="netflix-tv-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
+
+    <div
+      class="list"
+      id="vivamax-list"
+    ></div>
+
   </div>
 
-  <div class="row" id="korean-drama-row">
-    <div class="row-header">
-        <h2>Trending Korean Drama</h2>
-        <div>
-            <button class="filter-btn" data-category="korean-drama" aria-label="Filter Korean Drama"><i class="fas fa-filter"></i></button>
-            <button class="filter-btn clear-filter-btn" data-category="korean-drama" style="display: none;" aria-label="Clear Filters">
-                <i class="fas fa-times"></i>
-            </button>
-            <a href="#" class="show-more-link" data-category="korean-drama">Show More &raquo;</a>
-        </div>
-    </div>
-    <div class="list loading-list" id="korean-drama-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-  
-  <div class="list-container-no-header">
-    <h2>Recently Viewed</h2>
-    <div class="list loading-list" id="recently-viewed-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-  </div>
-  
-  <div id="empty-message" style="display: none; text-align: center; color: #ccc; padding: 20px;">Loading content...</div>
 
-  <div class="modal" id="modal">
+  <!-- =========================
+       MOVIE DETAILS MODAL
+  ========================== -->
+
+  <div
+    class="modal"
+    id="modal"
+  >
+
     <div class="modal-content">
-      <span class="close" id="modal-close-btn" aria-label="Close Details Modal" style="color: red;">&times;</span>
+
+      <span
+        class="close"
+        onclick="closeModal()"
+      >
+        &times;
+      </span>
+
       <div class="modal-body">
-        <img id="modal-image" src="" alt="Poster image" />
+
+        <img
+          id="modal-image"
+          src=""
+          alt=""
+        />
+
         <div class="modal-text">
-          <h2 id="modal-title">
-            <span id="modal-item-title"></span>
-            <i class="fas fa-heart favorite-icon" id="favorite-toggle" aria-label="Toggle Favorite"></i>
-          </h2>
-          
-          <div class="stars" id="modal-rating-tmdb" aria-label="TMDB Rating"></div> 
-          
-          <div style="margin-top: 10px;">
-              <label style="color: var(--accent-color); font-weight: bold;">Your Rating:</label>
-              <div class="stars" id="modal-rating-user" data-rating="0" aria-label="Rate this item">
-                  <i class="far fa-star user-star" data-value="1" id="star-1" aria-label="1 star"></i>
-                  <i class="far fa-star user-star" data-value="2" id="star-2" aria-label="2 stars"></i>
-                  <i class="far fa-star user-star" data-value="3" id="star-3" aria-label="3 stars"></i>
-                  <i class="far fa-star user-star" data-value="4" id="star-4" aria-label="4 stars"></i>
-                  <i class="far fa-star user-star" data-value="5" id="star-5" aria-label="5 stars"></i>
-              </div>
+
+          <h2
+            id="modal-title"
+          ></h2>
+
+          <div
+            class="stars"
+            id="modal-rating"
+          ></div>
+
+          <button
+            id="watchlist-btn"
+            class="watchlist-btn"
+            onclick="toggleWatchlist()"
+          >
+            Add to List
+          </button>
+
+          <p
+            id="modal-description"
+          ></p>
+
+          <!-- TV OPTIONS -->
+
+          <div
+            id="series-options"
+            class="series-options"
+            style="display:none;"
+          >
+
+            <select
+              id="season-select"
+              class="season-select"
+              onchange="onSeasonChange()"
+            ></select>
+
+            <div
+              id="episodes-container"
+              class="episodes-container"
+            ></div>
+
           </div>
-          <p id="modal-description"></p>
+
         </div>
+
       </div>
-      
-      <div class="video-player-container" id="video-player-container">
-          <iframe id="modal-video" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
-          <div class="player-controls">
-              <button class="player-control-btn" id="watched-btn" aria-label="Mark as Watched">
-                  <i class="fas fa-eye"></i>
-                  <span>Mark Watched</span>
-              </button>
-              <button class="player-control-btn" id="fullscreen-btn" aria-label="Toggle Fullscreen">
-                  <i class="fas fa-expand"></i>
-              </button>
-          </div>
+
+
+      <!-- VIDEO -->
+
+      <div class="video-container">
+
+        <iframe
+          id="modal-video"
+          allowfullscreen
+        ></iframe>
+
       </div>
-      
-      <div class="server-selector">
-        <label for="server">Change Server:</label>
-        <select id="server" aria-label="Select Video Server"></select>
-        <button id="save-default-server-btn" aria-label="Save Default Server">
-            <i class="fas fa-save"></i> Save as Default
-        </button>
-      </div>
-      <div class="season-selector" id="season-selector" style="display: none;">
-        <label for="season">Select Season:</label>
-        <select id="season" aria-label="Select Season"></select>
-      </div>
-      <div class="episode-list" id="episode-list">
-        </div>
-      
+
     </div>
+
   </div>
 
-  <div class="search-modal" id="search-modal">
-    <span class="close" id="search-modal-close-btn" aria-label="Close Search" style="color: red;">&times;</span>
-    <input type="text" id="search-input" placeholder="Search for a movie or show..." aria-label="Search Input" />
-    <div class="results" id="search-results">
-        </div>
-  </div>
-  
-  <div class="filter-modal" id="filter-modal">
-    <div class="filter-content">
-        <span class="close" id="filter-modal-close-btn" aria-label="Close Filter Modal" style="color: var(--accent-color);">&times;</span>
-        <h2 id="filter-modal-title">Filter Content</h2>
-        <p>Apply filters to start a new search list.</p>
-        
-        <label for="filter-year">Select Year:</label>
-        <select id="filter-year" aria-label="Filter by Year">
-            <option value="">Any Year</option>
-            </select>
 
-        <label for="filter-genre">Select Genre:</label>
-        <select id="filter-genre" aria-label="Filter by Genre">
-            <option value="">Any Genre</option>
-            </select>
-        
-        <button id="apply-filters-btn">Apply Filters and Show More</button>
+  <!-- =========================
+       SEE ALL MODAL
+  ========================== -->
+
+  <div
+    class="grid-modal"
+    id="grid-modal"
+  >
+
+    <div class="grid-modal-header">
+
+      <h2
+        id="grid-modal-title"
+      >
+        Category
+      </h2>
+
+      <span
+        class="close"
+        onclick="closeGridModal()"
+      >
+        &times;
+      </span>
+
     </div>
+
+
+    <div
+      class="grid-scroll-area"
+      id="grid-scroll-area"
+    >
+
+      <div
+        class="grid-container"
+        id="grid-modal-results"
+      ></div>
+
+      <div
+        class="grid-loading"
+        id="grid-loading"
+      >
+        Loading more...
+      </div>
+
+      <div
+        class="grid-end"
+        id="grid-end"
+        style="display:none;"
+      ></div>
+
+    </div>
+
   </div>
+
+
+  <!-- =========================
+       SEARCH MODAL
+  ========================== -->
+
+  <div
+    class="search-modal"
+    id="search-modal"
+  >
+
+    <span
+      class="close"
+      onclick="closeSearchModal()"
+    >
+      &times;
+    </span>
+
+    <input
+      type="text"
+      id="search-input"
+      placeholder="Search for a movie or show..."
+      oninput="debounceSearch()"
+    />
+
+    <div
+      class="results"
+      id="search-results"
+    ></div>
+
+  </div>
+
+
+  <!-- =========================
+       FOOTER
+  ========================== -->
 
   <footer class="footer">
+
     <div class="footer-content">
-      <p>&copy; 2025 ReelRoom. All rights reserved.</p>
+
+      <p>
+        &copy; 2026 StreamVault.
+        All rights reserved.
+      </p>
+
       <div class="footer-links">
-        <a href="#">Disclaimer</a>
-        <a href="#">About Us</a>
-        <a href="#">Contact Us</a>
+
+        <a href="#">
+          Disclaimer
+        </a>
+
+        <a href="#">
+          About Us
+        </a>
+
+        <a href="#">
+          Contact Us
+        </a>
+
       </div>
+
     </div>
+
   </footer>
+
 </body>
+
 </html>
